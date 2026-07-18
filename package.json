@@ -1,0 +1,36 @@
+{
+  "name": "catalogo-b2b-allvino",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "prisma:seed": "prisma db seed"
+  },
+  "dependencies": {
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "@prisma/client": "^5.22.0",
+    "bcrypt": "^5.1.1",
+    "next-auth": "^4.24.10",
+    "puppeteer": "^23.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/bcrypt": "^5.0.2",
+    "postcss": "^8",
+    "autoprefixer": "^10.4.20",
+    "tailwindcss": "^3.4.15",
+    "typescript": "^5",
+    "prisma": "^5.22.0",
+    "ts-node": "^10.9.2"
+  },
+  "prisma": {
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+  }
+}

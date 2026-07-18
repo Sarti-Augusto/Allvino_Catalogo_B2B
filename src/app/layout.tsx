@@ -1,0 +1,21 @@
+import type { Metadata } from "next";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "Catálogo B2B Allvino | Vinhos Importados",
+  description: "Catálogo digital de vinhos importados Allvino. Acesse e exporte em formato PDF.",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="pt-BR">
+      <body className="antialiased min-h-screen bg-allvino-dark-950 text-allvino-dark-100">
+        {children}
+      </body>
+    </html>
+  );
+}

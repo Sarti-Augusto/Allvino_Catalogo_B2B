@@ -6,7 +6,7 @@ A jornada de desenvolvimento será dividida em 5 fases sequenciais. Iniciamos pe
 
 ## Phases
 
-- [ ] **Phase 1: Setup do Projeto e Modelagem do Banco de Dados** - Configurar o Next.js, Prisma, PostgreSQL e carregar templates padrão no seed.
+- [x] **Phase 1: Setup do Projeto e Modelagem do Banco de Dados** - Configurar o Next.js, Prisma, PostgreSQL e carregar templates padrão no seed.
 - [ ] **Phase 2: Painel Administrativo, Login e CRUD de Vinhos** - Implementar NextAuth e o gerenciamento completo de vinhos com upload de imagens.
 - [ ] **Phase 3: Editor de Design e Controle de Templates (Admin)** - Desenvolver o painel de edição de estilos visuais e ativação de templates.
 - [ ] **Phase 4: Motor de PDF (API e Geração)** - Criar o backend de injeção dinâmica e renderização do PDF com alta definição usando Puppeteer.
@@ -25,7 +25,7 @@ A jornada de desenvolvimento será dividida em 5 fases sequenciais. Iniciamos pe
 **Plans**: 1 plan
 
 Plans:
-- [ ] 01-01: Inicialização do Next.js, Prisma schema, migrações e seed script.
+- [x] 01-01: Inicialização do Next.js, Prisma schema, migrações e seed script.
 
 ### Phase 2: Painel Administrativo, Login e CRUD de Vinhos
 **Goal**: Criar a área administrativa segura para gerenciar a lista de vinhos disponíveis no catálogo.
@@ -88,7 +88,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Setup e DB | 0/1 | Not started | - |
+| 1. Setup e DB | 1/1 | Complete | 2026-07-18 |
 | 2. Admin & CRUD | 0/2 | Not started | - |
 | 3. Template Editor | 0/1 | Not started | - |
 | 4. PDF Engine | 0/2 | Not started | - |
