@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Providers } from "@/components/providers";
 
 export const metadata: Metadata = {
   title: "Catálogo B2B Allvino | Vinhos Importados",
@@ -14,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className="antialiased min-h-screen bg-allvino-dark-950 text-allvino-dark-100">
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

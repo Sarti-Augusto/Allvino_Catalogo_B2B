@@ -7,7 +7,7 @@ A jornada de desenvolvimento será dividida em 5 fases sequenciais. Iniciamos pe
 ## Phases
 
 - [x] **Phase 1: Setup do Projeto e Modelagem do Banco de Dados** - Configurar o Next.js, Prisma, PostgreSQL e carregar templates padrão no seed.
-- [ ] **Phase 2: Painel Administrativo, Login e CRUD de Vinhos** - Implementar NextAuth e o gerenciamento completo de vinhos com upload de imagens.
+- [x] **Phase 2: Painel Administrativo, Login e CRUD de Vinhos** - Implementar NextAuth e o gerenciamento completo de vinhos com upload de imagens.
 - [ ] **Phase 3: Editor de Design e Controle de Templates (Admin)** - Desenvolver o painel de edição de estilos visuais e ativação de templates.
 - [ ] **Phase 4: Motor de PDF (API e Geração)** - Criar o backend de injeção dinâmica e renderização do PDF com alta definição usando Puppeteer.
 - [ ] **Phase 5: Vitrine Pública, Filtros e Acesso ao PDF** - Desenvolver a tela principal pública, filtros de pesquisa e o botão de exportação.
@@ -38,8 +38,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: Autenticação via NextAuth.js com Credenciais e proteção de rotas admin.
-- [ ] 02-02: Páginas e formulários de CRUD de Vinhos com simulação de upload de imagens.
+- [x] 02-01: Autenticação via NextAuth.js com Credenciais e proteção de rotas admin.
+- [x] 02-02: Páginas e formulários de CRUD de Vinhos com simulação de upload de imagens.
 
 ### Phase 3: Editor de Design e Controle de Templates (Admin)
 **Goal**: Permitir que o administrador edite a estilização visual do catálogo exportado sem alterar o código.
@@ -89,7 +89,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Setup e DB | 1/1 | Complete | 2026-07-18 |
-| 2. Admin & CRUD | 0/2 | Not started | - |
+| 2. Admin & CRUD | 2/2 | Complete | 2026-07-18 |
 | 3. Template Editor | 0/1 | Not started | - |
 | 4. PDF Engine | 0/2 | Not started | - |
 | 5. Vitrine & Filtros | 0/1 | Not started | - |
