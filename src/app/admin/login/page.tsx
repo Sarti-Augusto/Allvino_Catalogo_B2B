@@ -44,10 +44,20 @@ export default function LoginPage() {
 
       <div className="w-full max-w-md glass-panel rounded-2xl p-8 shadow-2xl relative z-10 border border-allvino-outline-variant/40">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-extrabold font-serif tracking-tight text-allvino-primary">
-            ALLVINO
+          <div className="flex justify-center mb-4">
+            <img
+              src="/logo.png"
+              alt="Allvino Logo"
+              className="h-16 w-auto object-contain"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          </div>
+          <h1 className="text-2xl font-extrabold font-serif tracking-tight text-allvino-primary uppercase">
+            Allvino Admin
           </h1>
-          <p className="text-sm text-allvino-on-surface-variant mt-2 font-light">
+          <p className="text-xs text-allvino-on-surface-variant mt-1.5 font-light">
             Painel de Gestão do Catálogo B2B
           </p>
         </div>
