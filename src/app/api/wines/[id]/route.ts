@@ -35,6 +35,7 @@ export async function PUT(
       precoPromocional,
       status,
       imagemUrl,
+      categoria,
       estoque,
     } = body;
 
@@ -64,6 +65,7 @@ export async function PUT(
         precoPromocional: precoPromocional !== undefined ? (precoPromocional ? parseFloat(precoPromocional) : null) : existingProduct.precoPromocional,
         status: status !== undefined ? Boolean(status) : existingProduct.status,
         imagemUrl: imagemUrl !== undefined ? imagemUrl : existingProduct.imagemUrl,
+        categoria: categoria !== undefined ? categoria : (existingProduct as any).categoria,
         estoque: estoque !== undefined ? parseInt(estoque) : existingProduct.estoque,
       },
     });

@@ -144,9 +144,18 @@ export async function GET() {
     finalHtml = finalHtml.replace(/{{footerText}}/g, styles.footerText || "");
     finalHtml = finalHtml.replace(/{{productsList}}/g, productsHtml);
 
-    // Inject explicit CSS rules to prevent splitting wine-cards across page borders
+    // Inject explicit CSS rules to prevent splitting wine-cards across page borders and to apply page backgrounds
+    const bgStyleRule = styles.backgroundImageUrl
+      ? `body {
+           background-image: url('${styles.backgroundImageUrl}') !important;
+           background-size: cover !important;
+           background-position: center !important;
+         }`
+      : "";
+
     const pageBreakStyles = `
       <style>
+        ${bgStyleRule}
         .wine-card {
           page-break-inside: avoid !important;
           break-inside: avoid !important;

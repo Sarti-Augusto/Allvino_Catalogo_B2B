@@ -13,6 +13,7 @@ interface TemplateStyles {
   gridColumns: string;
   headerTitle: string;
   footerText: string;
+  backgroundImageUrl?: string; // New field
 }
 
 interface Template {
@@ -23,7 +24,6 @@ interface Template {
   isActive: boolean;
 }
 
-// Sample wines for PDF Live Preview
 const PREVIEW_WINES = [
   {
     name: "Château Margaux 2018",
@@ -51,6 +51,13 @@ const PREVIEW_WINES = [
   }
 ];
 
+const PRESET_BACKGROUNDS = [
+  { label: "Branco / Liso", url: "" },
+  { label: "Pergaminho Textura", url: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=600&auto=format&fit=crop" },
+  { label: "Linho Texturizado", url: "https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=600&auto=format&fit=crop" },
+  { label: "Gelo Frio", url: "https://images.unsplash.com/photo-1541701494587-cb58502866ab?q=80&w=600&auto=format&fit=crop" }
+];
+
 export default function TemplatesPage() {
   const { data: session } = useSession();
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -69,6 +76,7 @@ export default function TemplatesPage() {
   const [gridColumns, setGridColumns] = useState("2");
   const [headerTitle, setHeaderTitle] = useState("");
   const [footerText, setFooterText] = useState("");
+  const [backgroundImageUrl, setBackgroundImageUrl] = useState("");
 
   // Toast State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -93,7 +101,6 @@ export default function TemplatesPage() {
       if (res.ok) {
         const data = await res.json();
         setTemplates(data);
-        // Set the active template or the first one as selected
         const active = data.find((t: Template) => t.isActive) || data[0];
         if (active) {
           handleSelectTemplate(active);
@@ -123,6 +130,7 @@ export default function TemplatesPage() {
       setGridColumns(styles.gridColumns || "2");
       setHeaderTitle(styles.headerTitle || "ALLVINO - CATÁLOGO");
       setFooterText(styles.footerText || "");
+      setBackgroundImageUrl(styles.backgroundImageUrl || "");
     } catch (err) {
       console.error("Erro ao fazer parse das propriedades de estilo:", err);
     }
@@ -142,6 +150,7 @@ export default function TemplatesPage() {
       gridColumns,
       headerTitle,
       footerText,
+      backgroundImageUrl,
     };
 
     const payload = {
@@ -159,7 +168,6 @@ export default function TemplatesPage() {
 
       if (res.ok) {
         showToast("Configurações do template salvas com sucesso!");
-        // Refresh templates data
         fetchTemplates();
       } else {
         showToast("Falha ao salvar modificações.", "error");
@@ -177,11 +185,19 @@ export default function TemplatesPage() {
       <nav className="border-b border-allvino-outline-variant/30 bg-allvino-surface-container-low/80 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-8">
+            <div className="flex items-center space-x-2">
+              <img
+                src="/logo.png"
+                alt="Allvino Logo"
+                className="h-10 w-auto object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
+              />
               <span className="text-xl font-bold font-serif text-allvino-primary tracking-wider">
                 ALLVINO ADMIN
               </span>
-              <div className="hidden md:flex space-x-4">
+              <div className="hidden md:flex space-x-4 pl-6">
                 <Link
                   href="/admin/dashboard"
                   className="px-3 py-2 rounded-md text-sm font-medium text-allvino-on-surface-variant hover:text-allvino-primary transition"
@@ -234,7 +250,7 @@ export default function TemplatesPage() {
             Editor de Templates PDF
           </h1>
           <p className="text-allvino-on-surface-variant text-sm mt-1">
-            Personalize a identidade visual, cores, cabeçalhos e rodapés do catálogo impresso.
+            Personalize a identidade visual, cores, fundos texturizados, cabeçalhos e rodapés do catálogo impresso.
           </p>
         </div>
 
@@ -370,6 +386,39 @@ export default function TemplatesPage() {
                   </div>
                 </div>
 
+                {/* PDF Background model selector */}
+                <div className="space-y-4 pt-4 border-t border-allvino-outline-variant/10">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-allvino-primary">
+                    Textura de Fundo do PDF
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {PRESET_BACKGROUNDS.map((bg) => (
+                      <button
+                        key={bg.label}
+                        type="button"
+                        onClick={() => setBackgroundImageUrl(bg.url)}
+                        className={`px-3 py-1.5 rounded text-xs font-medium border transition ${
+                          backgroundImageUrl === bg.url
+                            ? "bg-allvino-primary border-allvino-primary text-white font-bold"
+                            : "bg-allvino-surface-container-high border border-allvino-outline-variant text-allvino-text hover:border-allvino-outline-variant/80"
+                        }`}
+                      >
+                        {bg.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div>
+                    <label className="block text-xs text-allvino-on-surface-variant mb-1">URL de Fundo Customizada</label>
+                    <input
+                      type="text"
+                      value={backgroundImageUrl}
+                      onChange={(e) => setBackgroundImageUrl(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text placeholder-allvino-on-surface-variant/50 focus:outline-none focus:border-allvino-primary text-xs"
+                      placeholder="Cole um link de imagem (PNG/JPG)"
+                    />
+                  </div>
+                </div>
+
                 {/* Typography and Layout Scale */}
                 <div className="space-y-4 pt-4 border-t border-allvino-outline-variant/10">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-allvino-primary">
@@ -463,9 +512,12 @@ export default function TemplatesPage() {
                   style={{
                     backgroundColor: backgroundColor,
                     color: textColor,
+                    backgroundImage: backgroundImageUrl ? `url(${backgroundImageUrl})` : "none",
+                    backgroundSize: "cover",
+                    backgroundPosition: "center"
                   }}
                 >
-                  <div className="p-10 h-full flex flex-col justify-between">
+                  <div className="p-10 h-full flex flex-col justify-between relative z-10">
                     
                     {/* Catalog Header */}
                     <div>
@@ -494,7 +546,7 @@ export default function TemplatesPage() {
                         {PREVIEW_WINES.map((wine, idx) => (
                           <div 
                             key={idx}
-                            className="p-4 rounded border border-gray-200 bg-white shadow-sm flex gap-4 transition duration-300"
+                            className="p-4 rounded border border-gray-200/80 bg-white/95 shadow-sm flex gap-4 transition duration-300"
                           >
                             <div className="w-12 h-28 bg-gray-50 p-1 flex-shrink-0 flex items-center justify-center border border-gray-100 rounded">
                               <img 

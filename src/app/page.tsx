@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { getCountryFlagUrl } from "@/lib/utils";
 
 interface Product {
   id: string;
@@ -17,6 +18,7 @@ interface Product {
   precoPromocional: number | null;
   status: boolean;
   imagemUrl: string;
+  categoria: string;
   estoque: number;
 }
 
@@ -29,12 +31,14 @@ export default function Home() {
   const [selectedUva, setSelectedUva] = useState("");
   const [selectedPais, setSelectedPais] = useState("");
   const [selectedVinicola, setSelectedVinicola] = useState("");
+  const [selectedCategoria, setSelectedCategoria] = useState("");
   const [sortBy, setSortBy] = useState("name-asc");
 
-  // Dynamic filter options extracted from fetched data
+  // Dynamic filter options
   const [uvaOptions, setUvaOptions] = useState<string[]>([]);
   const [paisOptions, setPaisOptions] = useState<string[]>([]);
   const [vinicolaOptions, setVinicolaOptions] = useState<string[]>([]);
+  const [categoriaOptions, setCategoriaOptions] = useState<string[]>([]);
 
   useEffect(() => {
     fetchWines();
@@ -46,18 +50,19 @@ export default function Home() {
       const res = await fetch("/api/wines");
       if (res.ok) {
         const data: Product[] = await res.json();
-        // Public store only shows active wines
         const activeWines = data.filter((w) => w.status);
         setWines(activeWines);
 
-        // Extract unique options for filters
+        // Extract unique options
         const grapes = Array.from(new Set(activeWines.map((w) => w.uva.split(",")[0].trim()))).sort();
         const countries = Array.from(new Set(activeWines.map((w) => w.paisOrigem))).sort();
         const wineries = Array.from(new Set(activeWines.map((w) => w.vinicola))).sort();
+        const categories = Array.from(new Set(activeWines.map((w) => w.categoria || "Tinto"))).sort();
 
         setUvaOptions(grapes);
         setPaisOptions(countries);
         setVinicolaOptions(wineries);
+        setCategoriaOptions(categories);
       }
     } catch (error) {
       console.error("Erro ao carregar vitrine de vinhos:", error);
@@ -66,7 +71,7 @@ export default function Home() {
     }
   };
 
-  // Filter & Sort Logic
+  // Filter & Sort
   const filteredWines = wines
     .filter((wine) => {
       const matchesSearch =
@@ -77,8 +82,9 @@ export default function Home() {
       const matchesUva = selectedUva ? wine.uva.toLowerCase().includes(selectedUva.toLowerCase()) : true;
       const matchesPais = selectedPais ? wine.paisOrigem === selectedPais : true;
       const matchesVinicola = selectedVinicola ? wine.vinicola === selectedVinicola : true;
+      const matchesCategoria = selectedCategoria ? (wine.categoria || "Tinto") === selectedCategoria : true;
 
-      return matchesSearch && matchesUva && matchesPais && matchesVinicola;
+      return matchesSearch && matchesUva && matchesPais && matchesVinicola && matchesCategoria;
     })
     .sort((a, b) => {
       const priceA = a.precoPromocional ?? a.precoOriginal;
@@ -87,12 +93,62 @@ export default function Home() {
       if (sortBy === "price-asc") return priceA - priceB;
       if (sortBy === "price-desc") return priceB - priceA;
       if (sortBy === "name-desc") return b.name.localeCompare(a.name);
-      return a.name.localeCompare(b.name); // name-asc (default)
+      return a.name.localeCompare(b.name);
     });
+
+  // Global sharing URLs
+  const shareText = "Confira o catálogo de vinhos corporativo B2B da Allvino!";
+  const globalWhatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + " " + (typeof window !== "undefined" ? window.location.href : ""))}`;
+  const instagramUrl = "https://instagram.com/allvinob2b"; // Link placeholder do perfil Allvino
 
   return (
     <div className="min-h-screen bg-allvino-background text-allvino-text font-sans pb-16">
       
+      {/* Navigation Header */}
+      <nav className="border-b border-allvino-outline-variant/30 bg-allvino-surface-container-low/80 backdrop-blur-md sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center space-x-2">
+            <img
+              src="/logo.png"
+              alt="Allvino Logo"
+              className="h-10 w-auto object-contain"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+            <span className="text-xl font-bold font-serif text-allvino-primary tracking-wider">
+              ALLVINO
+            </span>
+          </Link>
+          <div className="flex items-center space-x-4">
+            {/* Share Buttons */}
+            <span className="hidden sm:inline text-xs text-allvino-on-surface-variant">Compartilhar site:</span>
+            <a
+              href={globalWhatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-1.5 rounded bg-[#25D366] hover:bg-[#20ba5a] text-white text-[10px] font-bold tracking-wide transition shadow"
+            >
+              WhatsApp
+            </a>
+            <a
+              href={instagramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-1.5 rounded bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] text-white text-[10px] font-bold tracking-wide transition shadow"
+            >
+              Instagram
+            </a>
+            <Link
+              href="/admin/login"
+              className="px-3 py-1.5 rounded bg-allvino-surface-container-high hover:bg-allvino-primary hover:text-white border border-allvino-outline-variant transition text-[10px] font-bold"
+            >
+              Admin
+            </Link>
+          </div>
+        </div>
+      </nav>
+
       {/* Editorial Hero Header */}
       <header className="border-b border-allvino-outline-variant/30 bg-allvino-surface-container-low/40 py-12 relative overflow-hidden">
         {/* Soft layout blobs */}
@@ -100,6 +156,16 @@ export default function Home() {
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-allvino-secondary-container rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10 space-y-4">
+          <div className="flex justify-center mb-2">
+            <img
+              src="/logo.png"
+              alt="Allvino Logo"
+              className="h-20 w-auto object-contain"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          </div>
           <p className="text-xs font-bold uppercase tracking-widest text-allvino-secondary">
             Allvino B2B Importadora
           </p>
@@ -117,12 +183,6 @@ export default function Home() {
             >
               📥 Baixar Catálogo PDF
             </a>
-            <Link
-              href="/admin/login"
-              className="px-6 py-3 font-semibold rounded border border-allvino-primary text-allvino-primary hover:bg-allvino-primary hover:text-white transition duration-300 text-sm"
-            >
-              Acesso Restrito
-            </Link>
           </div>
         </div>
       </header>
@@ -152,6 +212,25 @@ export default function Home() {
                   onChange={(e) => setSearch(e.target.value)}
                   className="w-full px-3 py-2 rounded-md bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text placeholder-allvino-on-surface-variant/50 focus:outline-none focus:border-allvino-primary text-xs"
                 />
+              </div>
+
+              {/* Category Selector */}
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1.5">
+                  Categoria
+                </label>
+                <select
+                  value={selectedCategoria}
+                  onChange={(e) => setSelectedCategoria(e.target.value)}
+                  className="w-full text-xs p-2.5 bg-allvino-surface-container-low border border-allvino-outline-variant rounded-md focus:outline-none focus:border-allvino-primary"
+                >
+                  <option value="">Todas as Categorias</option>
+                  {categoriaOptions.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Grape selector */}
@@ -229,13 +308,14 @@ export default function Home() {
               </div>
 
               {/* Clean filters */}
-              {(search || selectedUva || selectedPais || selectedVinicola) && (
+              {(search || selectedUva || selectedPais || selectedVinicola || selectedCategoria) && (
                 <button
                   onClick={() => {
                     setSearch("");
                     setSelectedUva("");
                     setSelectedPais("");
                     setSelectedVinicola("");
+                    setSelectedCategoria("");
                   }}
                   className="w-full py-2 bg-allvino-surface-container-high hover:bg-allvino-primary hover:text-white rounded border border-allvino-outline-variant transition text-xs font-bold text-center"
                 >
@@ -261,6 +341,7 @@ export default function Home() {
                     setSelectedUva("");
                     setSelectedPais("");
                     setSelectedVinicola("");
+                    setSelectedCategoria("");
                   }}
                   className="mt-4 px-4 py-2 bg-allvino-primary text-white rounded text-xs font-semibold"
                 >
@@ -270,13 +351,14 @@ export default function Home() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {filteredWines.map((wine) => (
-                  <div
+                  <Link
+                    href={`/product/${wine.id}`}
                     key={wine.id}
-                    className="bg-white rounded-xl shadow-md border border-allvino-outline-variant/30 flex flex-col justify-between overflow-hidden group hover:shadow-lg hover:border-allvino-secondary/40 transition duration-300"
+                    className="bg-white rounded-xl shadow-md border border-allvino-outline-variant/30 flex flex-col justify-between overflow-hidden group hover:shadow-lg hover:border-allvino-secondary/40 transition duration-300 cursor-pointer"
                   >
                     
                     {/* Visual Card Top Block */}
-                    <div className="p-5 flex-grow space-y-4">
+                    <div className="p-5 flex-grow space-y-4 relative">
                       
                       {/* Wine Image Wrapper */}
                       <div className="w-full h-48 bg-allvino-surface-container-low/40 rounded-lg p-2 flex items-center justify-center border border-allvino-outline-variant/10 overflow-hidden relative">
@@ -289,18 +371,34 @@ export default function Home() {
                         <div className="absolute top-2 right-2 px-2.5 py-1 rounded bg-allvino-primary text-white text-[10px] font-bold tracking-wider">
                           Safra {wine.safra}
                         </div>
+                        {/* Country Flag overlay beside bottle */}
+                        <div className="absolute bottom-2 left-2 flex items-center space-x-1 bg-white/95 border border-allvino-outline-variant/20 rounded px-1.5 py-0.5 shadow-sm">
+                          <img
+                            src={getCountryFlagUrl(wine.paisOrigem)}
+                            alt={wine.paisOrigem}
+                            className="w-4 h-2.5 object-cover rounded-sm"
+                          />
+                          <span className="text-[9px] font-bold text-allvino-secondary uppercase">
+                            {wine.paisOrigem}
+                          </span>
+                        </div>
                       </div>
 
                       {/* Technical specifications */}
                       <div className="space-y-1">
-                        <div className="text-[10px] font-bold uppercase tracking-widest text-allvino-secondary">
-                          {wine.paisOrigem} ({wine.regiao})
+                        <div className="flex items-center justify-between">
+                          <div className="text-[10px] font-bold uppercase tracking-widest text-allvino-secondary">
+                            {wine.vinicola}
+                          </div>
+                          <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase bg-allvino-primary/10 text-allvino-primary">
+                            {wine.categoria || "Tinto"}
+                          </span>
                         </div>
-                        <h3 className="text-lg font-serif font-bold text-allvino-primary leading-snug line-clamp-1">
+                        <h3 className="text-base font-serif font-bold text-allvino-primary leading-snug line-clamp-1 group-hover:text-allvino-secondary transition">
                           {wine.name}
                         </h3>
                         <p className="text-xs text-allvino-on-surface-variant font-light">
-                          {wine.vinicola} • {wine.uva} • {wine.teorAlcoolico}% ABV
+                          {wine.uva} • {wine.teorAlcoolico}% ABV
                         </p>
                       </div>
 
@@ -310,7 +408,7 @@ export default function Home() {
                       </p>
                     </div>
 
-                    {/* Pricing and inventory footer block */}
+                    {/* Pricing and details footer block */}
                     <div className="px-5 py-4 bg-allvino-surface-container-low/30 border-t border-allvino-outline-variant/20 flex items-center justify-between">
                       <div className="space-y-0.5">
                         <span className="text-[10px] uppercase font-bold tracking-widest text-allvino-on-surface-variant block">
@@ -332,17 +430,13 @@ export default function Home() {
                         )}
                       </div>
                       <div className="text-right">
-                        <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
-                          wine.estoque === 0
-                            ? "bg-red-50 text-red-700 border border-red-200"
-                            : "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                        }`}>
-                          {wine.estoque === 0 ? "Esgotado" : `${wine.estoque} un`}
+                        <span className="text-[10px] text-allvino-primary font-bold group-hover:text-allvino-secondary transition flex items-center gap-0.5">
+                          Ver Detalhes →
                         </span>
                       </div>
                     </div>
 
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}

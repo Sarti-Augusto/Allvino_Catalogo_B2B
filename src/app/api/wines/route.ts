@@ -44,6 +44,7 @@ export async function POST(request: Request) {
       precoPromocional,
       status,
       imagemUrl,
+      categoria,
       estoque,
     } = body;
 
@@ -68,6 +69,7 @@ export async function POST(request: Request) {
         precoPromocional: precoPromocional ? parseFloat(precoPromocional) : null,
         status: status !== undefined ? Boolean(status) : true,
         imagemUrl: imagemUrl || "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?q=80&w=300&auto=format&fit=crop",
+        categoria: categoria || "Tinto",
         estoque: parseInt(estoque) || 0,
       },
     });

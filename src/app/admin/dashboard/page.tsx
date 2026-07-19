@@ -19,6 +19,7 @@ interface Product {
   precoPromocional: number | null;
   status: boolean;
   imagemUrl: string;
+  categoria: string;
   estoque: number;
 }
 
@@ -29,6 +30,8 @@ const PRESET_IMAGES = [
   { label: "Espumante", url: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?q=80&w=300&auto=format&fit=crop" }
 ];
 
+const DEFAULT_CATEGORIES = ["Tinto", "Branco", "Rosé", "Espumante", "Fortificado", "Laranja"];
+
 export default function DashboardPage() {
   const { data: session } = useSession();
   const router = useRouter();
@@ -38,6 +41,9 @@ export default function DashboardPage() {
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  
+  // Custom categories list
+  const [categoriesList, setCategoriesList] = useState<string[]>(DEFAULT_CATEGORIES);
 
   // Form State
   const [name, setName] = useState("");
@@ -50,9 +56,9 @@ export default function DashboardPage() {
   const [notasDegustacao, setNotasDegustacao] = useState("");
   const [precoOriginal, setPrecoOriginal] = useState("120");
   const [precoPromocional, setPrecoPromocional] = useState("");
-  const [estoque, setEstoque] = useState("50");
   const [status, setStatus] = useState("true");
   const [imagemUrl, setImagemUrl] = useState(PRESET_IMAGES[0].url);
+  const [categoria, setCategoria] = useState("Tinto");
 
   // Notification Toast State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -69,6 +75,11 @@ export default function DashboardPage() {
       if (res.ok) {
         const data = await res.json();
         setProducts(data);
+
+        // Merge seeded unique categories with defaults
+        const uniqueCats = Array.from(new Set(data.map((p: Product) => p.categoria).filter(Boolean))) as string[];
+        const merged = Array.from(new Set([...DEFAULT_CATEGORIES, ...uniqueCats]));
+        setCategoriesList(merged);
       } else {
         showToast("Erro ao buscar vinhos do servidor.", "error");
       }
@@ -99,9 +110,9 @@ export default function DashboardPage() {
     setNotasDegustacao("");
     setPrecoOriginal("120");
     setPrecoPromocional("");
-    setEstoque("50");
     setStatus("true");
     setImagemUrl(PRESET_IMAGES[0].url);
+    setCategoria("Tinto");
     setShowModal(true);
   };
 
@@ -117,10 +128,21 @@ export default function DashboardPage() {
     setNotasDegustacao(product.notasDegustacao);
     setPrecoOriginal(String(product.precoOriginal));
     setPrecoPromocional(product.precoPromocional ? String(product.precoPromocional) : "");
-    setEstoque(String(product.estoque));
     setStatus(String(product.status));
     setImagemUrl(product.imagemUrl);
+    setCategoria(product.categoria || "Tinto");
     setShowModal(true);
+  };
+
+  const handleAddCategory = () => {
+    const newCat = prompt("Digite o nome da nova categoria de produto (ex: Frisante, Laranja Premium):");
+    if (newCat && newCat.trim()) {
+      const formatted = newCat.trim();
+      if (!categoriesList.includes(formatted)) {
+        setCategoriesList([...categoriesList, formatted]);
+      }
+      setCategoria(formatted);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -139,7 +161,8 @@ export default function DashboardPage() {
       precoPromocional: precoPromocional || null,
       status: status === "true",
       imagemUrl,
-      estoque,
+      categoria,
+      estoque: 50 // Enviar padrão interno para o banco
     };
 
     try {
@@ -184,7 +207,7 @@ export default function DashboardPage() {
   // KPIs
   const totalWines = products.length;
   const activeWines = products.filter((p) => p.status).length;
-  const outOfStock = products.filter((p) => p.estoque === 0).length;
+  const uniqueCategoriesCount = categoriesList.length;
   const avgPrice = products.length
     ? products.reduce((acc, curr) => acc + curr.precoOriginal, 0) / products.length
     : 0;
@@ -195,7 +218,8 @@ export default function DashboardPage() {
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.vinicola.toLowerCase().includes(search.toLowerCase()) ||
       p.uva.toLowerCase().includes(search.toLowerCase()) ||
-      p.paisOrigem.toLowerCase().includes(search.toLowerCase())
+      p.paisOrigem.toLowerCase().includes(search.toLowerCase()) ||
+      (p.categoria || "").toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -204,11 +228,19 @@ export default function DashboardPage() {
       <nav className="border-b border-allvino-outline-variant/30 bg-allvino-surface-container-low/80 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-8">
+            <div className="flex items-center space-x-2">
+              <img
+                src="/logo.png"
+                alt="Allvino Logo"
+                className="h-10 w-auto object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
+              />
               <span className="text-xl font-bold font-serif text-allvino-primary tracking-wider">
                 ALLVINO ADMIN
               </span>
-              <div className="hidden md:flex space-x-4">
+              <div className="hidden md:flex space-x-4 pl-6">
                 <Link
                   href="/admin/dashboard"
                   className="px-3 py-2 rounded-md text-sm font-medium bg-allvino-primary text-white border border-allvino-primary-container"
@@ -250,7 +282,7 @@ export default function DashboardPage() {
           <div className={`fixed bottom-5 right-5 z-50 px-6 py-3.5 rounded-lg shadow-2xl border flex items-center space-x-2 text-sm font-medium transition-all ${
             toastType === "success" 
               ? "bg-emerald-50 border-emerald-200 text-emerald-800" 
-              : "bg-red-50 border-red-200 text-red-855"
+              : "bg-red-50 border-red-200 text-red-800"
           }`}>
             <span>{toastMessage}</span>
           </div>
@@ -275,21 +307,18 @@ export default function DashboardPage() {
         </div>
 
         {/* KPI Panel */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
           <div className="glass-panel p-6 rounded-xl relative overflow-hidden">
             <p className="text-xs font-semibold tracking-wider text-allvino-on-surface-variant uppercase">Total de Rótulos</p>
             <p className="text-3xl font-extrabold text-allvino-text mt-2">{totalWines}</p>
             <div className="absolute top-0 right-0 w-24 h-24 bg-allvino-secondary/5 rounded-full filter blur-md"></div>
           </div>
           <div className="glass-panel p-6 rounded-xl relative overflow-hidden">
-            <p className="text-xs font-semibold tracking-wider text-allvino-on-surface-variant uppercase">Rótulos Ativos</p>
-            <p className="text-3xl font-extrabold text-allvino-primary mt-2">{activeWines}</p>
+            <p className="text-xs font-semibold tracking-wider text-allvino-on-surface-variant uppercase">Rótulos Ativos / Categorias</p>
+            <p className="text-3xl font-extrabold text-allvino-primary mt-2">
+              {activeWines} <span className="text-sm text-allvino-on-surface-variant font-normal">ativos em</span> {uniqueCategoriesCount} <span className="text-sm text-allvino-on-surface-variant font-normal">categorias</span>
+            </p>
             <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full filter blur-md"></div>
-          </div>
-          <div className="glass-panel p-6 rounded-xl relative overflow-hidden">
-            <p className="text-xs font-semibold tracking-wider text-allvino-on-surface-variant uppercase">Fora de Estoque</p>
-            <p className="text-3xl font-extrabold text-allvino-primary mt-2">{outOfStock}</p>
-            <div className="absolute top-0 right-0 w-24 h-24 bg-allvino-primary/5 rounded-full filter blur-md"></div>
           </div>
           <div className="glass-panel p-6 rounded-xl relative overflow-hidden">
             <p className="text-xs font-semibold tracking-wider text-allvino-on-surface-variant uppercase">Preço Médio B2B</p>
@@ -305,7 +334,7 @@ export default function DashboardPage() {
           <div className="relative w-full sm:max-w-md">
             <input
               type="text"
-              placeholder="Buscar por nome, vinícola, uva ou país..."
+              placeholder="Buscar por nome, vinícola, uva, país ou categoria..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-4 pr-10 py-2.5 rounded-lg bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text placeholder-allvino-on-surface-variant/60 focus:outline-none focus:border-allvino-primary/60 transition text-sm"
@@ -333,9 +362,9 @@ export default function DashboardPage() {
                 <thead>
                   <tr className="border-b border-allvino-outline-variant/40 text-xs font-semibold uppercase tracking-wider text-allvino-primary bg-allvino-surface-container-low/40">
                     <th className="py-4 px-6">Vinho</th>
+                    <th className="py-4 px-6">Categoria</th>
                     <th className="py-4 px-6">Uva / Blend</th>
-                    <th className="py-4 px-6">Estoque</th>
-                    <th className="py-4 px-6">Preço</th>
+                    <th className="py-4 px-6">Preço B2B</th>
                     <th className="py-4 px-6 text-center">Status</th>
                     <th className="py-4 px-6 text-right">Ações</th>
                   </tr>
@@ -358,14 +387,14 @@ export default function DashboardPage() {
                           </p>
                         </div>
                       </td>
+                      <td className="py-4 px-6">
+                        <span className="px-2.5 py-0.5 rounded text-xs font-semibold bg-allvino-surface-container-high border border-allvino-outline-variant text-allvino-text">
+                          {product.categoria || "Tinto"}
+                        </span>
+                      </td>
                       <td className="py-4 px-6 text-allvino-text">
                         {product.uva}
                         <p className="text-xs text-allvino-on-surface-variant mt-0.5">{product.teorAlcoolico}% vol</p>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className={`font-semibold ${product.estoque === 0 ? "text-allvino-primary" : "text-allvino-text"}`}>
-                          {product.estoque} un
-                        </span>
                       </td>
                       <td className="py-4 px-6">
                         {product.precoPromocional ? (
@@ -534,7 +563,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Row 4 */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1">
                     Preço Original (R$) *
@@ -561,21 +590,9 @@ export default function DashboardPage() {
                     placeholder="Deixe em branco se não houver"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1">
-                    Estoque (unidades) *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    value={estoque}
-                    onChange={(e) => setEstoque(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text focus:outline-none focus:border-allvino-primary/60 transition text-sm"
-                  />
-                </div>
               </div>
 
-              {/* Status & Preset Image Selector */}
+              {/* Status, Categoria, Image presets */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1">
@@ -590,36 +607,70 @@ export default function DashboardPage() {
                     <option value="false">Inativo (oculto)</option>
                   </select>
                 </div>
-                <div className="md:col-span-2">
+                <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1">
-                    Imagem do Vinho (Selecione um Preset ou Cole a URL)
+                    Categoria do Vinho
                   </label>
-                  <div className="flex flex-col gap-2">
-                    <div className="flex flex-wrap gap-2">
-                      {PRESET_IMAGES.map((preset) => (
-                        <button
-                          key={preset.label}
-                          type="button"
-                          onClick={() => setImagemUrl(preset.url)}
-                          className={`px-3 py-1.5 rounded text-xs font-medium border transition ${
-                            imagemUrl === preset.url
-                              ? "bg-allvino-primary border-allvino-primary text-white font-bold"
-                              : "bg-allvino-surface-container-high border border-allvino-outline-variant text-allvino-text hover:border-allvino-outline-variant/80"
-                          }`}
-                        >
-                          {preset.label}
-                        </button>
+                  <div className="flex gap-1.5">
+                    <select
+                      value={categoria}
+                      onChange={(e) => setCategoria(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-lg bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text focus:outline-none focus:border-allvino-primary/60 transition text-sm"
+                    >
+                      {categoriesList.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
                       ))}
-                    </div>
-                    <input
-                      type="text"
-                      value={imagemUrl}
-                      onChange={(e) => setImagemUrl(e.target.value)}
-                      className="w-full px-4 py-2 rounded bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text text-xs focus:outline-none focus:border-allvino-primary/60 transition"
-                      placeholder="https://exemplo.com/sua-imagem.jpg"
-                    />
+                    </select>
+                    <button
+                      type="button"
+                      onClick={handleAddCategory}
+                      className="px-2.5 rounded bg-allvino-surface-container-high border border-allvino-outline-variant text-allvino-primary hover:bg-allvino-primary hover:text-white font-bold text-sm transition"
+                      title="Nova Categoria"
+                    >
+                      +
+                    </button>
                   </div>
                 </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1">
+                    Presets de Imagem
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {PRESET_IMAGES.map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => setImagemUrl(preset.url)}
+                        className={`px-2.5 py-1.5 rounded text-[10px] font-medium border transition ${
+                          imagemUrl === preset.url
+                            ? "bg-allvino-primary border-allvino-primary text-white font-bold"
+                            : "bg-allvino-surface-container-high border border-allvino-outline-variant text-allvino-text hover:border-allvino-outline-variant/80"
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Image URL custom input & Guideline note */}
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1">
+                  URL da Imagem do Vinho
+                </label>
+                <input
+                  type="text"
+                  value={imagemUrl}
+                  onChange={(e) => setImagemUrl(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text text-xs focus:outline-none focus:border-allvino-primary/60 transition"
+                  placeholder="https://exemplo.com/sua-imagem.jpg"
+                />
+                <p className="text-[10px] text-allvino-on-surface-variant/80 mt-1 font-light">
+                  💡 **Dimensão Recomendada:** Para manter a consistência visual no catálogo digital e PDF, utilize imagens em formato **vertical** de garrafa com **fundo transparente (PNG)**, dimensões sugeridas de **300x700px**.
+                </p>
               </div>
 
               {/* Tasting Notes */}
