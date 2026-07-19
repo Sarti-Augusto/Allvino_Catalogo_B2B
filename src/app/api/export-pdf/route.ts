@@ -184,7 +184,7 @@ export async function GET() {
     }
 
     const page = await browser.newPage();
-    await page.setContent(finalHtml, { waitUntil: "networkidle0" });
+    await page.setContent(finalHtml, { waitUntil: "load" });
 
     const pdfBuffer = await page.pdf({
       format: "A4",
