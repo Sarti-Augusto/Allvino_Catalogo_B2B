@@ -3,10 +3,10 @@ gsd_state_version: '1.0'
 status: planning
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 7
-  completed_plans: 3
-  percent: 42
+  completed_plans: 4
+  percent: 57
 ---
 
 # Project State
@@ -16,23 +16,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-18)
 
 **Core value:** Clientes e distribuidores conseguem visualizar e baixar o catálogo de vinhos atualizado da Allvino em PDF com altíssima fidelidade gráfica a qualquer momento.
-**Current focus:** Phase 3 (Editor de Design e Controle de Templates (Admin))
+**Current focus:** Phase 4 (Motor de PDF (API e Geração))
 
 ## Current Position
 
-Phase: 3 of 5 (Editor de Design e Controle de Templates (Admin))
-Plan: 0 of 1 in current phase
+Phase: 4 of 5 (Motor de PDF (API e Geração))
+Plan: 0 of 2 in current phase
 Status: Ready to plan
-Last activity: 2026-07-18 — Finalização da Fase 2: Implementada autenticação NextAuth.js, proteção middleware para rotas administrativas, APIs de vinhos e o CRUD completo (listagem, KPI, cadastro, edição e exclusão) no dashboard.
+Last activity: 2026-07-19 — Finalização da Fase 3: Criada a API de templates `/api/templates` e `/api/templates/[id]` com controle de transação, e a interface reativa do Editor de Templates no painel admin com visualização prévia da página PDF em tempo real.
 
-Progress: [████░░░░░░] 42%
+Progress: [██████░░░░] 57%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
+- Total plans completed: 4
 - Average duration: 15 min
-- Total execution time: 0.75 hours
+- Total execution time: 1.0 hours
 
 **By Phase:**
 
@@ -40,7 +40,7 @@ Progress: [████░░░░░░] 42%
 |-------|-------|-------|----------|
 | 1. Setup e DB | 1 | 1 | 15 min |
 | 2. Admin & CRUD | 2 | 2 | 15 min |
-| 3. Template Editor | 0 | 1 | - |
+| 3. Template Editor | 1 | 1 | 15 min |
 | 4. PDF Engine | 0 | 2 | - |
 | 5. Vitrine & Filtros | 0 | 1 | - |
 

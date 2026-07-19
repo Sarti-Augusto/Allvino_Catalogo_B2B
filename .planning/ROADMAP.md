@@ -8,7 +8,7 @@ A jornada de desenvolvimento será dividida em 5 fases sequenciais. Iniciamos pe
 
 - [x] **Phase 1: Setup do Projeto e Modelagem do Banco de Dados** - Configurar o Next.js, Prisma, PostgreSQL e carregar templates padrão no seed.
 - [x] **Phase 2: Painel Administrativo, Login e CRUD de Vinhos** - Implementar NextAuth e o gerenciamento completo de vinhos com upload de imagens.
-- [ ] **Phase 3: Editor de Design e Controle de Templates (Admin)** - Desenvolver o painel de edição de estilos visuais e ativação de templates.
+- [x] **Phase 3: Editor de Design e Controle de Templates (Admin)** - Desenvolver o painel de edição de estilos visuais e ativação de templates.
 - [ ] **Phase 4: Motor de PDF (API e Geração)** - Criar o backend de injeção dinâmica e renderização do PDF com alta definição usando Puppeteer.
 - [ ] **Phase 5: Vitrine Pública, Filtros e Acesso ao PDF** - Desenvolver a tela principal pública, filtros de pesquisa e o botão de exportação.
 
@@ -52,7 +52,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 03-01: Interface do Editor de Templates no painel do administrador e salvamento na tabela `Template`.
+- [x] 03-01: Interface do Editor de Templates no painel do administrador e salvamento na tabela `Template`.
 
 ### Phase 4: Motor de PDF (API e Geração)
 **Goal**: Desenvolver o motor de backend que compila vinhos e estilos em um PDF de alto impacto.
@@ -90,6 +90,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Setup e DB | 1/1 | Complete | 2026-07-18 |
 | 2. Admin & CRUD | 2/2 | Complete | 2026-07-18 |
-| 3. Template Editor | 0/1 | Not started | - |
+| 3. Template Editor | 1/1 | Complete | 2026-07-19 |
 | 4. PDF Engine | 0/2 | Not started | - |
 | 5. Vitrine & Filtros | 0/1 | Not started | - |
