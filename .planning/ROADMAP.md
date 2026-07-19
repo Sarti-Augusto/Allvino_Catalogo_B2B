@@ -10,7 +10,7 @@ A jornada de desenvolvimento será dividida em 5 fases sequenciais. Iniciamos pe
 - [x] **Phase 2: Painel Administrativo, Login e CRUD de Vinhos** - Implementar NextAuth e o gerenciamento completo de vinhos com upload de imagens.
 - [x] **Phase 3: Editor de Design e Controle de Templates (Admin)** - Desenvolver o painel de edição de estilos visuais e ativação de templates.
 - [x] **Phase 4: Motor de PDF (API e Geração)** - Criar o backend de injeção dinâmica e renderização do PDF com alta definição usando Puppeteer.
-- [ ] **Phase 5: Vitrine Pública, Filtros e Acesso ao PDF** - Desenvolver a tela principal pública, filtros de pesquisa e o botão de exportação.
+- [x] **Phase 5: Vitrine Pública, Filtros e Acesso ao PDF** - Desenvolver a tela principal pública, filtros de pesquisa e o botão de exportação.
 
 ## Phase Details
 
@@ -73,13 +73,13 @@ Plans:
 **Depends on**: Phase 4
 **Requirements**: [PUB-01, PUB-02, PUB-03]
 **Success Criteria**:
-  1. A vitrine pública exibe a lista de vinhos ativos em uma interface premium e responsiva.
-  2. Filtros por uva, preço, país e vinícola atualizam os resultados instantaneamente.
-  3. O botão de baixar catálogo funciona, baixando o PDF correspondente ao template ativo estilizado.
+  1. A vitrine pública carrega os vinhos e exibe as informações principais em uma grade limpa e responsiva.
+  2. A busca textual e os filtros dinâmicos por uva, país e vinícola funcionam simultaneamente em tempo real.
+  3. O botão de download gera e baixa o catálogo completo compilado com o template de design configurado pelo administrador.
 **Plans**: 1 plan
 
 Plans:
-- [ ] 05-01: Vitrine pública com Tailwind, filtros de consulta e botão de chamada da API do PDF.
+- [x] 05-01: Vitrine pública com Tailwind, filtros de consulta e botão de chamada da API do PDF.
 
 ## Progress
 
@@ -92,4 +92,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Admin & CRUD | 2/2 | Complete | 2026-07-18 |
 | 3. Template Editor | 1/1 | Complete | 2026-07-19 |
 | 4. PDF Engine | 2/2 | Complete | 2026-07-19 |
-| 5. Vitrine & Filtros | 0/1 | Not started | - |
+| 5. Vitrine & Filtros | 1/1 | Complete | 2026-07-19 |

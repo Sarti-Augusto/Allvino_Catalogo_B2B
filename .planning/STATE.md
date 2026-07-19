@@ -1,12 +1,12 @@
 ---
 gsd_state_version: '1.0'
-status: planning
+status: Complete
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 7
-  completed_plans: 6
-  percent: 85
+  completed_plans: 7
+  percent: 100
 ---
 
 # Project State
@@ -16,23 +16,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-18)
 
 **Core value:** Clientes e distribuidores conseguem visualizar e baixar o catálogo de vinhos atualizado da Allvino em PDF com altíssima fidelidade gráfica a qualquer momento.
-**Current focus:** Phase 5 (Vitrine Pública, Filtros e Acesso ao PDF)
+**Current focus:** Projeto Concluído
 
 ## Current Position
 
 Phase: 5 of 5 (Vitrine Pública, Filtros e Acesso ao PDF)
-Plan: 0 of 1 in current phase
-Status: Ready to plan
-Last activity: 2026-07-19 — Finalização da Fase 4: Implementada a API `/api/export-pdf` que resolve o template ativo e os vinhos cadastrados ativos, renderizando e exportando o arquivo PDF de alta definição gráfica via Puppeteer.
+Plan: 1 of 1 in current phase
+Status: Complete
+Last activity: 2026-07-19 — Conclusão Geral do Projeto: Desenvolvida a vitrine pública de vinhos da Allvino, completa com filtros de pesquisa responsivos (busca textual, uva, país de origem, vinícola e ordenação de preços), e integrada com o motor de exportação de PDF (Fase 4).
 
-Progress: [████████░░] 85%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
+- Total plans completed: 7
 - Average duration: 15 min
-- Total execution time: 1.5 hours
+- Total execution time: 1.75 hours
 
 **By Phase:**
 
@@ -42,7 +42,7 @@ Progress: [████████░░] 85%
 | 2. Admin & CRUD | 2 | 2 | 15 min |
 | 3. Template Editor | 1 | 1 | 15 min |
 | 4. PDF Engine | 2 | 2 | 15 min |
-| 5. Vitrine & Filtros | 0 | 1 | - |
+| 5. Vitrine & Filtros | 1 | 1 | 15 min |
 
 **Recent Trend:**
 - Last 5 plans: [15]
