@@ -199,25 +199,25 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="min-h-screen bg-allvino-dark-950 text-white font-sans pb-12">
+    <div className="min-h-screen bg-allvino-background text-allvino-text font-sans pb-12">
       {/* Navigation Header */}
-      <nav className="border-b border-allvino-dark-800 bg-allvino-dark-900/80 backdrop-blur-md sticky top-0 z-40">
+      <nav className="border-b border-allvino-outline-variant/30 bg-allvino-surface-container-low/80 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-8">
-              <span className="text-xl font-bold font-serif text-allvino-gold-400 tracking-wider">
+              <span className="text-xl font-bold font-serif text-allvino-primary tracking-wider">
                 ALLVINO ADMIN
               </span>
               <div className="hidden md:flex space-x-4">
                 <Link
                   href="/admin/dashboard"
-                  className="px-3 py-2 rounded-md text-sm font-medium bg-allvino-wine-900/40 text-allvino-gold-400 border border-allvino-wine-800/30"
+                  className="px-3 py-2 rounded-md text-sm font-medium bg-allvino-primary text-white border border-allvino-primary-container"
                 >
                   Vinhos
                 </Link>
                 <Link
                   href="/admin/templates"
-                  className="px-3 py-2 rounded-md text-sm font-medium text-allvino-dark-200 hover:text-allvino-gold-400 transition"
+                  className="px-3 py-2 rounded-md text-sm font-medium text-allvino-on-surface-variant hover:text-allvino-primary transition"
                 >
                   Editor de Templates
                 </Link>
@@ -227,13 +227,13 @@ export default function DashboardPage() {
               <a
                 href="/"
                 target="_blank"
-                className="text-xs text-allvino-dark-300 hover:text-allvino-gold-400 transition mr-2"
+                className="text-xs text-allvino-on-surface-variant hover:text-allvino-primary transition mr-2"
               >
                 Ver Vitrine Pública
               </a>
               <button
                 onClick={() => signOut({ callbackUrl: "/admin/login" })}
-                className="px-4 py-1.5 rounded bg-allvino-dark-800 hover:bg-allvino-wine-800 border border-allvino-dark-700 hover:border-allvino-wine-600 transition text-xs font-semibold"
+                className="px-4 py-1.5 rounded bg-allvino-surface-container-high hover:bg-allvino-primary hover:text-white border border-allvino-outline-variant hover:border-allvino-primary transition text-xs font-semibold"
               >
                 Sair
               </button>
@@ -249,8 +249,8 @@ export default function DashboardPage() {
         {toastMessage && (
           <div className={`fixed bottom-5 right-5 z-50 px-6 py-3.5 rounded-lg shadow-2xl border flex items-center space-x-2 text-sm font-medium transition-all ${
             toastType === "success" 
-              ? "bg-emerald-950/90 border-emerald-500/30 text-emerald-200" 
-              : "bg-red-950/90 border-red-500/30 text-red-200"
+              ? "bg-emerald-50 border-emerald-200 text-emerald-800" 
+              : "bg-red-50 border-red-200 text-red-855"
           }`}>
             <span>{toastMessage}</span>
           </div>
@@ -259,16 +259,16 @@ export default function DashboardPage() {
         {/* Dashboard Title & Quick Actions */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold font-serif text-allvino-gold-400">
+            <h1 className="text-3xl font-bold font-serif text-allvino-primary">
               Gerenciamento de Catálogo
             </h1>
-            <p className="text-allvino-dark-300 text-sm mt-1">
+            <p className="text-allvino-on-surface-variant text-sm mt-1">
               Olá, {session?.user?.name || "Administrador"}. Controle os vinhos expostos na vitrine e exportados no PDF.
             </p>
           </div>
           <button
             onClick={handleOpenCreateModal}
-            className="px-5 py-2.5 rounded-lg bg-allvino-wine-800 hover:bg-allvino-wine-700 text-white font-semibold text-sm shadow-md transition duration-200 flex items-center gap-2 border border-allvino-wine-600/35"
+            className="px-5 py-2.5 rounded-lg bg-allvino-primary hover:bg-allvino-primary-container text-white font-semibold text-sm shadow-md transition duration-200 flex items-center gap-2 border border-allvino-primary"
           >
             + Adicionar Vinho
           </button>
@@ -277,26 +277,26 @@ export default function DashboardPage() {
         {/* KPI Panel */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
           <div className="glass-panel p-6 rounded-xl relative overflow-hidden">
-            <p className="text-xs font-semibold tracking-wider text-allvino-dark-300 uppercase">Total de Rótulos</p>
-            <p className="text-3xl font-extrabold text-white mt-2">{totalWines}</p>
-            <div className="absolute top-0 right-0 w-24 h-24 bg-allvino-gold-400/5 rounded-full filter blur-md"></div>
+            <p className="text-xs font-semibold tracking-wider text-allvino-on-surface-variant uppercase">Total de Rótulos</p>
+            <p className="text-3xl font-extrabold text-allvino-text mt-2">{totalWines}</p>
+            <div className="absolute top-0 right-0 w-24 h-24 bg-allvino-secondary/5 rounded-full filter blur-md"></div>
           </div>
           <div className="glass-panel p-6 rounded-xl relative overflow-hidden">
-            <p className="text-xs font-semibold tracking-wider text-allvino-dark-300 uppercase">Rótulos Ativos</p>
-            <p className="text-3xl font-extrabold text-allvino-gold-400 mt-2">{activeWines}</p>
+            <p className="text-xs font-semibold tracking-wider text-allvino-on-surface-variant uppercase">Rótulos Ativos</p>
+            <p className="text-3xl font-extrabold text-allvino-primary mt-2">{activeWines}</p>
             <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full filter blur-md"></div>
           </div>
           <div className="glass-panel p-6 rounded-xl relative overflow-hidden">
-            <p className="text-xs font-semibold tracking-wider text-allvino-dark-300 uppercase">Fora de Estoque</p>
-            <p className="text-3xl font-extrabold text-allvino-wine-500 mt-2">{outOfStock}</p>
-            <div className="absolute top-0 right-0 w-24 h-24 bg-allvino-wine-800/5 rounded-full filter blur-md"></div>
+            <p className="text-xs font-semibold tracking-wider text-allvino-on-surface-variant uppercase">Fora de Estoque</p>
+            <p className="text-3xl font-extrabold text-allvino-primary mt-2">{outOfStock}</p>
+            <div className="absolute top-0 right-0 w-24 h-24 bg-allvino-primary/5 rounded-full filter blur-md"></div>
           </div>
           <div className="glass-panel p-6 rounded-xl relative overflow-hidden">
-            <p className="text-xs font-semibold tracking-wider text-allvino-dark-300 uppercase">Preço Médio B2B</p>
-            <p className="text-3xl font-extrabold text-white mt-2">
+            <p className="text-xs font-semibold tracking-wider text-allvino-on-surface-variant uppercase">Preço Médio B2B</p>
+            <p className="text-3xl font-extrabold text-allvino-text mt-2">
               R$ {avgPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
-            <div className="absolute top-0 right-0 w-24 h-24 bg-allvino-gold-400/5 rounded-full filter blur-md"></div>
+            <div className="absolute top-0 right-0 w-24 h-24 bg-allvino-secondary/5 rounded-full filter blur-md"></div>
           </div>
         </div>
 
@@ -308,30 +308,30 @@ export default function DashboardPage() {
               placeholder="Buscar por nome, vinícola, uva ou país..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-4 pr-10 py-2.5 rounded-lg bg-allvino-dark-900 border border-allvino-dark-800 text-white placeholder-allvino-dark-500 focus:outline-none focus:border-allvino-gold-400/60 transition text-sm"
+              className="w-full pl-4 pr-10 py-2.5 rounded-lg bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text placeholder-allvino-on-surface-variant/60 focus:outline-none focus:border-allvino-primary/60 transition text-sm"
             />
           </div>
-          <div className="text-xs text-allvino-dark-300">
-            Exibindo <span className="text-allvino-gold-400 font-semibold">{filteredProducts.length}</span> de {totalWines} rótulos.
+          <div className="text-xs text-allvino-on-surface-variant">
+            Exibindo <span className="text-allvino-primary font-semibold">{filteredProducts.length}</span> de {totalWines} rótulos.
           </div>
         </div>
 
         {/* Table View */}
-        <div className="glass-panel rounded-xl overflow-hidden shadow-xl border border-allvino-dark-800">
+        <div className="glass-panel rounded-xl overflow-hidden shadow-xl border border-allvino-outline-variant/40">
           <div className="overflow-x-auto">
             {loading ? (
-              <div className="py-20 text-center text-allvino-dark-300 space-y-3">
-                <div className="w-10 h-10 border-4 border-allvino-wine-800 border-t-allvino-gold-400 rounded-full animate-spin mx-auto"></div>
+              <div className="py-20 text-center text-allvino-on-surface-variant space-y-3">
+                <div className="w-10 h-10 border-4 border-allvino-primary border-t-allvino-secondary rounded-full animate-spin mx-auto"></div>
                 <p className="text-xs tracking-wider">Carregando catálogo...</p>
               </div>
             ) : filteredProducts.length === 0 ? (
-              <div className="py-20 text-center text-allvino-dark-300">
+              <div className="py-20 text-center text-allvino-on-surface-variant">
                 <p className="text-sm">Nenhum vinho encontrado com os filtros aplicados.</p>
               </div>
             ) : (
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-allvino-dark-800 text-xs font-semibold uppercase tracking-wider text-allvino-gold-400 bg-allvino-dark-900/40">
+                  <tr className="border-b border-allvino-outline-variant/40 text-xs font-semibold uppercase tracking-wider text-allvino-primary bg-allvino-surface-container-low/40">
                     <th className="py-4 px-6">Vinho</th>
                     <th className="py-4 px-6">Uva / Blend</th>
                     <th className="py-4 px-6">Estoque</th>
@@ -340,11 +340,11 @@ export default function DashboardPage() {
                     <th className="py-4 px-6 text-right">Ações</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-allvino-dark-850 text-sm">
+                <tbody className="divide-y divide-allvino-outline-variant/20 text-sm">
                   {filteredProducts.map((product) => (
-                    <tr key={product.id} className="hover:bg-allvino-dark-900/30 transition duration-150">
+                    <tr key={product.id} className="hover:bg-allvino-surface-container-lowest/50 transition duration-150">
                       <td className="py-4 px-6 flex items-center space-x-4">
-                        <div className="w-12 h-14 bg-white rounded-md p-1 border border-allvino-dark-700 flex items-center justify-center flex-shrink-0">
+                        <div className="w-12 h-14 bg-white rounded-md p-1 border border-allvino-outline-variant/50 flex items-center justify-center flex-shrink-0">
                           <img
                             src={product.imagemUrl}
                             alt={product.name}
@@ -352,33 +352,33 @@ export default function DashboardPage() {
                           />
                         </div>
                         <div>
-                          <p className="font-semibold text-white">{product.name}</p>
-                          <p className="text-xs text-allvino-dark-300">
+                          <p className="font-semibold text-allvino-text">{product.name}</p>
+                          <p className="text-xs text-allvino-on-surface-variant">
                             {product.vinicola} • {product.paisOrigem} ({product.regiao}) • Safra {product.safra}
                           </p>
                         </div>
                       </td>
-                      <td className="py-4 px-6 text-allvino-dark-200">
+                      <td className="py-4 px-6 text-allvino-text">
                         {product.uva}
-                        <p className="text-xs text-allvino-dark-400 mt-0.5">{product.teorAlcoolico}% vol</p>
+                        <p className="text-xs text-allvino-on-surface-variant mt-0.5">{product.teorAlcoolico}% vol</p>
                       </td>
                       <td className="py-4 px-6">
-                        <span className={`font-semibold ${product.estoque === 0 ? "text-allvino-wine-500" : "text-white"}`}>
+                        <span className={`font-semibold ${product.estoque === 0 ? "text-allvino-primary" : "text-allvino-text"}`}>
                           {product.estoque} un
                         </span>
                       </td>
                       <td className="py-4 px-6">
                         {product.precoPromocional ? (
                           <div className="space-y-0.5">
-                            <span className="text-allvino-wine-400 font-bold block">
+                            <span className="text-allvino-primary font-bold block">
                               R$ {product.precoPromocional.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                             </span>
-                            <span className="text-xs text-allvino-dark-400 line-through">
+                            <span className="text-xs text-allvino-on-surface-variant line-through">
                               R$ {product.precoOriginal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                             </span>
                           </div>
                         ) : (
-                          <span className="text-white font-semibold">
+                          <span className="text-allvino-text font-semibold">
                             R$ {product.precoOriginal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                           </span>
                         )}
@@ -386,8 +386,8 @@ export default function DashboardPage() {
                       <td className="py-4 px-6 text-center">
                         <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
                           product.status 
-                            ? "bg-emerald-950/60 border border-emerald-500/20 text-emerald-400" 
-                            : "bg-allvino-dark-800 border border-allvino-dark-700 text-allvino-dark-300"
+                            ? "bg-emerald-50 border border-emerald-200 text-emerald-800" 
+                            : "bg-allvino-surface-container-high border border-allvino-outline-variant text-allvino-on-surface-variant"
                         }`}>
                           {product.status ? "Ativo" : "Inativo"}
                         </span>
@@ -395,13 +395,13 @@ export default function DashboardPage() {
                       <td className="py-4 px-6 text-right space-x-2">
                         <button
                           onClick={() => handleOpenEditModal(product)}
-                          className="px-3 py-1.5 rounded bg-allvino-dark-800 hover:bg-allvino-gold-400 border border-allvino-dark-700 hover:border-allvino-gold-500 text-allvino-dark-200 hover:text-allvino-dark-950 font-medium text-xs transition"
+                          className="px-3 py-1.5 rounded bg-allvino-surface-container-high hover:bg-allvino-secondary border border-allvino-outline-variant hover:border-allvino-secondary text-allvino-text hover:text-white font-medium text-xs transition"
                         >
                           Editar
                         </button>
                         <button
                           onClick={() => handleDelete(product.id)}
-                          className="px-3 py-1.5 rounded bg-allvino-dark-850 hover:bg-allvino-wine-900 border border-allvino-dark-800 hover:border-allvino-wine-700 text-allvino-wine-500 hover:text-white font-medium text-xs transition"
+                          className="px-3 py-1.5 rounded bg-allvino-surface-container-high hover:bg-allvino-primary border border-allvino-outline-variant hover:border-allvino-primary text-allvino-primary hover:text-white font-medium text-xs transition"
                         >
                           Excluir
                         </button>
@@ -417,15 +417,15 @@ export default function DashboardPage() {
 
       {/* CRUD Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-allvino-dark-950/70 backdrop-blur-sm overflow-y-auto">
-          <div className="w-full max-w-3xl glass-panel rounded-2xl p-6 md:p-8 shadow-2xl relative border border-allvino-gold-400/25 max-h-[90vh] overflow-y-auto mt-10">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-allvino-text/25 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-3xl glass-panel rounded-2xl p-6 md:p-8 shadow-2xl relative border border-allvino-outline-variant/45 max-h-[90vh] overflow-y-auto mt-10 text-allvino-text">
             <button
               onClick={() => setShowModal(false)}
-              className="absolute top-4 right-4 text-allvino-dark-300 hover:text-white text-xl"
+              className="absolute top-4 right-4 text-allvino-on-surface-variant hover:text-allvino-primary text-xl"
             >
               ✕
             </button>
-            <h2 className="text-2xl font-bold font-serif text-allvino-gold-400 mb-6">
+            <h2 className="text-2xl font-bold font-serif text-allvino-primary mb-6">
               {editingProduct ? "Editar Vinho" : "Adicionar Novo Vinho"}
             </h2>
 
@@ -433,7 +433,7 @@ export default function DashboardPage() {
               {/* Row 1 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-gold-400 mb-1">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1">
                     Nome do Vinho *
                   </label>
                   <input
@@ -441,12 +441,12 @@ export default function DashboardPage() {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg bg-allvino-dark-900 border border-allvino-dark-800 text-white placeholder-allvino-dark-500 focus:outline-none focus:border-allvino-gold-400/60 transition text-sm"
+                    className="w-full px-4 py-2.5 rounded-lg bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text placeholder-allvino-on-surface-variant focus:outline-none focus:border-allvino-primary/60 transition text-sm"
                     placeholder="Château Margaux"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-gold-400 mb-1">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1">
                     Vinícola *
                   </label>
                   <input
@@ -454,7 +454,7 @@ export default function DashboardPage() {
                     required
                     value={vinicola}
                     onChange={(e) => setVinicola(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg bg-allvino-dark-900 border border-allvino-dark-800 text-white placeholder-allvino-dark-500 focus:outline-none focus:border-allvino-gold-400/60 transition text-sm"
+                    className="w-full px-4 py-2.5 rounded-lg bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text placeholder-allvino-on-surface-variant focus:outline-none focus:border-allvino-primary/60 transition text-sm"
                     placeholder="Maison Margaux"
                   />
                 </div>
@@ -463,7 +463,7 @@ export default function DashboardPage() {
               {/* Row 2 */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-gold-400 mb-1">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1">
                     Uva / Blend *
                   </label>
                   <input
@@ -471,12 +471,12 @@ export default function DashboardPage() {
                     required
                     value={uva}
                     onChange={(e) => setUva(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg bg-allvino-dark-900 border border-allvino-dark-800 text-white placeholder-allvino-dark-500 focus:outline-none focus:border-allvino-gold-400/60 transition text-sm"
+                    className="w-full px-4 py-2.5 rounded-lg bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text placeholder-allvino-on-surface-variant focus:outline-none focus:border-allvino-primary/60 transition text-sm"
                     placeholder="Cabernet Sauvignon, Merlot"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-gold-400 mb-1">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1">
                     Teor Alcoólico (%) *
                   </label>
                   <input
@@ -485,11 +485,11 @@ export default function DashboardPage() {
                     required
                     value={teorAlcoolico}
                     onChange={(e) => setTeorAlcoolico(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg bg-allvino-dark-900 border border-allvino-dark-800 text-white focus:outline-none focus:border-allvino-gold-400/60 transition text-sm"
+                    className="w-full px-4 py-2.5 rounded-lg bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text focus:outline-none focus:border-allvino-primary/60 transition text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-gold-400 mb-1">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1">
                     Safra *
                   </label>
                   <input
@@ -497,7 +497,7 @@ export default function DashboardPage() {
                     required
                     value={safra}
                     onChange={(e) => setSafra(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg bg-allvino-dark-900 border border-allvino-dark-800 text-white focus:outline-none focus:border-allvino-gold-400/60 transition text-sm"
+                    className="w-full px-4 py-2.5 rounded-lg bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text focus:outline-none focus:border-allvino-primary/60 transition text-sm"
                     placeholder="2018"
                   />
                 </div>
@@ -506,7 +506,7 @@ export default function DashboardPage() {
               {/* Row 3 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-gold-400 mb-1">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1">
                     País de Origem *
                   </label>
                   <input
@@ -514,12 +514,12 @@ export default function DashboardPage() {
                     required
                     value={paisOrigem}
                     onChange={(e) => setPaisOrigem(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg bg-allvino-dark-900 border border-allvino-dark-800 text-white focus:outline-none focus:border-allvino-gold-400/60 transition text-sm"
+                    className="w-full px-4 py-2.5 rounded-lg bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text focus:outline-none focus:border-allvino-primary/60 transition text-sm"
                     placeholder="França"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-gold-400 mb-1">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1">
                     Região *
                   </label>
                   <input
@@ -527,7 +527,7 @@ export default function DashboardPage() {
                     required
                     value={regiao}
                     onChange={(e) => setRegiao(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg bg-allvino-dark-900 border border-allvino-dark-800 text-white focus:outline-none focus:border-allvino-gold-400/60 transition text-sm"
+                    className="w-full px-4 py-2.5 rounded-lg bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text focus:outline-none focus:border-allvino-primary/60 transition text-sm"
                     placeholder="Bordeaux"
                   />
                 </div>
@@ -536,7 +536,7 @@ export default function DashboardPage() {
               {/* Row 4 */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-gold-400 mb-1">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1">
                     Preço Original (R$) *
                   </label>
                   <input
@@ -545,11 +545,11 @@ export default function DashboardPage() {
                     required
                     value={precoOriginal}
                     onChange={(e) => setPrecoOriginal(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg bg-allvino-dark-900 border border-allvino-dark-800 text-white focus:outline-none focus:border-allvino-gold-400/60 transition text-sm"
+                    className="w-full px-4 py-2.5 rounded-lg bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text focus:outline-none focus:border-allvino-primary/60 transition text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-gold-400 mb-1">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1">
                     Preço Promocional (R$)
                   </label>
                   <input
@@ -557,12 +557,12 @@ export default function DashboardPage() {
                     step="0.01"
                     value={precoPromocional}
                     onChange={(e) => setPrecoPromocional(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg bg-allvino-dark-900 border border-allvino-dark-800 text-white focus:outline-none focus:border-allvino-gold-400/60 transition text-sm"
+                    className="w-full px-4 py-2.5 rounded-lg bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text focus:outline-none focus:border-allvino-primary/60 transition text-sm"
                     placeholder="Deixe em branco se não houver"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-gold-400 mb-1">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1">
                     Estoque (unidades) *
                   </label>
                   <input
@@ -570,7 +570,7 @@ export default function DashboardPage() {
                     required
                     value={estoque}
                     onChange={(e) => setEstoque(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg bg-allvino-dark-900 border border-allvino-dark-800 text-white focus:outline-none focus:border-allvino-gold-400/60 transition text-sm"
+                    className="w-full px-4 py-2.5 rounded-lg bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text focus:outline-none focus:border-allvino-primary/60 transition text-sm"
                   />
                 </div>
               </div>
@@ -578,20 +578,20 @@ export default function DashboardPage() {
               {/* Status & Preset Image Selector */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-gold-400 mb-1">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1">
                     Status do Produto
                   </label>
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg bg-allvino-dark-900 border border-allvino-dark-800 text-white focus:outline-none focus:border-allvino-gold-400/60 transition text-sm"
+                    className="w-full px-4 py-2.5 rounded-lg bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text focus:outline-none focus:border-allvino-primary/60 transition text-sm"
                   >
                     <option value="true">Ativo (visível no catálogo)</option>
                     <option value="false">Inativo (oculto)</option>
                   </select>
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-gold-400 mb-1">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1">
                     Imagem do Vinho (Selecione um Preset ou Cole a URL)
                   </label>
                   <div className="flex flex-col gap-2">
@@ -603,8 +603,8 @@ export default function DashboardPage() {
                           onClick={() => setImagemUrl(preset.url)}
                           className={`px-3 py-1.5 rounded text-xs font-medium border transition ${
                             imagemUrl === preset.url
-                              ? "bg-allvino-gold-400 border-allvino-gold-500 text-allvino-dark-950 font-bold"
-                              : "bg-allvino-dark-900 border-allvino-dark-800 text-allvino-dark-200 hover:border-allvino-dark-700"
+                              ? "bg-allvino-primary border-allvino-primary text-white font-bold"
+                              : "bg-allvino-surface-container-high border border-allvino-outline-variant text-allvino-text hover:border-allvino-outline-variant/80"
                           }`}
                         >
                           {preset.label}
@@ -615,7 +615,7 @@ export default function DashboardPage() {
                       type="text"
                       value={imagemUrl}
                       onChange={(e) => setImagemUrl(e.target.value)}
-                      className="w-full px-4 py-2 rounded bg-allvino-dark-900 border border-allvino-dark-800 text-white text-xs focus:outline-none focus:border-allvino-gold-400/60 transition"
+                      className="w-full px-4 py-2 rounded bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text text-xs focus:outline-none focus:border-allvino-primary/60 transition"
                       placeholder="https://exemplo.com/sua-imagem.jpg"
                     />
                   </div>
@@ -624,29 +624,29 @@ export default function DashboardPage() {
 
               {/* Tasting Notes */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-gold-400 mb-1">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1">
                   Notas de Degustação / Ficha Técnica
                 </label>
                 <textarea
                   value={notasDegustacao}
                   onChange={(e) => setNotasDegustacao(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-lg bg-allvino-dark-900 border border-allvino-dark-800 text-white placeholder-allvino-dark-500 focus:outline-none focus:border-allvino-gold-400/60 transition text-sm h-24 resize-none"
+                  className="w-full px-4 py-2.5 rounded-lg bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text placeholder-allvino-on-surface-variant focus:outline-none focus:border-allvino-primary/60 transition text-sm h-24 resize-none"
                   placeholder="Descreva as qualidades organolépticas, cor, aroma, sabor e harmonização..."
                 />
               </div>
 
               {/* Submit & Cancel */}
-              <div className="flex justify-end space-x-3 pt-4 border-t border-allvino-dark-800">
+              <div className="flex justify-end space-x-3 pt-4 border-t border-allvino-outline-variant/30">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-5 py-2.5 rounded-lg bg-allvino-dark-800 hover:bg-allvino-dark-750 text-allvino-dark-200 text-sm font-semibold transition"
+                  className="px-5 py-2.5 rounded-lg bg-allvino-surface-container-high hover:bg-allvino-surface-container-highest text-allvino-text text-sm font-semibold transition"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 rounded-lg bg-allvino-wine-800 hover:bg-allvino-wine-700 text-white text-sm font-semibold transition shadow-md"
+                  className="px-6 py-2.5 rounded-lg bg-allvino-primary hover:bg-allvino-primary-container text-white text-sm font-semibold transition shadow-md"
                 >
                   {editingProduct ? "Salvar Alterações" : "Cadastrar Vinho"}
                 </button>

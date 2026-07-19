@@ -37,30 +37,30 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-allvino-dark-950 px-4 relative overflow-hidden">
+    <div className="flex items-center justify-center min-h-screen bg-allvino-background px-4 relative overflow-hidden">
       {/* Background design accents */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-allvino-wine-950 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-allvino-gold-950 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse delay-75"></div>
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-allvino-primary-container rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-allvino-secondary-container rounded-full mix-blend-multiply filter blur-3xl opacity-15 animate-pulse delay-75"></div>
 
-      <div className="w-full max-w-md glass-panel rounded-2xl p-8 shadow-2xl relative z-10 border border-allvino-gold-400/20">
+      <div className="w-full max-w-md glass-panel rounded-2xl p-8 shadow-2xl relative z-10 border border-allvino-outline-variant/40">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-extrabold font-serif tracking-tight text-allvino-gold-400">
+          <h1 className="text-4xl font-extrabold font-serif tracking-tight text-allvino-primary">
             ALLVINO
           </h1>
-          <p className="text-sm text-allvino-dark-300 mt-2 font-light">
+          <p className="text-sm text-allvino-on-surface-variant mt-2 font-light">
             Painel de Gestão do Catálogo B2B
           </p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 rounded-lg bg-red-950/40 border border-red-500/35 text-red-200 text-sm">
+          <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-gold-400 mb-2">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-2">
               E-mail corporativo
             </label>
             <input
@@ -68,13 +68,13 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-3 rounded-lg bg-allvino-dark-900 border border-allvino-dark-700 text-white placeholder-allvino-dark-500 focus:outline-none focus:border-allvino-gold-400/60 transition"
+              className="w-full px-4 py-3 rounded-lg bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text placeholder-allvino-on-surface-variant/60 focus:outline-none focus:border-allvino-primary transition"
               placeholder="seuemail@allvino.com"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-gold-400 mb-2">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-2">
               Senha de acesso
             </label>
             <input
@@ -82,7 +82,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-3 rounded-lg bg-allvino-dark-900 border border-allvino-dark-700 text-white placeholder-allvino-dark-500 focus:outline-none focus:border-allvino-gold-400/60 transition"
+              className="w-full px-4 py-3 rounded-lg bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text placeholder-allvino-on-surface-variant/60 focus:outline-none focus:border-allvino-primary transition"
               placeholder="••••••••"
             />
           </div>
@@ -90,7 +90,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 px-4 rounded-lg bg-allvino-wine-800 hover:bg-allvino-wine-700 disabled:opacity-50 text-white font-semibold tracking-wide transition duration-200 shadow-lg hover:shadow-allvino-wine-900/50"
+            className="w-full py-3.5 px-4 rounded-lg bg-allvino-primary hover:bg-allvino-primary-container disabled:opacity-50 text-white font-semibold tracking-wide transition duration-200 shadow-lg hover:shadow-allvino-primary/20"
           >
             {loading ? "Autenticando..." : "Entrar no Painel"}
           </button>
@@ -99,7 +99,7 @@ export default function LoginPage() {
         <div className="mt-8 text-center">
           <a
             href="/"
-            className="text-xs text-allvino-dark-400 hover:text-allvino-gold-400 transition"
+            className="text-xs text-allvino-on-surface-variant hover:text-allvino-primary transition"
           >
             ← Voltar para a vitrine pública
           </a>

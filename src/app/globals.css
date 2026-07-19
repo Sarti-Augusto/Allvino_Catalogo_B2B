@@ -11,34 +11,35 @@
 
 body {
   font-family: var(--font-sans);
-  background-color: #0f0f11;
-  color: #e7e7e8;
+  background-color: #fcf9f8;
+  color: #1c1b1b;
 }
 
-/* Custom premium elements */
+/* Custom premium elements - light theme aligned */
 .gold-gradient {
-  background: linear-gradient(135deg, #e2ccab 0%, #c5a880 50%, #b48d56 100%);
+  background: linear-gradient(135deg, #ffe088 0%, #e9c349 50%, #735c00 100%);
 }
 
 .wine-gradient {
-  background: linear-gradient(135deg, #80282d 0%, #5c1d20 50%, #3c1214 100%);
+  background: linear-gradient(135deg, #ffdada 0%, #58111a 50%, #390009 100%);
 }
 
 .glass-panel {
-  background: rgba(34, 34, 39, 0.7);
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(197, 168, 128, 0.15);
+  border: 1px solid rgba(115, 92, 0, 0.18);
+  box-shadow: 0 4px 30px rgba(28, 27, 27, 0.05);
 }
 
 .glass-input {
-  background: rgba(24, 24, 28, 0.6);
-  border: 1px solid rgba(197, 168, 128, 0.1);
-  color: #ffffff;
+  background: rgba(246, 243, 242, 0.7);
+  border: 1px solid rgba(115, 92, 0, 0.15);
+  color: #1c1b1b;
   transition: all 0.2s ease-in-out;
 }
 
 .glass-input:focus {
-  border-color: rgba(197, 168, 128, 0.5);
-  box-shadow: 0 0 8px rgba(197, 168, 128, 0.2);
+  border-color: rgba(57, 0, 9, 0.5); /* Primary Bordeaux focus */
+  box-shadow: 0 0 8px rgba(57, 0, 9, 0.15);
   outline: none;
 }

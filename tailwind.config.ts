@@ -10,45 +10,27 @@ const config: Config = {
     extend: {
       colors: {
         allvino: {
-          wine: {
-            50: "#fdf2f2",
-            100: "#fbe8e8",
-            200: "#f7d5d5",
-            300: "#f1b3b3",
-            400: "#e68484",
-            500: "#d35858",
-            600: "#b93d3d",
-            700: "#9b2c2c",
-            800: "#80282d", // core wine
-            900: "#5c1d20", // dark wine
-            950: "#3c1214", // deep dark wine
-          },
-          gold: {
-            50: "#faf8f5",
-            100: "#f4ede0",
-            200: "#e6d7bc",
-            300: "#d4bc91",
-            400: "#c5a880", // core gold
-            500: "#b48d56",
-            600: "#a37a47",
-            700: "#876237",
-            800: "#6d4e2d",
-            900: "#583e25",
-            950: "#3d2a18",
-          },
-          dark: {
-            50: "#f6f6f6",
-            100: "#e7e7e8",
-            200: "#cfcfd1",
-            300: "#a9a9ad",
-            400: "#7c7c82",
-            500: "#5b5b61",
-            600: "#49494e",
-            700: "#3e3e42",
-            800: "#222227", // panel grey
-            900: "#18181c", // deep grey
-            950: "#0f0f11", // pure background black-grey
-          }
+          background: "#fcf9f8",
+          text: "#1c1b1b",
+          primary: "#390009", // Vinho Bordeaux escuro
+          "primary-container": "#58111a", // Vinho Bordeaux médio
+          "on-primary-container": "#db767b",
+          secondary: "#735c00", // Dourado antigo
+          "secondary-container": "#fed65b",
+          "on-secondary-container": "#745c00",
+          outline: "#877272",
+          "outline-variant": "#dac0c0",
+          
+          // Níveis de superfície para Tonal Layering
+          surface: "#fcf9f8",
+          "surface-dim": "#dcd9d9",
+          "surface-container-lowest": "#ffffff",
+          "surface-container-low": "#f6f3f2",
+          "surface-container": "#f0eded",
+          "surface-container-high": "#eae7e7",
+          "surface-container-highest": "#e5e2e1",
+          "on-surface": "#1c1b1b",
+          "on-surface-variant": "#554242",
         }
       },
       fontFamily: {
