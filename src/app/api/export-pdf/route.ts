@@ -170,11 +170,18 @@ export async function GET() {
     `;
     finalHtml = finalHtml.replace("</head>", `${pageBreakStyles}</head>`);
 
-    // 6. Launch Puppeteer to generate high-fidelity PDF
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
+    // 6. Launch or connect Puppeteer to generate high-fidelity PDF
+    const browserWSEndpoint = process.env.BROWSERLESS_CONNECT_URL;
+    if (browserWSEndpoint) {
+      browser = await puppeteer.connect({
+        browserWSEndpoint,
+      });
+    } else {
+      browser = await puppeteer.launch({
+        headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      });
+    }
 
     const page = await browser.newPage();
     await page.setContent(finalHtml, { waitUntil: "networkidle0" });
