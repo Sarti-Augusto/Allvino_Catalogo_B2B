@@ -83,11 +83,11 @@ export async function GET() {
     const coverVerticalOffset = typeof styles.coverVerticalOffset === "number" ? styles.coverVerticalOffset : 0;
 
     // Fine-tuning product page parameters (Bottle size & text dimensions)
-    const productImgHeight = typeof styles.productImgHeight === "number" ? styles.productImgHeight : 480;
+    const productImgHeight = typeof styles.productImgHeight === "number" ? styles.productImgHeight : 560;
     const productImgMaxWidth = Math.round(productImgHeight * 0.52);
-    const productDescFontSize = typeof styles.productDescFontSize === "number" ? styles.productDescFontSize : 14;
-    const productNameFontSize = typeof styles.productNameFontSize === "number" ? styles.productNameFontSize : 28;
-    const productSpecsFontSize = typeof styles.productSpecsFontSize === "number" ? styles.productSpecsFontSize : 10;
+    const productDescFontSize = typeof styles.productDescFontSize === "number" ? styles.productDescFontSize : 16;
+    const productNameFontSize = typeof styles.productNameFontSize === "number" ? styles.productNameFontSize : 32;
+    const productSpecsFontSize = typeof styles.productSpecsFontSize === "number" ? styles.productSpecsFontSize : 11.5;
 
     // 6. Resolve font family CSS
     const fontCSS =

@@ -95,10 +95,10 @@ export default function TemplatesPage() {
   const [coverVerticalOffset, setCoverVerticalOffset] = useState(0);
 
   // Product Page Fine-Tuning State (Bottle & Descriptions)
-  const [productImgHeight, setProductImgHeight] = useState(480);
-  const [productDescFontSize, setProductDescFontSize] = useState(14);
-  const [productNameFontSize, setProductNameFontSize] = useState(28);
-  const [productSpecsFontSize, setProductSpecsFontSize] = useState(10);
+  const [productImgHeight, setProductImgHeight] = useState(560);
+  const [productDescFontSize, setProductDescFontSize] = useState(16);
+  const [productNameFontSize, setProductNameFontSize] = useState(32);
+  const [productSpecsFontSize, setProductSpecsFontSize] = useState(11.5);
 
   // Preview tab
   const [previewTab, setPreviewTab] = useState<"cover" | "product">("cover");
@@ -167,10 +167,10 @@ export default function TemplatesPage() {
 
       setCoverVerticalOffset(typeof s.coverVerticalOffset === "number" ? s.coverVerticalOffset : 0);
 
-      setProductImgHeight(typeof s.productImgHeight === "number" ? s.productImgHeight : 480);
-      setProductDescFontSize(typeof s.productDescFontSize === "number" ? s.productDescFontSize : 14);
-      setProductNameFontSize(typeof s.productNameFontSize === "number" ? s.productNameFontSize : 28);
-      setProductSpecsFontSize(typeof s.productSpecsFontSize === "number" ? s.productSpecsFontSize : 10);
+      setProductImgHeight(typeof s.productImgHeight === "number" ? s.productImgHeight : 560);
+      setProductDescFontSize(typeof s.productDescFontSize === "number" ? s.productDescFontSize : 16);
+      setProductNameFontSize(typeof s.productNameFontSize === "number" ? s.productNameFontSize : 32);
+      setProductSpecsFontSize(typeof s.productSpecsFontSize === "number" ? s.productSpecsFontSize : 11.5);
     } catch {
       console.error("Erro ao interpretar estilos do template.");
     }
@@ -777,8 +777,8 @@ export default function TemplatesPage() {
                       <div className="flex items-center gap-2">
                         <input
                           type="range"
-                          min="250"
-                          max="700"
+                          min="200"
+                          max="850"
                           value={productImgHeight}
                           onChange={(e) => setProductImgHeight(Number(e.target.value))}
                           className="w-full accent-allvino-primary"
@@ -804,7 +804,7 @@ export default function TemplatesPage() {
                         <input
                           type="range"
                           min="10"
-                          max="24"
+                          max="32"
                           value={productDescFontSize}
                           onChange={(e) => setProductDescFontSize(Number(e.target.value))}
                           className="w-full accent-allvino-primary"
@@ -830,7 +830,7 @@ export default function TemplatesPage() {
                         <input
                           type="range"
                           min="18"
-                          max="42"
+                          max="50"
                           value={productNameFontSize}
                           onChange={(e) => setProductNameFontSize(Number(e.target.value))}
                           className="w-full accent-allvino-primary"
@@ -856,7 +856,7 @@ export default function TemplatesPage() {
                         <input
                           type="range"
                           min="8"
-                          max="18"
+                          max="24"
                           value={productSpecsFontSize}
                           onChange={(e) => setProductSpecsFontSize(Number(e.target.value))}
                           className="w-full accent-allvino-primary"
