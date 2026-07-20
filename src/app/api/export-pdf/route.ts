@@ -97,12 +97,15 @@ export async function GET() {
 
     const coverVerticalOffset = typeof styles.coverVerticalOffset === "number" ? styles.coverVerticalOffset : 0;
 
-    // Fine-tuning product page parameters (Bottle size & text dimensions)
+    // Fine-tuning product page parameters (Bottle size & text dimensions & margins)
     const productImgHeight = typeof styles.productImgHeight === "number" ? styles.productImgHeight : 560;
     const productImgMaxWidth = Math.round(productImgHeight * 0.52);
-    const productDescFontSize = typeof styles.productDescFontSize === "number" ? styles.productDescFontSize : 16;
-    const productNameFontSize = typeof styles.productNameFontSize === "number" ? styles.productNameFontSize : 32;
-    const productSpecsFontSize = typeof styles.productSpecsFontSize === "number" ? styles.productSpecsFontSize : 11.5;
+    const productDescFontSize = typeof styles.productDescFontSize === "number" ? styles.productDescFontSize : 15;
+    const productNameFontSize = typeof styles.productNameFontSize === "number" ? styles.productNameFontSize : 30;
+    const productSpecsFontSize = typeof styles.productSpecsFontSize === "number" ? styles.productSpecsFontSize : 11;
+
+    const productPagePadding = typeof styles.productPagePadding === "number" ? styles.productPagePadding : 32;
+    const productTextMaxWidth = typeof styles.productTextMaxWidth === "number" ? styles.productTextMaxWidth : 560;
 
     // Fine-tuning product page text colors & price position
     const productNameColor = styles.productNameColor || primaryColor;
@@ -263,51 +266,61 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
 .cover-brd-t{top:35px}
 .cover-brd-b{bottom:75px}
 
-/* ── PRODUCT PAGE ─────────────────────── */
+/* ── PRODUCT PAGE (Strict Flexible A4 layout with zero text overflow) ── */
 .prod-page{
   width:210mm;height:297mm;
-  padding:36px 48px 45px;
+  padding:${productPagePadding}px 45px 42px;
   display:flex;flex-direction:column;
-  align-items:center;
+  align-items:center;justify-content:space-between;
   position:relative;
+  overflow:hidden;
   page-break-after:always;
 }
 .prod-top{
-  text-align:center;width:100%;padding-top:4px;
+  text-align:center;width:100%;padding-top:2px;
+  flex-shrink:0;
 }
 .prod-name{
   font-family:${fontCSS};
   font-weight:700;
-  letter-spacing:1px;margin-bottom:8px;
+  letter-spacing:1px;margin-bottom:6px;
+  line-height:1.2;
 }
 .prod-origin{
   text-transform:uppercase;letter-spacing:3px;font-weight:600;
 }
 .prod-line{
   width:50px;height:1.5px;
-  margin:14px auto;
+  margin:10px auto;
 }
 .prod-middle{
-  flex:1;width:100%;
+  flex:1 1 auto;width:100%;
   display:flex;align-items:center;justify-content:center;
-  position:relative;padding:10px 0;
+  position:relative;padding:6px 0;
+  min-height:120px;
+  overflow:hidden;
 }
 .prod-img-area{
   display:flex;align-items:center;justify-content:center;
+  height:100%;max-height:100%;
 }
 .prod-img{
+  max-height:${productImgHeight}px;
+  max-width:${productImgMaxWidth}px;
   object-fit:contain;
+  flex-shrink:1;
   filter:drop-shadow(0 10px 30px rgba(0,0,0,.14));
 }
 
 /* Positioned directly beside the bottle - NO surrounding card box */
 .prod-price-badge-side{
-  position:absolute;bottom:25px;
+  position:absolute;bottom:15px;
   background:transparent !important;
   border:none !important;
   box-shadow:none !important;
   padding:0 !important;
   white-space:nowrap;
+  z-index:10;
 }
 .prod-price-badge-side.price-right{
   left:calc(50% + ${halfImgW + 14 + productPriceXOffset}px);
@@ -335,19 +348,24 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
   font-size:13px;color:#bbb;text-decoration:line-through;
 }
 .prod-bottom{
-  text-align:center;width:100%;max-width:500px;
+  text-align:center;width:100%;
+  max-width:${productTextMaxWidth}px;
+  flex-shrink:0;
+  margin-bottom:8px;
 }
 .prod-specs{
   text-transform:uppercase;letter-spacing:1.5px;
-  margin-bottom:10px;
+  margin-bottom:8px;
+  line-height:1.4;
 }
 .prod-desc{
-  line-height:1.8;font-weight:400;
-  margin-bottom:16px;
+  line-height:1.65;font-weight:400;
+  margin-bottom:12px;
+  word-wrap:break-word;
 }
 .page-foot{
-  position:absolute;bottom:20px;left:48px;right:48px;
-  border-top:1px solid #eee;padding-top:8px;
+  position:absolute;bottom:16px;left:45px;right:45px;
+  border-top:1px solid #eee;padding-top:6px;
   display:flex;justify-content:space-between;
   font-size:8px;color:#bbb;letter-spacing:.5px;
 }
