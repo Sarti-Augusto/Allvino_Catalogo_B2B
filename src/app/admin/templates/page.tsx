@@ -43,6 +43,10 @@ interface TemplateStyles {
   productPriceInfoColor?: string;
   productPriceSide?: "right" | "left";
   productPriceXOffset?: number;
+  // Dedicated font sizes for price elements
+  productPriceLabelFontSize?: number;
+  productPriceInfoFontSize?: number;
+  productPriceValueFontSize?: number;
 }
 
 interface Template {
@@ -124,6 +128,11 @@ export default function TemplatesPage() {
   const [productPriceInfoColor, setProductPriceInfoColor] = useState("");
   const [productPriceSide, setProductPriceSide] = useState<"right" | "left">("right");
   const [productPriceXOffset, setProductPriceXOffset] = useState(0);
+
+  // Price Font Sizes
+  const [productPriceLabelFontSize, setProductPriceLabelFontSize] = useState(9.5);
+  const [productPriceInfoFontSize, setProductPriceInfoFontSize] = useState(10);
+  const [productPriceValueFontSize, setProductPriceValueFontSize] = useState(24);
 
   // Preview tab
   const [previewTab, setPreviewTab] = useState<"cover" | "product">("cover");
@@ -209,6 +218,10 @@ export default function TemplatesPage() {
       setProductPriceInfoColor(s.productPriceInfoColor || "");
       setProductPriceSide(s.productPriceSide || "right");
       setProductPriceXOffset(typeof s.productPriceXOffset === "number" ? s.productPriceXOffset : 0);
+
+      setProductPriceLabelFontSize(typeof s.productPriceLabelFontSize === "number" ? s.productPriceLabelFontSize : 9.5);
+      setProductPriceInfoFontSize(typeof s.productPriceInfoFontSize === "number" ? s.productPriceInfoFontSize : 10);
+      setProductPriceValueFontSize(typeof s.productPriceValueFontSize === "number" ? s.productPriceValueFontSize : 24);
     } catch {
       console.error("Erro ao interpretar estilos do template.");
     }
@@ -258,6 +271,9 @@ export default function TemplatesPage() {
         productPriceInfoColor,
         productPriceSide,
         productPriceXOffset,
+        productPriceLabelFontSize,
+        productPriceInfoFontSize,
+        productPriceValueFontSize,
       }),
     };
 
@@ -392,7 +408,7 @@ export default function TemplatesPage() {
             Editor de Templates PDF
           </h1>
           <p className="text-allvino-on-surface-variant text-sm mt-1">
-            Personalize a capa (esquema de cores da logo, posições, ângulos) e as páginas internas (redimensionamento flexível da garrafa, margens A4 e largura de texto).
+            Personalize a capa (esquema de cores da logo, posições, ângulos) e as páginas internas (dimensionamento de preços, tamanho da garrafa e margens).
           </p>
         </div>
 
@@ -987,6 +1003,93 @@ export default function TemplatesPage() {
                           onChange={(e) => setProductPriceXOffset(Number(e.target.value))}
                           className="w-16 text-[10px] p-1 rounded bg-allvino-surface-container-low border border-allvino-outline-variant text-center"
                         />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* DEDICATED PRICE FONT SIZE CONTROLS */}
+                  <div className="space-y-3 pt-2 pb-3 border-b border-allvino-outline-variant/20">
+                    <p className="text-[11px] font-bold text-allvino-primary">
+                      Dimensionamento das Fontes do Preço
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] text-allvino-on-surface-variant font-medium">
+                            "Preço Unitário B2B"
+                          </label>
+                          <span className="text-[10px] font-bold text-allvino-primary">{productPriceLabelFontSize}px</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="range"
+                            min="6"
+                            max="20"
+                            step="0.5"
+                            value={productPriceLabelFontSize}
+                            onChange={(e) => setProductPriceLabelFontSize(Number(e.target.value))}
+                            className="w-full accent-allvino-primary"
+                          />
+                          <input
+                            type="number"
+                            step="0.5"
+                            value={productPriceLabelFontSize}
+                            onChange={(e) => setProductPriceLabelFontSize(Number(e.target.value))}
+                            className="w-14 text-[10px] p-1 rounded bg-allvino-surface-container-low border border-allvino-outline-variant text-center"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] text-allvino-on-surface-variant font-medium">
+                            "Caixa c/ 6 garrafas"
+                          </label>
+                          <span className="text-[10px] font-bold text-allvino-primary">{productPriceInfoFontSize}px</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="range"
+                            min="6"
+                            max="22"
+                            step="0.5"
+                            value={productPriceInfoFontSize}
+                            onChange={(e) => setProductPriceInfoFontSize(Number(e.target.value))}
+                            className="w-full accent-allvino-primary"
+                          />
+                          <input
+                            type="number"
+                            step="0.5"
+                            value={productPriceInfoFontSize}
+                            onChange={(e) => setProductPriceInfoFontSize(Number(e.target.value))}
+                            className="w-14 text-[10px] p-1 rounded bg-allvino-surface-container-low border border-allvino-outline-variant text-center"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] text-allvino-on-surface-variant font-medium">
+                            Valor do Preço (R$)
+                          </label>
+                          <span className="text-[10px] font-bold text-allvino-primary">{productPriceValueFontSize}px</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="range"
+                            min="14"
+                            max="45"
+                            value={productPriceValueFontSize}
+                            onChange={(e) => setProductPriceValueFontSize(Number(e.target.value))}
+                            className="w-full accent-allvino-primary"
+                          />
+                          <input
+                            type="number"
+                            value={productPriceValueFontSize}
+                            onChange={(e) => setProductPriceValueFontSize(Number(e.target.value))}
+                            className="w-14 text-[10px] p-1 rounded bg-allvino-surface-container-low border border-allvino-outline-variant text-center"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1607,26 +1710,29 @@ export default function TemplatesPage() {
                           }}
                         >
                           <p
-                            className="text-[6px] uppercase tracking-[1.5px] font-bold mb-0.5"
-                            style={{ color: resolvedProductPriceLabelColor }}
+                            className="uppercase tracking-[1.5px] font-bold mb-0.5"
+                            style={{ color: resolvedProductPriceLabelColor, fontSize: `${Math.round(productPriceLabelFontSize * 0.65)}px` }}
                           >
                             Preço Unitário B2B
                           </p>
                           <p
-                            className="text-[6.5px] font-semibold mb-1"
-                            style={{ color: resolvedProductPriceInfoColor }}
+                            className="font-semibold mb-1"
+                            style={{ color: resolvedProductPriceInfoColor, fontSize: `${Math.round(productPriceInfoFontSize * 0.65)}px` }}
                           >
                             Caixa c/ 6 garrafas
                           </p>
                           <div className="flex items-baseline gap-1.5">
                             <span
-                              className="text-sm font-extrabold"
-                              style={{ color: resolvedProductPriceColor }}
+                              className="font-extrabold"
+                              style={{ color: resolvedProductPriceColor, fontSize: `${Math.round(productPriceValueFontSize * 0.65)}px` }}
                             >
                               R${" "}
                               {PREVIEW_WINE.precoPromocional?.toFixed(2)}
                             </span>
-                            <span className="text-[8px] text-gray-400 line-through">
+                            <span
+                              className="text-gray-400 line-through"
+                              style={{ fontSize: `${Math.round(productPriceValueFontSize * 0.35)}px` }}
+                            >
                               R$ {PREVIEW_WINE.precoOriginal.toFixed(2)}
                             </span>
                           </div>

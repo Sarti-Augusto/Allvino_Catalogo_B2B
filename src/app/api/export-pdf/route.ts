@@ -117,6 +117,11 @@ export async function GET() {
     const productPriceSide = styles.productPriceSide || "right"; // "right" or "left"
     const productPriceXOffset = typeof styles.productPriceXOffset === "number" ? styles.productPriceXOffset : 0;
 
+    // Fine-tuning price font sizes
+    const productPriceLabelFontSize = typeof styles.productPriceLabelFontSize === "number" ? styles.productPriceLabelFontSize : 9.5;
+    const productPriceInfoFontSize = typeof styles.productPriceInfoFontSize === "number" ? styles.productPriceInfoFontSize : 10;
+    const productPriceValueFontSize = typeof styles.productPriceValueFontSize === "number" ? styles.productPriceValueFontSize : 24;
+
     // 6. Resolve font family CSS
     const fontCSS =
       fontFamily === "Inter"
@@ -149,10 +154,10 @@ export async function GET() {
       let priceHtml: string;
       if (product.precoPromocional) {
         priceHtml = `
-          <span class="price-val" style="color:${productPriceColor};">R$ ${product.precoPromocional.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-          <span class="price-old">R$ ${product.precoOriginal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>`;
+          <span class="price-val" style="color:${productPriceColor}; font-size:${productPriceValueFontSize}px;">R$ ${product.precoPromocional.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+          <span class="price-old" style="font-size:${Math.round(productPriceValueFontSize * 0.55)}px;">R$ ${product.precoOriginal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>`;
       } else {
-        priceHtml = `<span class="price-val" style="color:${productPriceColor};">R$ ${product.precoOriginal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>`;
+        priceHtml = `<span class="price-val" style="color:${productPriceColor}; font-size:${productPriceValueFontSize}px;">R$ ${product.precoOriginal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>`;
       }
 
       const pageBg = backgroundImageUrl
@@ -172,10 +177,10 @@ export async function GET() {
             <img src="${product.imagemUrl}" class="prod-img" style="max-height:${productImgHeight}px; max-width:${productImgMaxWidth}px;" />
           </div>
 
-          <!-- Clean price text directly beside bottle (no box, no border) -->
+          <!-- Clean price text directly beside bottle (no box, no border) with customizable font sizes -->
           <div class="prod-price-badge-side ${productPriceSide === 'left' ? 'price-left' : 'price-right'}">
-            <p class="prod-price-label" style="color:${productPriceLabelColor};">Preço Unitário B2B</p>
-            <p class="prod-price-info" style="color:${productPriceInfoColor};">Caixa c/ 6 garrafas</p>
+            <p class="prod-price-label" style="color:${productPriceLabelColor}; font-size:${productPriceLabelFontSize}px;">Preço Unitário B2B</p>
+            <p class="prod-price-info" style="color:${productPriceInfoColor}; font-size:${productPriceInfoFontSize}px;">Caixa c/ 6 garrafas</p>
             <div class="prod-price-row">${priceHtml}</div>
           </div>
         </div>
@@ -331,21 +336,21 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
   text-align:right;
 }
 .prod-price-label{
-  font-size:9.5px;text-transform:uppercase;
+  text-transform:uppercase;
   letter-spacing:2px;font-weight:700;margin-bottom:2px;
 }
 .prod-price-info{
-  font-size:10px;font-weight:600;margin-bottom:4px;
+  font-weight:600;margin-bottom:4px;
 }
 .prod-price-row{
   display:flex;align-items:baseline;
   gap:10px;
 }
 .price-val{
-  font-size:24px;font-weight:800;
+  font-weight:800;
 }
 .price-old{
-  font-size:13px;color:#bbb;text-decoration:line-through;
+  color:#bbb;text-decoration:line-through;
 }
 .prod-bottom{
   text-align:center;width:100%;
