@@ -30,14 +30,14 @@ async function main() {
   // 2. Criar Templates Base
   // Template Clássico
   const templateClassicoStyles = {
-    primaryColor: "#80282d", // Vinho
-    secondaryColor: "#c5a880", // Dourado
+    primaryColor: "#80282d",
+    secondaryColor: "#c5a880",
     backgroundColor: "#ffffff",
-    textColor: "#1f2937", // Cinza Escuro
+    textColor: "#1f2937",
     fontFamily: "Playfair Display",
-    gridColumns: "2",
     headerTitle: "ALLVINO - CATÁLOGO DE VINHOS",
     footerText: "Allvino Importadora de Vinhos B2B - contato@allvino.com.br",
+    coverImageUrl: "",
   };
 
   const templateClassicoHtml = `
@@ -214,14 +214,14 @@ async function main() {
 
   // Template Moderno
   const templateModernoStyles = {
-    primaryColor: "#0f0f11", // Preto
-    secondaryColor: "#b48d56", // Ouro Queimado
+    primaryColor: "#0f0f11",
+    secondaryColor: "#b48d56",
     backgroundColor: "#f9f9fb",
     textColor: "#2d3748",
     fontFamily: "Inter",
-    gridColumns: "2",
     headerTitle: "ALLVINO | DESIGN SELECTION",
     footerText: "allvino.com.br | B2B Portal",
+    coverImageUrl: "",
   };
 
   const templateModernoHtml = `
@@ -390,14 +390,14 @@ async function main() {
 
   // Template Ofertas
   const templateOfertasStyles = {
-    primaryColor: "#b81c20", // Vermelho Alerta
-    secondaryColor: "#2d3748", // Chumbo
+    primaryColor: "#b81c20",
+    secondaryColor: "#2d3748",
     backgroundColor: "#ffffff",
     textColor: "#2d3748",
     fontFamily: "Inter",
-    gridColumns: "2",
     headerTitle: "ALLVINO - CAMPANHA DE OFERTAS",
     footerText: "Estoque Limitado. Preços sujeitos a alterações sem aviso prévio.",
+    coverImageUrl: "",
   };
 
   const templateOfertasHtml = `
