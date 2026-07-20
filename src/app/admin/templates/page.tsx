@@ -36,7 +36,10 @@ interface TemplateStyles {
   productSpecsColor?: string;
   productDescColor?: string;
   productPriceColor?: string;
+  productPriceLabelColor?: string;
+  productPriceInfoColor?: string;
   productPriceSide?: "right" | "left";
+  productPriceXOffset?: number;
 }
 
 interface Template {
@@ -110,7 +113,10 @@ export default function TemplatesPage() {
   const [productSpecsColor, setProductSpecsColor] = useState("");
   const [productDescColor, setProductDescColor] = useState("");
   const [productPriceColor, setProductPriceColor] = useState("");
+  const [productPriceLabelColor, setProductPriceLabelColor] = useState("");
+  const [productPriceInfoColor, setProductPriceInfoColor] = useState("");
   const [productPriceSide, setProductPriceSide] = useState<"right" | "left">("right");
+  const [productPriceXOffset, setProductPriceXOffset] = useState(0);
 
   // Preview tab
   const [previewTab, setPreviewTab] = useState<"cover" | "product">("cover");
@@ -188,7 +194,10 @@ export default function TemplatesPage() {
       setProductSpecsColor(s.productSpecsColor || "");
       setProductDescColor(s.productDescColor || "");
       setProductPriceColor(s.productPriceColor || "");
+      setProductPriceLabelColor(s.productPriceLabelColor || "");
+      setProductPriceInfoColor(s.productPriceInfoColor || "");
       setProductPriceSide(s.productPriceSide || "right");
+      setProductPriceXOffset(typeof s.productPriceXOffset === "number" ? s.productPriceXOffset : 0);
     } catch {
       console.error("Erro ao interpretar estilos do template.");
     }
@@ -231,7 +240,10 @@ export default function TemplatesPage() {
         productSpecsColor,
         productDescColor,
         productPriceColor,
+        productPriceLabelColor,
+        productPriceInfoColor,
         productPriceSide,
+        productPriceXOffset,
       }),
     };
 
@@ -282,6 +294,8 @@ export default function TemplatesPage() {
   const resolvedProductSpecsColor = productSpecsColor || secondaryColor;
   const resolvedProductDescColor = productDescColor || textColor;
   const resolvedProductPriceColor = productPriceColor || primaryColor;
+  const resolvedProductPriceLabelColor = productPriceLabelColor || "#777777";
+  const resolvedProductPriceInfoColor = productPriceInfoColor || secondaryColor;
 
   return (
     <div className="min-h-screen bg-allvino-background text-allvino-text font-sans pb-12">
@@ -355,7 +369,7 @@ export default function TemplatesPage() {
             Editor de Templates PDF
           </h1>
           <p className="text-allvino-on-surface-variant text-sm mt-1">
-            Personalize a capa (logo, posições, ângulos) e as páginas internas (posicionamento de preço, tamanho da garrafa e paleta de cores dos textos).
+            Personalize a capa (logo, posições, ângulos) e as páginas internas (proximidade do preço, tamanho da garrafa e cores individuais dos textos).
           </p>
         </div>
 
@@ -793,34 +807,61 @@ export default function TemplatesPage() {
                     </span>
                   </h4>
 
-                  {/* PRICE POSITION SELECTOR */}
-                  <div className="pt-1 pb-2 border-b border-allvino-outline-variant/20">
-                    <label className="block text-[10px] font-semibold text-allvino-primary mb-1">
-                      Posição do Quadro de Preço B2B
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setProductPriceSide("right")}
-                        className={`py-2 px-3 rounded text-xs font-bold transition border ${
-                          productPriceSide === "right"
-                            ? "bg-allvino-primary text-white border-allvino-primary shadow"
-                            : "bg-allvino-surface-container-low border-allvino-outline-variant text-allvino-text hover:bg-allvino-surface-container-high"
-                        }`}
-                      >
-                        👉 Ao lado Direito da Garrafa
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setProductPriceSide("left")}
-                        className={`py-2 px-3 rounded text-xs font-bold transition border ${
-                          productPriceSide === "left"
-                            ? "bg-allvino-primary text-white border-allvino-primary shadow"
-                            : "bg-allvino-surface-container-low border-allvino-outline-variant text-allvino-text hover:bg-allvino-surface-container-high"
-                        }`}
-                      >
-                        👈 Ao lado Esquerdo da Garrafa
-                      </button>
+                  {/* PRICE POSITION SELECTOR & PROXIMITY OFFSET */}
+                  <div className="pt-1 pb-2 border-b border-allvino-outline-variant/20 space-y-3">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-allvino-primary mb-1">
+                        Posição do Preço em Relação à Garrafa
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setProductPriceSide("right")}
+                          className={`py-2 px-3 rounded text-xs font-bold transition border ${
+                            productPriceSide === "right"
+                              ? "bg-allvino-primary text-white border-allvino-primary shadow"
+                              : "bg-allvino-surface-container-low border-allvino-outline-variant text-allvino-text hover:bg-allvino-surface-container-high"
+                          }`}
+                        >
+                          👉 Ao lado Direito (Parte de Baixo)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setProductPriceSide("left")}
+                          className={`py-2 px-3 rounded text-xs font-bold transition border ${
+                            productPriceSide === "left"
+                              ? "bg-allvino-primary text-white border-allvino-primary shadow"
+                              : "bg-allvino-surface-container-low border-allvino-outline-variant text-allvino-text hover:bg-allvino-surface-container-high"
+                          }`}
+                        >
+                          👈 Ao lado Esquerdo (Parte de Baixo)
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] text-allvino-on-surface-variant font-medium">
+                          Proximidade / Ajuste X do Preço à Garrafa
+                        </label>
+                        <span className="text-[10px] font-bold text-allvino-primary">{productPriceXOffset}px</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="range"
+                          min="-150"
+                          max="150"
+                          value={productPriceXOffset}
+                          onChange={(e) => setProductPriceXOffset(Number(e.target.value))}
+                          className="w-full accent-allvino-primary"
+                        />
+                        <input
+                          type="number"
+                          value={productPriceXOffset}
+                          onChange={(e) => setProductPriceXOffset(Number(e.target.value))}
+                          className="w-16 text-[10px] p-1 rounded bg-allvino-surface-container-low border border-allvino-outline-variant text-center"
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -888,7 +929,7 @@ export default function TemplatesPage() {
                       </div>
 
                       <div>
-                        <label className="block text-[10px] text-allvino-on-surface-variant mb-1">Destaque do Preço</label>
+                        <label className="block text-[10px] text-allvino-on-surface-variant mb-1">Valor do Preço (ex: R$ 34,90)</label>
                         <div className="flex items-center gap-2">
                           <input
                             type="color"
@@ -900,6 +941,44 @@ export default function TemplatesPage() {
                             type="text"
                             value={productPriceColor}
                             onChange={(e) => setProductPriceColor(e.target.value)}
+                            placeholder="Auto"
+                            className="w-full text-[10px] p-1.5 rounded bg-allvino-surface-container-low border border-allvino-outline-variant"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] text-allvino-on-surface-variant mb-1">"Preço Unitário B2B"</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={resolvedProductPriceLabelColor}
+                            onChange={(e) => setProductPriceLabelColor(e.target.value)}
+                            className="w-7 h-7 border rounded cursor-pointer bg-transparent"
+                          />
+                          <input
+                            type="text"
+                            value={productPriceLabelColor}
+                            onChange={(e) => setProductPriceLabelColor(e.target.value)}
+                            placeholder="#777777"
+                            className="w-full text-[10px] p-1.5 rounded bg-allvino-surface-container-low border border-allvino-outline-variant"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] text-allvino-on-surface-variant mb-1">"Caixa c/ 6 garrafas"</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={resolvedProductPriceInfoColor}
+                            onChange={(e) => setProductPriceInfoColor(e.target.value)}
+                            className="w-7 h-7 border rounded cursor-pointer bg-transparent"
+                          />
+                          <input
+                            type="text"
+                            value={productPriceInfoColor}
+                            onChange={(e) => setProductPriceInfoColor(e.target.value)}
                             placeholder="Auto"
                             className="w-full text-[10px] p-1.5 rounded bg-allvino-surface-container-low border border-allvino-outline-variant"
                           />
@@ -1377,7 +1456,7 @@ export default function TemplatesPage() {
                         />
                       </div>
 
-                      {/* Middle Section: Bottle & Side Price Badge */}
+                      {/* Middle Section: Bottle & Clean Price Text Beside Bottle */}
                       <div className="flex-1 w-full flex items-center justify-center py-1 relative">
                         <div className="flex items-center justify-center">
                           <img
@@ -1393,23 +1472,28 @@ export default function TemplatesPage() {
                           />
                         </div>
 
-                        {/* Price Badge beside bottle on the lower side */}
+                        {/* Price Text directly beside bottle (NO BOX, NO BORDER, NO BACKGROUND) */}
                         <div
-                          className={`absolute bottom-3 bg-white/90 backdrop-blur border rounded-lg p-2.5 text-center shadow-md border-l-4 transition-all ${
-                            productPriceSide === "left" ? "left-2" : "right-2"
-                          }`}
-                          style={{ borderColor: resolvedProductPriceColor }}
+                          className="absolute bottom-4 transition-all whitespace-nowrap"
+                          style={{
+                            ...(productPriceSide === "left"
+                              ? { right: `calc(50% + ${Math.round(productImgHeight * 0.13) + 8 - productPriceXOffset * 0.5}px)`, textAlign: "right" }
+                              : { left: `calc(50% + ${Math.round(productImgHeight * 0.13) + 8 + productPriceXOffset * 0.5}px)`, textAlign: "left" }),
+                          }}
                         >
-                          <p className="text-[5.5px] uppercase tracking-[2px] text-gray-400 mb-0.5">
+                          <p
+                            className="text-[6px] uppercase tracking-[1.5px] font-bold mb-0.5"
+                            style={{ color: resolvedProductPriceLabelColor }}
+                          >
                             Preço Unitário B2B
                           </p>
                           <p
                             className="text-[6.5px] font-semibold mb-1"
-                            style={{ color: resolvedProductSpecsColor }}
+                            style={{ color: resolvedProductPriceInfoColor }}
                           >
                             Caixa c/ 6 garrafas
                           </p>
-                          <div className="flex items-baseline justify-center gap-1.5">
+                          <div className="flex items-baseline gap-1.5">
                             <span
                               className="text-sm font-extrabold"
                               style={{ color: resolvedProductPriceColor }}

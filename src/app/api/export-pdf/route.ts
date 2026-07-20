@@ -89,12 +89,15 @@ export async function GET() {
     const productNameFontSize = typeof styles.productNameFontSize === "number" ? styles.productNameFontSize : 32;
     const productSpecsFontSize = typeof styles.productSpecsFontSize === "number" ? styles.productSpecsFontSize : 11.5;
 
-    // Fine-tuning product page text colors
+    // Fine-tuning product page text colors & price position
     const productNameColor = styles.productNameColor || primaryColor;
     const productSpecsColor = styles.productSpecsColor || secondaryColor;
     const productDescColor = styles.productDescColor || textColor;
     const productPriceColor = styles.productPriceColor || primaryColor;
+    const productPriceLabelColor = styles.productPriceLabelColor || "#777777";
+    const productPriceInfoColor = styles.productPriceInfoColor || secondaryColor;
     const productPriceSide = styles.productPriceSide || "right"; // "right" or "left"
+    const productPriceXOffset = typeof styles.productPriceXOffset === "number" ? styles.productPriceXOffset : 0;
 
     // 6. Resolve font family CSS
     const fontCSS =
@@ -140,10 +143,10 @@ export async function GET() {
             <img src="${product.imagemUrl}" class="prod-img" style="max-height:${productImgHeight}px; max-width:${productImgMaxWidth}px;" />
           </div>
 
-          <!-- Price badge beside bottle at the bottom -->
-          <div class="prod-price-badge-side ${productPriceSide === 'left' ? 'price-left' : 'price-right'}" style="border-color:${productPriceColor};">
-            <p class="prod-price-label">Preço Unitário B2B</p>
-            <p class="prod-price-info" style="color:${productSpecsColor};">Caixa c/ 6 garrafas</p>
+          <!-- Clean price text directly beside bottle (no box, no border) -->
+          <div class="prod-price-badge-side ${productPriceSide === 'left' ? 'price-left' : 'price-right'}">
+            <p class="prod-price-label" style="color:${productPriceLabelColor};">Preço Unitário B2B</p>
+            <p class="prod-price-info" style="color:${productPriceInfoColor};">Caixa c/ 6 garrafas</p>
             <div class="prod-price-row">${priceHtml}</div>
           </div>
         </div>
@@ -164,6 +167,8 @@ export async function GET() {
     const coverBgCSS = hasCoverBg
       ? `background-image:url('${coverImageUrl}');background-size:cover;background-position:center;`
       : `background-color:${backgroundColor};`;
+
+    const halfImgW = Math.round(productImgMaxWidth / 2);
 
     const fullHtml = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -269,38 +274,40 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
   object-fit:contain;
   filter:drop-shadow(0 10px 30px rgba(0,0,0,.14));
 }
+
+/* Positioned directly beside the bottle - NO surrounding card box */
 .prod-price-badge-side{
-  position:absolute;bottom:15px;
-  background:rgba(255,255,255,0.92);
-  backdrop-filter:blur(6px);
-  border:1.5px solid ${productPriceColor};
-  border-radius:10px;
-  padding:10px 16px;
-  text-align:center;
-  box-shadow:0 6px 20px rgba(0,0,0,0.08);
+  position:absolute;bottom:25px;
+  background:transparent !important;
+  border:none !important;
+  box-shadow:none !important;
+  padding:0 !important;
+  white-space:nowrap;
 }
 .prod-price-badge-side.price-right{
-  right:10px;
+  left:calc(50% + ${halfImgW + 14 + productPriceXOffset}px);
+  text-align:left;
 }
 .prod-price-badge-side.price-left{
-  left:10px;
+  right:calc(50% + ${halfImgW + 14 - productPriceXOffset}px);
+  text-align:right;
 }
 .prod-price-label{
-  font-size:7.5px;text-transform:uppercase;
-  letter-spacing:3px;color:#aaa;margin-bottom:2px;
+  font-size:9.5px;text-transform:uppercase;
+  letter-spacing:2px;font-weight:700;margin-bottom:2px;
 }
 .prod-price-info{
-  font-size:9px;font-weight:600;margin-bottom:4px;
+  font-size:10px;font-weight:600;margin-bottom:4px;
 }
 .prod-price-row{
   display:flex;align-items:baseline;
-  justify-content:center;gap:10px;
+  gap:10px;
 }
 .price-val{
-  font-size:22px;font-weight:800;
+  font-size:24px;font-weight:800;
 }
 .price-old{
-  font-size:12px;color:#bbb;text-decoration:line-through;
+  font-size:13px;color:#bbb;text-decoration:line-through;
 }
 .prod-bottom{
   text-align:center;width:100%;max-width:500px;
