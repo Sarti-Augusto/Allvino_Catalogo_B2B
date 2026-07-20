@@ -66,6 +66,22 @@ export async function GET() {
     const coverImageUrl = styles.coverImageUrl || "";
     const backgroundImageUrl = styles.backgroundImageUrl || "";
 
+    // Fine-tuning cover parameters
+    const coverSubtitle = styles.coverSubtitle || "Catálogo Exclusivo B2B";
+    const coverLogoHeight = typeof styles.coverLogoHeight === "number" ? styles.coverLogoHeight : 110;
+    const coverLogoAngle = typeof styles.coverLogoAngle === "number" ? styles.coverLogoAngle : 0;
+    const coverLogoYOffset = typeof styles.coverLogoYOffset === "number" ? styles.coverLogoYOffset : 0;
+    
+    const coverTitleColorCustom = styles.coverTitleColor || "";
+    const coverTitleAngle = typeof styles.coverTitleAngle === "number" ? styles.coverTitleAngle : 0;
+    const coverTitleYOffset = typeof styles.coverTitleYOffset === "number" ? styles.coverTitleYOffset : 0;
+    
+    const coverSubtitleColorCustom = styles.coverSubtitleColor || "";
+    const coverSubtitleAngle = typeof styles.coverSubtitleAngle === "number" ? styles.coverSubtitleAngle : 0;
+    const coverSubtitleYOffset = typeof styles.coverSubtitleYOffset === "number" ? styles.coverSubtitleYOffset : 0;
+
+    const coverVerticalOffset = typeof styles.coverVerticalOffset === "number" ? styles.coverVerticalOffset : 0;
+
     // 6. Resolve font family CSS
     const fontCSS =
       fontFamily === "Inter"
@@ -76,10 +92,10 @@ export async function GET() {
 
     // 7. Cover page config
     const hasCoverBg = !!coverImageUrl;
-    const coverTitleColor = hasCoverBg ? "#ffffff" : primaryColor;
-    const coverSubColor = hasCoverBg ? "rgba(255,255,255,0.78)" : secondaryColor;
+    const coverTitleColor = coverTitleColorCustom || (hasCoverBg ? "#ffffff" : primaryColor);
+    const coverSubColor = coverSubtitleColorCustom || (hasCoverBg ? "rgba(255,255,255,0.78)" : secondaryColor);
     const coverFootColor = hasCoverBg ? "rgba(255,255,255,0.55)" : "#999999";
-    const coverDivColor = hasCoverBg ? "rgba(255,255,255,0.35)" : secondaryColor;
+    const coverDivColor = coverSubtitleColorCustom || (hasCoverBg ? "rgba(255,255,255,0.35)" : secondaryColor);
 
     // 8. Generate product pages HTML
     let productPagesHtml = "";
@@ -160,9 +176,12 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
 .cover-inner{
   position:relative;z-index:2;
   text-align:center;padding:60px 50px;
+  transform: translateY(${coverVerticalOffset}px);
 }
 .cover-logo{
-  height:110px;width:auto;margin-bottom:45px;
+  height:${coverLogoHeight}px;width:auto;margin-bottom:35px;
+  transform: translateY(${coverLogoYOffset}px) rotate(${coverLogoAngle}deg);
+  transition: transform 0.2s ease;
   ${hasCoverBg ? "filter:brightness(0) invert(1);opacity:.92;" : ""}
 }
 .cover-line{
@@ -175,12 +194,14 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
   color:${coverTitleColor};
   letter-spacing:4px;text-transform:uppercase;
   margin-bottom:14px;
+  transform: translateY(${coverTitleYOffset}px) rotate(${coverTitleAngle}deg);
   ${hasCoverBg ? "text-shadow:0 2px 12px rgba(0,0,0,.25);" : ""}
 }
 .cover-sub{
   font-size:11px;font-weight:500;
   color:${coverSubColor};
   letter-spacing:6px;text-transform:uppercase;
+  transform: translateY(${coverSubtitleYOffset}px) rotate(${coverSubtitleAngle}deg);
 }
 .cover-foot{
   position:absolute;bottom:38px;left:0;right:0;
@@ -283,7 +304,7 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
     ${logoBase64 ? `<img src="${logoBase64}" class="cover-logo"/>` : ""}
     <div class="cover-line"></div>
     <h1 class="cover-h1">${headerTitle}</h1>
-    <p class="cover-sub">Catálogo Exclusivo B2B</p>
+    <p class="cover-sub">${coverSubtitle}</p>
   </div>
   <div class="cover-foot">${footerText}</div>
 </div>

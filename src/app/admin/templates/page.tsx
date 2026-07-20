@@ -14,6 +14,18 @@ interface TemplateStyles {
   footerText: string;
   backgroundImageUrl?: string;
   coverImageUrl?: string;
+  // Cover fine-tuning:
+  coverSubtitle?: string;
+  coverLogoHeight?: number;
+  coverLogoAngle?: number;
+  coverLogoYOffset?: number;
+  coverTitleColor?: string;
+  coverTitleAngle?: number;
+  coverTitleYOffset?: number;
+  coverSubtitleColor?: string;
+  coverSubtitleAngle?: number;
+  coverSubtitleYOffset?: number;
+  coverVerticalOffset?: number;
 }
 
 interface Template {
@@ -48,7 +60,7 @@ export default function TemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Style state
+  // General Style state
   const [nome, setNome] = useState("");
   const [isActive, setIsActive] = useState(false);
   const [primaryColor, setPrimaryColor] = useState("#80282d");
@@ -60,6 +72,22 @@ export default function TemplatesPage() {
   const [footerText, setFooterText] = useState("");
   const [backgroundImageUrl, setBackgroundImageUrl] = useState("");
   const [coverImageUrl, setCoverImageUrl] = useState("");
+
+  // Cover Fine-Tuning State
+  const [coverSubtitle, setCoverSubtitle] = useState("CATÁLOGO EXCLUSIVO B2B");
+  const [coverLogoHeight, setCoverLogoHeight] = useState(110);
+  const [coverLogoAngle, setCoverLogoAngle] = useState(0);
+  const [coverLogoYOffset, setCoverLogoYOffset] = useState(0);
+
+  const [coverTitleColor, setCoverTitleColor] = useState("");
+  const [coverTitleAngle, setCoverTitleAngle] = useState(0);
+  const [coverTitleYOffset, setCoverTitleYOffset] = useState(0);
+
+  const [coverSubtitleColor, setCoverSubtitleColor] = useState("");
+  const [coverSubtitleAngle, setCoverSubtitleAngle] = useState(0);
+  const [coverSubtitleYOffset, setCoverSubtitleYOffset] = useState(0);
+
+  const [coverVerticalOffset, setCoverVerticalOffset] = useState(0);
 
   // Preview tab
   const [previewTab, setPreviewTab] = useState<"cover" | "product">("cover");
@@ -108,10 +136,25 @@ export default function TemplatesPage() {
       setBackgroundColor(s.backgroundColor || "#ffffff");
       setTextColor(s.textColor || "#1f2937");
       setFontFamily(s.fontFamily || "Playfair Display");
-      setHeaderTitle(s.headerTitle || "ALLVINO - CATÁLOGO");
+      setHeaderTitle(s.headerTitle || "CATÁLOGO DE VINHOS");
       setFooterText(s.footerText || "");
       setBackgroundImageUrl(s.backgroundImageUrl || "");
       setCoverImageUrl(s.coverImageUrl || "");
+
+      setCoverSubtitle(s.coverSubtitle || "CATÁLOGO EXCLUSIVO B2B");
+      setCoverLogoHeight(typeof s.coverLogoHeight === "number" ? s.coverLogoHeight : 110);
+      setCoverLogoAngle(typeof s.coverLogoAngle === "number" ? s.coverLogoAngle : 0);
+      setCoverLogoYOffset(typeof s.coverLogoYOffset === "number" ? s.coverLogoYOffset : 0);
+
+      setCoverTitleColor(s.coverTitleColor || "");
+      setCoverTitleAngle(typeof s.coverTitleAngle === "number" ? s.coverTitleAngle : 0);
+      setCoverTitleYOffset(typeof s.coverTitleYOffset === "number" ? s.coverTitleYOffset : 0);
+
+      setCoverSubtitleColor(s.coverSubtitleColor || "");
+      setCoverSubtitleAngle(typeof s.coverSubtitleAngle === "number" ? s.coverSubtitleAngle : 0);
+      setCoverSubtitleYOffset(typeof s.coverSubtitleYOffset === "number" ? s.coverSubtitleYOffset : 0);
+
+      setCoverVerticalOffset(typeof s.coverVerticalOffset === "number" ? s.coverVerticalOffset : 0);
     } catch {
       console.error("Erro ao interpretar estilos do template.");
     }
@@ -135,6 +178,17 @@ export default function TemplatesPage() {
         footerText,
         backgroundImageUrl,
         coverImageUrl,
+        coverSubtitle,
+        coverLogoHeight,
+        coverLogoAngle,
+        coverLogoYOffset,
+        coverTitleColor,
+        coverTitleAngle,
+        coverTitleYOffset,
+        coverSubtitleColor,
+        coverSubtitleAngle,
+        coverSubtitleYOffset,
+        coverVerticalOffset,
       }),
     };
 
@@ -157,7 +211,6 @@ export default function TemplatesPage() {
     }
   };
 
-  // File upload helper — reads file and sets state to base64
   const handleFileUpload = (
     file: File | undefined,
     setter: (val: string) => void
@@ -170,16 +223,18 @@ export default function TemplatesPage() {
     reader.readAsDataURL(file);
   };
 
-  // Cover has background image?
   const hasCoverBg = !!coverImageUrl;
 
-  // Resolved font for preview
   const previewFont =
     fontFamily === "Inter"
       ? "Inter, sans-serif"
       : fontFamily === "Cinzel"
       ? "Georgia, serif"
       : "Georgia, serif";
+
+  // Resolved colors for cover preview
+  const resolvedCoverTitleColor = coverTitleColor || (hasCoverBg ? "#ffffff" : primaryColor);
+  const resolvedCoverSubColor = coverSubtitleColor || (hasCoverBg ? "rgba(255,255,255,0.78)" : secondaryColor);
 
   return (
     <div className="min-h-screen bg-allvino-background text-allvino-text font-sans pb-12">
@@ -253,8 +308,7 @@ export default function TemplatesPage() {
             Editor de Templates PDF
           </h1>
           <p className="text-allvino-on-surface-variant text-sm mt-1">
-            Configure a capa, as cores, os fundos e a tipografia do catálogo
-            impresso. O PDF será gerado com 1 produto por página.
+            Personalize o layout da capa (logo, títulos, rotações, alturas e cores) e das páginas internas do catálogo.
           </p>
         </div>
 
@@ -317,17 +371,13 @@ export default function TemplatesPage() {
                   </label>
                 </div>
 
-                {/* ── COVER IMAGE ── */}
-                <div className="space-y-3 pt-2 border-t border-allvino-outline-variant/10">
+                {/* ── COVER IMAGE & TEXT ADJUSTMENTS ── */}
+                <div className="space-y-4 pt-2 border-t border-allvino-outline-variant/10">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-allvino-primary">
                     Imagem de Capa do Catálogo
                   </h4>
                   <p className="text-[10px] text-allvino-on-surface-variant/70 leading-relaxed">
-                    A imagem será usada como fundo fullscreen na primeira página
-                    do PDF.
-                    <br />
-                    <strong>Dimensões recomendadas:</strong> 2480 × 3508 px (A4
-                    a 300 dpi). Formatos: JPG ou PNG.
+                    <strong>Dimensões recomendadas:</strong> 2480 × 3508 px (A4 a 300 dpi).
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
@@ -345,7 +395,7 @@ export default function TemplatesPage() {
                     </div>
                     <div>
                       <label className="block text-[10px] text-allvino-on-surface-variant mb-1">
-                        Ou Cole uma URL
+                        Ou URL da Capa
                       </label>
                       <input
                         type="text"
@@ -367,7 +417,7 @@ export default function TemplatesPage() {
                       </div>
                       <div className="text-[10px] text-allvino-on-surface-variant flex-1 min-w-0">
                         <p className="font-semibold text-allvino-primary">
-                          Imagem de Capa
+                          Imagem de Capa Carregada
                         </p>
                         <p className="font-light truncate">
                           {coverImageUrl.startsWith("data:")
@@ -380,16 +430,229 @@ export default function TemplatesPage() {
                         onClick={() => setCoverImageUrl("")}
                         className="text-[10px] text-red-500 hover:text-red-700 font-bold flex-shrink-0"
                       >
-                        ✕
+                        ✕ Removar
                       </button>
                     </div>
                   )}
                 </div>
 
+                {/* ── COVER FINE-TUNING PANEL ── */}
+                <div className="space-y-4 pt-4 border-t border-allvino-outline-variant/20 bg-allvino-surface-container-low/30 p-4 rounded-xl border">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-allvino-primary flex items-center justify-between">
+                    <span>Ajustes da Capa (Logo, Títulos e Cores)</span>
+                    <span className="text-[9px] text-allvino-secondary bg-allvino-secondary/10 px-2 py-0.5 rounded font-bold">
+                      Harmonia Visual
+                    </span>
+                  </h4>
+
+                  {/* LOGO FINE-TUNING */}
+                  <div className="space-y-3 pt-2 border-t border-allvino-outline-variant/20">
+                    <p className="text-[11px] font-bold text-allvino-primary">
+                      1. Logotipo Allvino
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-[10px] text-allvino-on-surface-variant mb-1">
+                          Altura da Logo ({coverLogoHeight}px)
+                        </label>
+                        <input
+                          type="range"
+                          min="40"
+                          max="250"
+                          value={coverLogoHeight}
+                          onChange={(e) => setCoverLogoHeight(Number(e.target.value))}
+                          className="w-full accent-allvino-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-allvino-on-surface-variant mb-1">
+                          Ângulo ({coverLogoAngle}°)
+                        </label>
+                        <input
+                          type="range"
+                          min="-180"
+                          max="180"
+                          value={coverLogoAngle}
+                          onChange={(e) => setCoverLogoAngle(Number(e.target.value))}
+                          className="w-full accent-allvino-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-allvino-on-surface-variant mb-1">
+                          Posição Y ({coverLogoYOffset}px)
+                        </label>
+                        <input
+                          type="range"
+                          min="-150"
+                          max="150"
+                          value={coverLogoYOffset}
+                          onChange={(e) => setCoverLogoYOffset(Number(e.target.value))}
+                          className="w-full accent-allvino-primary"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* TITLE FINE-TUNING */}
+                  <div className="space-y-3 pt-3 border-t border-allvino-outline-variant/20">
+                    <p className="text-[11px] font-bold text-allvino-primary">
+                      2. Título da Capa ("{headerTitle || "CATÁLOGO DE VINHOS"}")
+                    </p>
+                    <div>
+                      <label className="block text-[10px] text-allvino-on-surface-variant mb-1">
+                        Cor do Título na Capa
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={resolvedCoverTitleColor}
+                          onChange={(e) => setCoverTitleColor(e.target.value)}
+                          className="w-8 h-8 border border-allvino-outline-variant rounded cursor-pointer bg-transparent"
+                        />
+                        <input
+                          type="text"
+                          value={coverTitleColor}
+                          onChange={(e) => setCoverTitleColor(e.target.value)}
+                          placeholder="Ex: #ffffff (Padrão Auto)"
+                          className="w-full text-[10px] p-2 rounded bg-allvino-surface-container-low border border-allvino-outline-variant"
+                        />
+                        {coverTitleColor && (
+                          <button
+                            type="button"
+                            onClick={() => setCoverTitleColor("")}
+                            className="text-[9px] text-allvino-secondary underline"
+                          >
+                            Resetar
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] text-allvino-on-surface-variant mb-1">
+                          Ângulo do Título ({coverTitleAngle}°)
+                        </label>
+                        <input
+                          type="range"
+                          min="-45"
+                          max="45"
+                          value={coverTitleAngle}
+                          onChange={(e) => setCoverTitleAngle(Number(e.target.value))}
+                          className="w-full accent-allvino-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-allvino-on-surface-variant mb-1">
+                          Posição Y ({coverTitleYOffset}px)
+                        </label>
+                        <input
+                          type="range"
+                          min="-100"
+                          max="100"
+                          value={coverTitleYOffset}
+                          onChange={(e) => setCoverTitleYOffset(Number(e.target.value))}
+                          className="w-full accent-allvino-primary"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SUBTITLE FINE-TUNING */}
+                  <div className="space-y-3 pt-3 border-t border-allvino-outline-variant/20">
+                    <p className="text-[11px] font-bold text-allvino-primary">
+                      3. Subtítulo da Capa
+                    </p>
+                    <div>
+                      <label className="block text-[10px] text-allvino-on-surface-variant mb-1">
+                        Texto do Subtítulo
+                      </label>
+                      <input
+                        type="text"
+                        value={coverSubtitle}
+                        onChange={(e) => setCoverSubtitle(e.target.value)}
+                        placeholder="Catálogo Exclusivo B2B"
+                        className="w-full text-xs p-2 rounded bg-allvino-surface-container-low border border-allvino-outline-variant"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-allvino-on-surface-variant mb-1">
+                        Cor do Subtítulo na Capa
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={resolvedCoverSubColor.startsWith("rgba") ? "#c5a880" : resolvedCoverSubColor}
+                          onChange={(e) => setCoverSubtitleColor(e.target.value)}
+                          className="w-8 h-8 border border-allvino-outline-variant rounded cursor-pointer bg-transparent"
+                        />
+                        <input
+                          type="text"
+                          value={coverSubtitleColor}
+                          onChange={(e) => setCoverSubtitleColor(e.target.value)}
+                          placeholder="Ex: #c5a880 (Padrão Auto)"
+                          className="w-full text-[10px] p-2 rounded bg-allvino-surface-container-low border border-allvino-outline-variant"
+                        />
+                        {coverSubtitleColor && (
+                          <button
+                            type="button"
+                            onClick={() => setCoverSubtitleColor("")}
+                            className="text-[9px] text-allvino-secondary underline"
+                          >
+                            Resetar
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] text-allvino-on-surface-variant mb-1">
+                          Ângulo do Subtítulo ({coverSubtitleAngle}°)
+                        </label>
+                        <input
+                          type="range"
+                          min="-45"
+                          max="45"
+                          value={coverSubtitleAngle}
+                          onChange={(e) => setCoverSubtitleAngle(Number(e.target.value))}
+                          className="w-full accent-allvino-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-allvino-on-surface-variant mb-1">
+                          Posição Y ({coverSubtitleYOffset}px)
+                        </label>
+                        <input
+                          type="range"
+                          min="-100"
+                          max="100"
+                          value={coverSubtitleYOffset}
+                          onChange={(e) => setCoverSubtitleYOffset(Number(e.target.value))}
+                          className="w-full accent-allvino-primary"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* OVERALL VERTICAL OFFSET */}
+                  <div className="pt-3 border-t border-allvino-outline-variant/20">
+                    <label className="block text-[10px] text-allvino-on-surface-variant mb-1">
+                      Posição Vertical Geral do Bloco de Capa ({coverVerticalOffset}px)
+                    </label>
+                    <input
+                      type="range"
+                      min="-150"
+                      max="150"
+                      value={coverVerticalOffset}
+                      onChange={(e) => setCoverVerticalOffset(Number(e.target.value))}
+                      className="w-full accent-allvino-primary"
+                    />
+                  </div>
+                </div>
+
                 {/* ── COLOR PICKERS ── */}
                 <div className="space-y-4 pt-4 border-t border-allvino-outline-variant/10">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-allvino-primary">
-                    Paleta de Cores do PDF
+                    Paleta Geral do PDF (Páginas de Produto)
                   </h4>
                   <div className="grid grid-cols-2 gap-4">
                     {[
@@ -443,11 +706,7 @@ export default function TemplatesPage() {
                     Textura de Fundo (Páginas de Produto)
                   </h4>
                   <p className="text-[10px] text-allvino-on-surface-variant/70 leading-relaxed">
-                    A textura será aplicada como fundo em cada página de produto
-                    do catálogo.
-                    <br />
-                    <strong>Dimensões recomendadas:</strong> 2480 × 3508 px (A4
-                    a 300 dpi). Formatos: JPG ou PNG.
+                    <strong>Dimensões recomendadas:</strong> 2480 × 3508 px (A4 a 300 dpi).
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
@@ -468,7 +727,7 @@ export default function TemplatesPage() {
                     </div>
                     <div>
                       <label className="block text-[10px] text-allvino-on-surface-variant mb-1">
-                        Ou Cole uma URL
+                        Ou URL da Textura
                       </label>
                       <input
                         type="text"
@@ -503,7 +762,7 @@ export default function TemplatesPage() {
                         onClick={() => setBackgroundImageUrl("")}
                         className="text-[10px] text-red-500 hover:text-red-700 font-bold flex-shrink-0"
                       >
-                        ✕
+                        ✕ Remover
                       </button>
                     </div>
                   )}
@@ -540,14 +799,14 @@ export default function TemplatesPage() {
                   <div className="space-y-3">
                     <div>
                       <label className="block text-xs text-allvino-on-surface-variant mb-1">
-                        Título do Cabeçalho (Capa)
+                        Título Principal (Capa)
                       </label>
                       <input
                         type="text"
                         value={headerTitle}
                         onChange={(e) => setHeaderTitle(e.target.value)}
                         className="w-full px-3 py-2 rounded-lg bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text placeholder-allvino-on-surface-variant/50 focus:outline-none focus:border-allvino-primary text-xs"
-                        placeholder="ALLVINO - CATÁLOGO B2B"
+                        placeholder="CATÁLOGO DE VINHOS"
                       />
                     </div>
                     <div>
@@ -592,7 +851,7 @@ export default function TemplatesPage() {
                           : "bg-allvino-surface-container-high border-allvino-outline-variant text-allvino-text hover:border-allvino-primary"
                       }`}
                     >
-                      Capa
+                      Capa (Preview)
                     </button>
                     <button
                       onClick={() => setPreviewTab("product")}
@@ -606,7 +865,7 @@ export default function TemplatesPage() {
                     </button>
                   </div>
                   <span className="text-[10px] text-allvino-on-surface-variant">
-                    Proporção A4
+                    Proporção A4 Padrão
                   </span>
                 </div>
 
@@ -655,13 +914,19 @@ export default function TemplatesPage() {
                           />
                         </>
                       )}
-                      <div className="relative z-10 text-center px-12">
+                      <div
+                        className="relative z-10 text-center px-12 transition-transform duration-150"
+                        style={{
+                          transform: `translateY(${coverVerticalOffset * 0.5}px)`,
+                        }}
+                      >
                         <img
                           src="/logo.png"
                           alt="Logo"
-                          className="mx-auto mb-8 object-contain"
+                          className="mx-auto mb-6 object-contain transition-all duration-150"
                           style={{
-                            height: "70px",
+                            height: `${coverLogoHeight * 0.6}px`,
+                            transform: `translateY(${coverLogoYOffset * 0.5}px) rotate(${coverLogoAngle}deg)`,
                             filter: hasCoverBg
                               ? "brightness(0) invert(1)"
                               : "none",
@@ -674,33 +939,31 @@ export default function TemplatesPage() {
                         <div
                           className="w-16 h-px mx-auto mb-6"
                           style={{
-                            background: hasCoverBg
-                              ? "rgba(255,255,255,0.35)"
-                              : secondaryColor,
+                            background: coverSubtitleColor || (hasCoverBg ? "rgba(255,255,255,0.35)" : secondaryColor),
                           }}
                         />
                         <h2
-                          className="text-xl tracking-widest uppercase mb-3"
+                          className="text-xl tracking-widest uppercase mb-3 transition-all duration-150"
                           style={{
-                            color: hasCoverBg ? "#fff" : primaryColor,
+                            color: resolvedCoverTitleColor,
                             fontFamily: previewFont,
                             fontWeight: 700,
+                            transform: `translateY(${coverTitleYOffset * 0.5}px) rotate(${coverTitleAngle}deg)`,
                             textShadow: hasCoverBg
                               ? "0 2px 10px rgba(0,0,0,.25)"
                               : "none",
                           }}
                         >
-                          {headerTitle || "ALLVINO - CATÁLOGO"}
+                          {headerTitle || "CATÁLOGO DE VINHOS"}
                         </h2>
                         <p
-                          className="text-[9px] tracking-[5px] uppercase"
+                          className="text-[9px] tracking-[5px] uppercase transition-all duration-150"
                           style={{
-                            color: hasCoverBg
-                              ? "rgba(255,255,255,0.78)"
-                              : secondaryColor,
+                            color: resolvedCoverSubColor,
+                            transform: `translateY(${coverSubtitleYOffset * 0.5}px) rotate(${coverSubtitleAngle}deg)`,
                           }}
                         >
-                          Catálogo Exclusivo B2B
+                          {coverSubtitle || "CATÁLOGO EXCLUSIVO B2B"}
                         </p>
                       </div>
                       <div
