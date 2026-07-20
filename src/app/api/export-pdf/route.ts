@@ -45,14 +45,28 @@ export async function GET() {
       );
     }
 
-    // 4. Read logo and convert to base64 for inline embedding
-    let logoBase64 = "";
+    // 4. Read logos (black and white variants) and convert to base64
+    let logoBlackBase64 = "";
+    let logoWhiteBase64 = "";
     try {
-      const logoPath = path.join(process.cwd(), "public", "logo.png");
-      const logoBuffer = fs.readFileSync(logoPath);
-      logoBase64 = `data:image/png;base64,${logoBuffer.toString("base64")}`;
+      const blackPath = path.join(process.cwd(), "public", "logo-black.png");
+      if (fs.existsSync(blackPath)) {
+        logoBlackBase64 = `data:image/png;base64,${fs.readFileSync(blackPath).toString("base64")}`;
+      } else {
+        const defaultPath = path.join(process.cwd(), "public", "logo.png");
+        logoBlackBase64 = `data:image/png;base64,${fs.readFileSync(defaultPath).toString("base64")}`;
+      }
     } catch (e) {
-      console.warn("Logo não encontrado em /public/logo.png — capa sem logotipo.");
+      console.warn("Logo preta não encontrada em /public/logo-black.png");
+    }
+
+    try {
+      const whitePath = path.join(process.cwd(), "public", "logo-white.png");
+      if (fs.existsSync(whitePath)) {
+        logoWhiteBase64 = `data:image/png;base64,${fs.readFileSync(whitePath).toString("base64")}`;
+      }
+    } catch (e) {
+      console.warn("Logo branca não encontrada em /public/logo-white.png");
     }
 
     // 5. Extract style variables with defaults
@@ -71,6 +85,7 @@ export async function GET() {
     const coverLogoHeight = typeof styles.coverLogoHeight === "number" ? styles.coverLogoHeight : 110;
     const coverLogoAngle = typeof styles.coverLogoAngle === "number" ? styles.coverLogoAngle : 0;
     const coverLogoYOffset = typeof styles.coverLogoYOffset === "number" ? styles.coverLogoYOffset : 0;
+    const coverLogoVariant = styles.coverLogoVariant || "auto"; // "auto" | "black" | "white"
     
     const coverTitleColorCustom = styles.coverTitleColor || "";
     const coverTitleAngle = typeof styles.coverTitleAngle === "number" ? styles.coverTitleAngle : 0;
@@ -107,8 +122,19 @@ export async function GET() {
         ? "'Cinzel', Georgia, serif"
         : "'Playfair Display', Georgia, serif";
 
-    // 7. Cover page config
+    // 7. Cover page config & logo resolution
     const hasCoverBg = !!coverImageUrl;
+
+    let selectedLogoBase64 = logoBlackBase64;
+    if (coverLogoVariant === "white") {
+      selectedLogoBase64 = logoWhiteBase64 || logoBlackBase64;
+    } else if (coverLogoVariant === "black") {
+      selectedLogoBase64 = logoBlackBase64;
+    } else {
+      // "auto": use white logo for cover background image, else black logo
+      selectedLogoBase64 = hasCoverBg ? (logoWhiteBase64 || logoBlackBase64) : logoBlackBase64;
+    }
+
     const coverTitleColor = coverTitleColorCustom || (hasCoverBg ? "#ffffff" : primaryColor);
     const coverSubColor = coverSubtitleColorCustom || (hasCoverBg ? "rgba(255,255,255,0.78)" : secondaryColor);
     const coverFootColor = hasCoverBg ? "rgba(255,255,255,0.55)" : "#999999";
@@ -205,7 +231,6 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
   height:${coverLogoHeight}px;width:auto;margin-bottom:35px;
   transform: translateY(${coverLogoYOffset}px) rotate(${coverLogoAngle}deg);
   transition: transform 0.2s ease;
-  ${hasCoverBg ? "filter:brightness(0) invert(1);opacity:.92;" : ""}
 }
 .cover-line{
   width:70px;height:1.5px;margin:0 auto 28px;
@@ -334,7 +359,7 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
 <div class="cover" style="${coverBgCSS}">
   ${hasCoverBg ? '<div class="cover-dim"></div>' : '<div class="cover-brd cover-brd-t"></div><div class="cover-brd cover-brd-b"></div>'}
   <div class="cover-inner">
-    ${logoBase64 ? `<img src="${logoBase64}" class="cover-logo"/>` : ""}
+    ${selectedLogoBase64 ? `<img src="${selectedLogoBase64}" class="cover-logo"/>` : ""}
     <div class="cover-line"></div>
     <h1 class="cover-h1">${headerTitle}</h1>
     <p class="cover-sub">${coverSubtitle}</p>

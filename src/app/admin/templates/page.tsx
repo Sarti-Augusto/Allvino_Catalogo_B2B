@@ -19,6 +19,7 @@ interface TemplateStyles {
   coverLogoHeight?: number;
   coverLogoAngle?: number;
   coverLogoYOffset?: number;
+  coverLogoVariant?: "auto" | "black" | "white";
   coverTitleColor?: string;
   coverTitleAngle?: number;
   coverTitleYOffset?: number;
@@ -92,6 +93,7 @@ export default function TemplatesPage() {
   const [coverLogoHeight, setCoverLogoHeight] = useState(110);
   const [coverLogoAngle, setCoverLogoAngle] = useState(0);
   const [coverLogoYOffset, setCoverLogoYOffset] = useState(0);
+  const [coverLogoVariant, setCoverLogoVariant] = useState<"auto" | "black" | "white">("auto");
 
   const [coverTitleColor, setCoverTitleColor] = useState("");
   const [coverTitleAngle, setCoverTitleAngle] = useState(0);
@@ -174,6 +176,7 @@ export default function TemplatesPage() {
       setCoverLogoHeight(typeof s.coverLogoHeight === "number" ? s.coverLogoHeight : 110);
       setCoverLogoAngle(typeof s.coverLogoAngle === "number" ? s.coverLogoAngle : 0);
       setCoverLogoYOffset(typeof s.coverLogoYOffset === "number" ? s.coverLogoYOffset : 0);
+      setCoverLogoVariant(s.coverLogoVariant || "auto");
 
       setCoverTitleColor(s.coverTitleColor || "");
       setCoverTitleAngle(typeof s.coverTitleAngle === "number" ? s.coverTitleAngle : 0);
@@ -225,6 +228,7 @@ export default function TemplatesPage() {
         coverLogoHeight,
         coverLogoAngle,
         coverLogoYOffset,
+        coverLogoVariant,
         coverTitleColor,
         coverTitleAngle,
         coverTitleYOffset,
@@ -296,6 +300,15 @@ export default function TemplatesPage() {
   const resolvedProductPriceColor = productPriceColor || primaryColor;
   const resolvedProductPriceLabelColor = productPriceLabelColor || "#777777";
   const resolvedProductPriceInfoColor = productPriceInfoColor || secondaryColor;
+
+  const previewLogoSrc =
+    coverLogoVariant === "white"
+      ? "/logo-white.png"
+      : coverLogoVariant === "black"
+      ? "/logo-black.png"
+      : hasCoverBg
+      ? "/logo-white.png"
+      : "/logo-black.png";
 
   return (
     <div className="min-h-screen bg-allvino-background text-allvino-text font-sans pb-12">
@@ -369,7 +382,7 @@ export default function TemplatesPage() {
             Editor de Templates PDF
           </h1>
           <p className="text-allvino-on-surface-variant text-sm mt-1">
-            Personalize a capa (logo, posições, ângulos) e as páginas internas (proximidade do preço, tamanho da garrafa e cores individuais dos textos).
+            Personalize a capa (esquema de cores da logo, posições, ângulos) e as páginas internas (proximidade do preço, tamanho da garrafa e cores individuais dos textos).
           </p>
         </div>
 
@@ -506,12 +519,62 @@ export default function TemplatesPage() {
                     </span>
                   </h4>
 
-                  {/* LOGO FINE-TUNING */}
+                  {/* LOGO FINE-TUNING & COLOR VARIANT SELECTOR */}
                   <div className="space-y-3 pt-2 border-t border-allvino-outline-variant/20">
                     <p className="text-[11px] font-bold text-allvino-primary">
-                      1. Logotipo Allvino
+                      1. Logotipo Allvino & Harmonia de Cores
                     </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+
+                    {/* Logo Variant Selector */}
+                    <div>
+                      <label className="block text-[10px] font-semibold text-allvino-on-surface-variant mb-1">
+                        Esquema de Cores do Logotipo
+                      </label>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setCoverLogoVariant("auto")}
+                          className={`py-2 px-2 rounded text-[10px] font-bold transition border text-center ${
+                            coverLogoVariant === "auto"
+                              ? "bg-allvino-primary text-white border-allvino-primary shadow"
+                              : "bg-allvino-surface-container-low border-allvino-outline-variant text-allvino-text hover:bg-allvino-surface-container-high"
+                          }`}
+                        >
+                          ⚡ Auto (Recomendado)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCoverLogoVariant("black")}
+                          className={`py-2 px-2 rounded text-[10px] font-bold transition border text-center ${
+                            coverLogoVariant === "black"
+                              ? "bg-allvino-primary text-white border-allvino-primary shadow"
+                              : "bg-allvino-surface-container-low border-allvino-outline-variant text-allvino-text hover:bg-allvino-surface-container-high"
+                          }`}
+                        >
+                          ⚫ Preto + Vermelho
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCoverLogoVariant("white")}
+                          className={`py-2 px-2 rounded text-[10px] font-bold transition border text-center ${
+                            coverLogoVariant === "white"
+                              ? "bg-allvino-primary text-white border-allvino-primary shadow"
+                              : "bg-allvino-surface-container-low border-allvino-outline-variant text-allvino-text hover:bg-allvino-surface-container-high"
+                          }`}
+                        >
+                          ⚪ Branco + Vermelho
+                        </button>
+                      </div>
+                      <p className="text-[9px] text-allvino-on-surface-variant/70 mt-1">
+                        {coverLogoVariant === "auto"
+                          ? "Detecta automaticamente: Usa versão branca para fotos/fundos escuros e preta para fundos claros."
+                          : coverLogoVariant === "black"
+                          ? "Força o logotipo com letras pretas e tampa/detalhe vermelho (ideal para fundos claros)."
+                          : "Força o logotipo com letras brancas e tampa/detalhe vermelho (ideal para fundos escuros)."}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
                       <div>
                         <div className="flex items-center justify-between mb-1">
                           <label className="text-[10px] text-allvino-on-surface-variant font-medium">
@@ -1367,16 +1430,12 @@ export default function TemplatesPage() {
                         }}
                       >
                         <img
-                          src="/logo.png"
+                          src={previewLogoSrc}
                           alt="Logo"
                           className="mx-auto mb-6 object-contain transition-all duration-150"
                           style={{
                             height: `${coverLogoHeight * 0.6}px`,
                             transform: `translateY(${coverLogoYOffset * 0.5}px) rotate(${coverLogoAngle}deg)`,
-                            filter: hasCoverBg
-                              ? "brightness(0) invert(1)"
-                              : "none",
-                            opacity: hasCoverBg ? 0.92 : 1,
                           }}
                           onError={(e) => {
                             e.currentTarget.style.display = "none";
