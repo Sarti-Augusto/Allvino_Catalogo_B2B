@@ -82,6 +82,13 @@ export async function GET() {
 
     const coverVerticalOffset = typeof styles.coverVerticalOffset === "number" ? styles.coverVerticalOffset : 0;
 
+    // Fine-tuning product page parameters (Bottle size & text dimensions)
+    const productImgHeight = typeof styles.productImgHeight === "number" ? styles.productImgHeight : 480;
+    const productImgMaxWidth = Math.round(productImgHeight * 0.52);
+    const productDescFontSize = typeof styles.productDescFontSize === "number" ? styles.productDescFontSize : 14;
+    const productNameFontSize = typeof styles.productNameFontSize === "number" ? styles.productNameFontSize : 28;
+    const productSpecsFontSize = typeof styles.productSpecsFontSize === "number" ? styles.productSpecsFontSize : 10;
+
     // 6. Resolve font family CSS
     const fontCSS =
       fontFamily === "Inter"
@@ -219,79 +226,80 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
 /* ── PRODUCT PAGE ─────────────────────── */
 .prod-page{
   width:210mm;height:297mm;
-  padding:42px 52px 55px;
+  padding:36px 48px 45px;
   display:flex;flex-direction:column;
   align-items:center;
   position:relative;
   page-break-after:always;
 }
 .prod-top{
-  text-align:center;width:100%;padding-top:8px;
+  text-align:center;width:100%;padding-top:4px;
 }
 .prod-name{
   font-family:${fontCSS};
-  font-size:24px;font-weight:700;
+  font-size:${productNameFontSize}px;font-weight:700;
   color:${primaryColor};
-  letter-spacing:1px;margin-bottom:10px;
+  letter-spacing:1px;margin-bottom:8px;
 }
 .prod-origin{
-  font-size:10px;color:${secondaryColor};
+  font-size:${productSpecsFontSize}px;color:${secondaryColor};
   text-transform:uppercase;letter-spacing:3px;font-weight:600;
 }
 .prod-line{
-  width:45px;height:1.5px;
+  width:50px;height:1.5px;
   background:${secondaryColor};
-  margin:20px auto;
+  margin:14px auto;
 }
 .prod-img-area{
   flex:1;display:flex;
   align-items:center;justify-content:center;
-  padding:10px 0;
+  padding:5px 0;
 }
 .prod-img{
-  max-height:370px;max-width:170px;
+  max-height:${productImgHeight}px;
+  max-width:${productImgMaxWidth}px;
   object-fit:contain;
-  filter:drop-shadow(0 8px 24px rgba(0,0,0,.10));
+  filter:drop-shadow(0 10px 30px rgba(0,0,0,.14));
 }
 .prod-bottom{
-  text-align:center;width:100%;max-width:460px;
+  text-align:center;width:100%;max-width:500px;
 }
 .prod-specs{
-  font-size:8.5px;color:#999;
+  font-size:${productSpecsFontSize}px;color:#888;
   text-transform:uppercase;letter-spacing:1.5px;
-  margin-bottom:12px;
+  margin-bottom:10px;
 }
 .prod-desc{
-  font-size:10.5px;line-height:1.85;
-  color:${textColor};font-weight:300;
-  margin-bottom:20px;
+  font-size:${productDescFontSize}px;line-height:1.8;
+  color:${textColor};font-weight:400;
+  margin-bottom:16px;
 }
 .prod-price-box{
-  border-top:1px solid #e4e4e4;padding-top:14px;
+  border-top:1px solid #e4e4e4;padding-top:12px;
 }
 .prod-price-label{
-  font-size:7.5px;text-transform:uppercase;
+  font-size:8px;text-transform:uppercase;
   letter-spacing:3px;color:#aaa;margin-bottom:2px;
 }
 .prod-price-info{
-  font-size:8.5px;color:${secondaryColor};
-  font-weight:600;margin-bottom:8px;
+  font-size:9.5px;color:${secondaryColor};
+  font-weight:600;margin-bottom:6px;
 }
 .prod-price-row{
   display:flex;align-items:baseline;
-  justify-content:center;gap:10px;
+  justify-content:center;gap:12px;
 }
 .price-val{
-  font-size:20px;font-weight:700;color:${primaryColor};
+  font-size:22px;font-weight:800;color:${primaryColor};
 }
 .price-old{
-  font-size:12px;color:#bbb;text-decoration:line-through;
+  font-size:13px;color:#bbb;text-decoration:line-through;
 }
 .page-foot{
-  position:absolute;bottom:22px;left:52px;right:52px;
+  position:absolute;bottom:20px;left:48px;right:48px;
   border-top:1px solid #eee;padding-top:8px;
   display:flex;justify-content:space-between;
-  font-size:7.5px;color:#bbb;letter-spacing:.5px;
+  font-size:8px;color:#bbb;letter-spacing:.5px;
 }
 </style>
 </head>

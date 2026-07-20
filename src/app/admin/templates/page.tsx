@@ -26,6 +26,11 @@ interface TemplateStyles {
   coverSubtitleAngle?: number;
   coverSubtitleYOffset?: number;
   coverVerticalOffset?: number;
+  // Product page fine-tuning:
+  productImgHeight?: number;
+  productDescFontSize?: number;
+  productNameFontSize?: number;
+  productSpecsFontSize?: number;
 }
 
 interface Template {
@@ -88,6 +93,12 @@ export default function TemplatesPage() {
   const [coverSubtitleYOffset, setCoverSubtitleYOffset] = useState(0);
 
   const [coverVerticalOffset, setCoverVerticalOffset] = useState(0);
+
+  // Product Page Fine-Tuning State (Bottle & Descriptions)
+  const [productImgHeight, setProductImgHeight] = useState(480);
+  const [productDescFontSize, setProductDescFontSize] = useState(14);
+  const [productNameFontSize, setProductNameFontSize] = useState(28);
+  const [productSpecsFontSize, setProductSpecsFontSize] = useState(10);
 
   // Preview tab
   const [previewTab, setPreviewTab] = useState<"cover" | "product">("cover");
@@ -155,6 +166,11 @@ export default function TemplatesPage() {
       setCoverSubtitleYOffset(typeof s.coverSubtitleYOffset === "number" ? s.coverSubtitleYOffset : 0);
 
       setCoverVerticalOffset(typeof s.coverVerticalOffset === "number" ? s.coverVerticalOffset : 0);
+
+      setProductImgHeight(typeof s.productImgHeight === "number" ? s.productImgHeight : 480);
+      setProductDescFontSize(typeof s.productDescFontSize === "number" ? s.productDescFontSize : 14);
+      setProductNameFontSize(typeof s.productNameFontSize === "number" ? s.productNameFontSize : 28);
+      setProductSpecsFontSize(typeof s.productSpecsFontSize === "number" ? s.productSpecsFontSize : 10);
     } catch {
       console.error("Erro ao interpretar estilos do template.");
     }
@@ -189,6 +205,10 @@ export default function TemplatesPage() {
         coverSubtitleAngle,
         coverSubtitleYOffset,
         coverVerticalOffset,
+        productImgHeight,
+        productDescFontSize,
+        productNameFontSize,
+        productSpecsFontSize,
       }),
     };
 
@@ -232,7 +252,6 @@ export default function TemplatesPage() {
       ? "Georgia, serif"
       : "Georgia, serif";
 
-  // Resolved colors for cover preview
   const resolvedCoverTitleColor = coverTitleColor || (hasCoverBg ? "#ffffff" : primaryColor);
   const resolvedCoverSubColor = coverSubtitleColor || (hasCoverBg ? "rgba(255,255,255,0.78)" : secondaryColor);
 
@@ -308,7 +327,7 @@ export default function TemplatesPage() {
             Editor de Templates PDF
           </h1>
           <p className="text-allvino-on-surface-variant text-sm mt-1">
-            Personalize o layout da capa (logo, títulos, rotações, alturas e cores) e das páginas internas do catálogo.
+            Personalize a capa (logo, posições, ângulos) e as páginas internas (tamanho da garrafa e textos da descrição).
           </p>
         </div>
 
@@ -371,7 +390,7 @@ export default function TemplatesPage() {
                   </label>
                 </div>
 
-                {/* ── COVER IMAGE & TEXT ADJUSTMENTS ── */}
+                {/* ── COVER IMAGE ── */}
                 <div className="space-y-4 pt-2 border-t border-allvino-outline-variant/10">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-allvino-primary">
                     Imagem de Capa do Catálogo
@@ -430,7 +449,7 @@ export default function TemplatesPage() {
                         onClick={() => setCoverImageUrl("")}
                         className="text-[10px] text-red-500 hover:text-red-700 font-bold flex-shrink-0"
                       >
-                        ✕ Removar
+                        ✕ Remover
                       </button>
                     </div>
                   )}
@@ -733,6 +752,122 @@ export default function TemplatesPage() {
                         onChange={(e) => setCoverVerticalOffset(Number(e.target.value))}
                         className="w-16 text-[10px] p-1 rounded bg-allvino-surface-container-low border border-allvino-outline-variant text-center"
                       />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── PRODUCT PAGE FINE-TUNING PANEL ── */}
+                <div className="space-y-4 pt-4 border-t border-allvino-outline-variant/20 bg-allvino-surface-container-low/30 p-4 rounded-xl border">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-allvino-primary flex items-center justify-between">
+                    <span>🍷 Dimensão da Garrafa e Textos do Produto</span>
+                    <span className="text-[9px] text-allvino-secondary bg-allvino-secondary/10 px-2 py-0.5 rounded font-bold">
+                      Layout de Produto
+                    </span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                    {/* Bottle Image Height */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] text-allvino-on-surface-variant font-semibold">
+                          Altura da Garrafa (Foto)
+                        </label>
+                        <span className="text-[10px] font-bold text-allvino-primary">{productImgHeight}px</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="range"
+                          min="250"
+                          max="700"
+                          value={productImgHeight}
+                          onChange={(e) => setProductImgHeight(Number(e.target.value))}
+                          className="w-full accent-allvino-primary"
+                        />
+                        <input
+                          type="number"
+                          value={productImgHeight}
+                          onChange={(e) => setProductImgHeight(Number(e.target.value))}
+                          className="w-14 text-[10px] p-1 rounded bg-allvino-surface-container-low border border-allvino-outline-variant text-center"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Product Description Font Size */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] text-allvino-on-surface-variant font-semibold">
+                          Fonte da Descrição
+                        </label>
+                        <span className="text-[10px] font-bold text-allvino-primary">{productDescFontSize}px</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="range"
+                          min="10"
+                          max="24"
+                          value={productDescFontSize}
+                          onChange={(e) => setProductDescFontSize(Number(e.target.value))}
+                          className="w-full accent-allvino-primary"
+                        />
+                        <input
+                          type="number"
+                          value={productDescFontSize}
+                          onChange={(e) => setProductDescFontSize(Number(e.target.value))}
+                          className="w-14 text-[10px] p-1 rounded bg-allvino-surface-container-low border border-allvino-outline-variant text-center"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Product Name Font Size */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] text-allvino-on-surface-variant font-semibold">
+                          Fonte do Nome do Vinho
+                        </label>
+                        <span className="text-[10px] font-bold text-allvino-primary">{productNameFontSize}px</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="range"
+                          min="18"
+                          max="42"
+                          value={productNameFontSize}
+                          onChange={(e) => setProductNameFontSize(Number(e.target.value))}
+                          className="w-full accent-allvino-primary"
+                        />
+                        <input
+                          type="number"
+                          value={productNameFontSize}
+                          onChange={(e) => setProductNameFontSize(Number(e.target.value))}
+                          className="w-14 text-[10px] p-1 rounded bg-allvino-surface-container-low border border-allvino-outline-variant text-center"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Product Specs Font Size */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] text-allvino-on-surface-variant font-semibold">
+                          Fonte da Ficha Técnica
+                        </label>
+                        <span className="text-[10px] font-bold text-allvino-primary">{productSpecsFontSize}px</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="range"
+                          min="8"
+                          max="18"
+                          value={productSpecsFontSize}
+                          onChange={(e) => setProductSpecsFontSize(Number(e.target.value))}
+                          className="w-full accent-allvino-primary"
+                        />
+                        <input
+                          type="number"
+                          value={productSpecsFontSize}
+                          onChange={(e) => setProductSpecsFontSize(Number(e.target.value))}
+                          className="w-14 text-[10px] p-1 rounded bg-allvino-surface-container-low border border-allvino-outline-variant text-center"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1069,78 +1204,88 @@ export default function TemplatesPage() {
 
                   {/* ── PRODUCT PREVIEW ── */}
                   {previewTab === "product" && (
-                    <div className="h-full flex flex-col items-center px-10 py-8 relative">
+                    <div className="h-full flex flex-col items-center px-10 py-6 relative">
                       {/* Product header */}
-                      <div className="text-center w-full pt-2">
+                      <div className="text-center w-full pt-1">
                         <h2
-                          className="text-lg font-bold mb-1.5"
+                          className="font-bold mb-1 transition-all"
                           style={{
                             color: primaryColor,
                             fontFamily: previewFont,
+                            fontSize: `${Math.round(productNameFontSize * 0.7)}px`,
                           }}
                         >
                           {PREVIEW_WINE.name}
                         </h2>
                         <p
-                          className="text-[8px] uppercase tracking-[3px] font-semibold"
-                          style={{ color: secondaryColor }}
+                          className="uppercase tracking-[3px] font-semibold transition-all"
+                          style={{
+                            color: secondaryColor,
+                            fontSize: `${Math.round(productSpecsFontSize * 0.85)}px`,
+                          }}
                         >
                           {PREVIEW_WINE.paisOrigem} ·{" "}
                           {PREVIEW_WINE.regiao}
                         </p>
                         <div
-                          className="w-10 h-px mx-auto my-4"
+                          className="w-10 h-px mx-auto my-3"
                           style={{ background: secondaryColor }}
                         />
                       </div>
 
                       {/* Bottle image */}
-                      <div className="flex-1 flex items-center justify-center py-2">
+                      <div className="flex-1 flex items-center justify-center py-1 overflow-hidden">
                         <img
                           src={PREVIEW_WINE.imagemUrl}
                           alt={PREVIEW_WINE.name}
-                          className="object-contain"
+                          className="object-contain transition-all duration-150"
                           style={{
-                            maxHeight: "200px",
-                            maxWidth: "100px",
+                            maxHeight: `${Math.round(productImgHeight * 0.56)}px`,
+                            maxWidth: `${Math.round(productImgHeight * 0.28)}px`,
                             filter:
-                              "drop-shadow(0 6px 16px rgba(0,0,0,.10))",
+                              "drop-shadow(0 8px 20px rgba(0,0,0,.12))",
                           }}
                         />
                       </div>
 
                       {/* Details */}
                       <div className="text-center w-full max-w-sm">
-                        <p className="text-[7px] text-gray-400 uppercase tracking-wider mb-2">
+                        <p
+                          className="text-gray-400 uppercase tracking-wider mb-2 transition-all"
+                          style={{
+                            fontSize: `${Math.round(productSpecsFontSize * 0.8)}px`,
+                          }}
+                        >
                           {PREVIEW_WINE.vinicola} · {PREVIEW_WINE.uva} ·
                           Safra {PREVIEW_WINE.safra} ·{" "}
                           {PREVIEW_WINE.teorAlcoolico}% vol
                         </p>
                         <p
-                          className="text-[8px] leading-relaxed mb-4"
+                          className="leading-relaxed mb-3 transition-all"
                           style={{
                             color: textColor,
-                            fontWeight: 300,
+                            fontWeight: 400,
+                            fontSize: `${Math.round(productDescFontSize * 0.75)}px`,
                           }}
                         >
                           {PREVIEW_WINE.desc}
                         </p>
                         <div
-                          className="border-t pt-3"
+                          className="border-t pt-2"
                           style={{ borderColor: "#e4e4e4" }}
                         >
-                          <p className="text-[6px] uppercase tracking-[3px] text-gray-400 mb-0.5">
+                          <p className="text-[6.5px] uppercase tracking-[3px] text-gray-400 mb-0.5">
                             Preço Unitário B2B
                           </p>
                           <p
-                            className="text-[7px] font-semibold mb-1.5"
+                            className="text-[7.5px] font-semibold mb-1"
                             style={{ color: secondaryColor }}
                           >
                             Caixa c/ 6 garrafas
                           </p>
                           <div className="flex items-baseline justify-center gap-2">
                             <span
-                              className="text-base font-bold"
+                              className="text-base font-extrabold"
                               style={{ color: primaryColor }}
                             >
                               R${" "}
@@ -1155,7 +1300,7 @@ export default function TemplatesPage() {
 
                       {/* Footer */}
                       <div
-                        className="absolute bottom-4 left-10 right-10 border-t pt-2 flex justify-between text-[6px] text-gray-300"
+                        className="absolute bottom-4 left-10 right-10 border-t pt-2 flex justify-between text-[6.5px] text-gray-300"
                         style={{ borderColor: "#eee" }}
                       >
                         <span>
