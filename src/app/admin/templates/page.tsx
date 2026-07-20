@@ -185,17 +185,17 @@ export default function TemplatesPage() {
       <nav className="border-b border-allvino-outline-variant/30 bg-allvino-surface-container-low/80 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               <img
                 src="/logo.png"
                 alt="Allvino Logo"
-                className="h-10 w-auto object-contain"
+                className="h-14 w-auto object-contain"
                 onError={(e) => {
                   e.currentTarget.style.display = "none";
                 }}
               />
-              <span className="text-xl font-bold font-serif text-allvino-primary tracking-wider">
-                ALLVINO ADMIN
+              <span className="text-sm font-bold bg-allvino-primary/10 text-allvino-primary px-2.5 py-1 rounded tracking-widest uppercase">
+                Admin
               </span>
               <div className="hidden md:flex space-x-4 pl-6">
                 <Link

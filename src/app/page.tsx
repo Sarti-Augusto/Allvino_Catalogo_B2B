@@ -107,18 +107,15 @@ export default function Home() {
       {/* Navigation Header */}
       <nav className="border-b border-allvino-outline-variant/30 bg-allvino-surface-container-low/80 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2">
+          <Link href="/" className="flex items-center">
             <img
               src="/logo.png"
               alt="Allvino Logo"
-              className="h-10 w-auto object-contain"
+              className="h-14 w-auto object-contain"
               onError={(e) => {
                 e.currentTarget.style.display = "none";
               }}
             />
-            <span className="text-xl font-bold font-serif text-allvino-primary tracking-wider">
-              ALLVINO
-            </span>
           </Link>
           <div className="flex items-center space-x-4">
             {/* Share Buttons */}
@@ -160,7 +157,7 @@ export default function Home() {
             <img
               src="/logo.png"
               alt="Allvino Logo"
-              className="h-20 w-auto object-contain"
+              className="h-24 w-auto object-contain"
               onError={(e) => {
                 e.currentTarget.style.display = "none";
               }}
@@ -412,7 +409,10 @@ export default function Home() {
                     <div className="px-5 py-4 bg-allvino-surface-container-low/30 border-t border-allvino-outline-variant/20 flex items-center justify-between">
                       <div className="space-y-0.5">
                         <span className="text-[10px] uppercase font-bold tracking-widest text-allvino-on-surface-variant block">
-                          Preço Caixa B2B
+                          Preço Unitário B2B
+                        </span>
+                        <span className="text-[9px] text-allvino-secondary block font-semibold mb-0.5">
+                          (Caixa c/ 6 garrafas)
                         </span>
                         {wine.precoPromocional ? (
                           <div className="flex items-baseline gap-2">

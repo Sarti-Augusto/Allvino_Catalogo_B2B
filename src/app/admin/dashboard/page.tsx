@@ -228,17 +228,17 @@ export default function DashboardPage() {
       <nav className="border-b border-allvino-outline-variant/30 bg-allvino-surface-container-low/80 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               <img
                 src="/logo.png"
                 alt="Allvino Logo"
-                className="h-10 w-auto object-contain"
+                className="h-14 w-auto object-contain"
                 onError={(e) => {
                   e.currentTarget.style.display = "none";
                 }}
               />
-              <span className="text-xl font-bold font-serif text-allvino-primary tracking-wider">
-                ALLVINO ADMIN
+              <span className="text-sm font-bold bg-allvino-primary/10 text-allvino-primary px-2.5 py-1 rounded tracking-widest uppercase">
+                Admin
               </span>
               <div className="hidden md:flex space-x-4 pl-6">
                 <Link
@@ -657,17 +657,56 @@ export default function DashboardPage() {
               </div>
 
               {/* Image URL custom input & Guideline note */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1">
-                  URL da Imagem do Vinho
-                </label>
-                <input
-                  type="text"
-                  value={imagemUrl}
-                  onChange={(e) => setImagemUrl(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text text-xs focus:outline-none focus:border-allvino-primary/60 transition"
-                  placeholder="https://exemplo.com/sua-imagem.jpg"
-                />
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1">
+                      Enviar Arquivo de Imagem
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            if (typeof reader.result === "string") {
+                              setImagemUrl(reader.result);
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="w-full px-3 py-2 rounded bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text text-xs focus:outline-none focus:border-allvino-primary/60 transition"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1">
+                      Ou URL da Imagem do Vinho
+                    </label>
+                    <input
+                      type="text"
+                      value={imagemUrl}
+                      onChange={(e) => setImagemUrl(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text text-xs focus:outline-none focus:border-allvino-primary/60 transition"
+                      placeholder="https://exemplo.com/sua-imagem.jpg"
+                    />
+                  </div>
+                </div>
+                
+                {imagemUrl && (
+                  <div className="flex items-center space-x-3 bg-allvino-surface-container-low/40 p-2.5 rounded-lg border border-allvino-outline-variant/30">
+                    <div className="w-12 h-16 bg-white border border-allvino-outline-variant/40 rounded flex items-center justify-center overflow-hidden flex-shrink-0">
+                      <img src={imagemUrl} alt="Preview" className="max-h-full max-w-full object-contain" />
+                    </div>
+                    <div className="text-[10px] text-allvino-on-surface-variant">
+                      <p className="font-semibold text-allvino-primary">Visualização da Garrafa</p>
+                      <p className="font-light line-clamp-1 max-w-md">{imagemUrl.startsWith("data:") ? "Arquivo de imagem carregado localmente (Base64)" : imagemUrl}</p>
+                    </div>
+                  </div>
+                )}
+                
                 <p className="text-[10px] text-allvino-on-surface-variant/80 mt-1 font-light">
                   💡 **Dimensão Recomendada:** Para manter a consistência visual no catálogo digital e PDF, utilize imagens em formato **vertical** de garrafa com **fundo transparente (PNG)**, dimensões sugeridas de **300x700px**.
                 </p>

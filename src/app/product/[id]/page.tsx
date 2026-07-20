@@ -81,18 +81,15 @@ export default function ProductDetailPage() {
       {/* Header Bar */}
       <nav className="border-b border-allvino-outline-variant/30 bg-allvino-surface-container-low/80 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2">
+          <Link href="/" className="flex items-center">
             <img
               src="/logo.png"
               alt="Allvino Logo"
-              className="h-10 w-auto object-contain"
+              className="h-14 w-auto object-contain"
               onError={(e) => {
                 e.currentTarget.style.display = "none";
               }}
             />
-            <span className="text-xl font-bold font-serif text-allvino-primary tracking-wider">
-              ALLVINO
-            </span>
           </Link>
           <Link
             href="/"
@@ -213,8 +210,11 @@ export default function ProductDetailPage() {
             {/* Price Footer */}
             <div className="pt-6 border-t border-allvino-outline-variant/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <span className="text-[10px] uppercase font-bold tracking-widest text-allvino-on-surface-variant block mb-1">
-                  Preço Caixa B2B
+                <span className="text-[10px] uppercase font-bold tracking-widest text-allvino-on-surface-variant block mb-0.5">
+                  Preço Unitário B2B
+                </span>
+                <span className="text-[9px] text-allvino-secondary block font-semibold mb-1">
+                  (Caixa c/ 6 garrafas)
                 </span>
                 {product.precoPromocional ? (
                   <div className="flex items-baseline gap-3">
