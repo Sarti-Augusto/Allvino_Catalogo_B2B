@@ -452,43 +452,76 @@ export default function TemplatesPage() {
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
-                        <label className="block text-[10px] text-allvino-on-surface-variant mb-1">
-                          Altura da Logo ({coverLogoHeight}px)
-                        </label>
-                        <input
-                          type="range"
-                          min="40"
-                          max="250"
-                          value={coverLogoHeight}
-                          onChange={(e) => setCoverLogoHeight(Number(e.target.value))}
-                          className="w-full accent-allvino-primary"
-                        />
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] text-allvino-on-surface-variant font-medium">
+                            Altura da Logo
+                          </label>
+                          <span className="text-[10px] font-bold text-allvino-primary">{coverLogoHeight}px</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="range"
+                            min="20"
+                            max="450"
+                            value={coverLogoHeight}
+                            onChange={(e) => setCoverLogoHeight(Number(e.target.value))}
+                            className="w-full accent-allvino-primary"
+                          />
+                          <input
+                            type="number"
+                            value={coverLogoHeight}
+                            onChange={(e) => setCoverLogoHeight(Number(e.target.value))}
+                            className="w-14 text-[10px] p-1 rounded bg-allvino-surface-container-low border border-allvino-outline-variant text-center"
+                          />
+                        </div>
                       </div>
                       <div>
-                        <label className="block text-[10px] text-allvino-on-surface-variant mb-1">
-                          Ângulo ({coverLogoAngle}°)
-                        </label>
-                        <input
-                          type="range"
-                          min="-180"
-                          max="180"
-                          value={coverLogoAngle}
-                          onChange={(e) => setCoverLogoAngle(Number(e.target.value))}
-                          className="w-full accent-allvino-primary"
-                        />
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] text-allvino-on-surface-variant font-medium">
+                            Ângulo
+                          </label>
+                          <span className="text-[10px] font-bold text-allvino-primary">{coverLogoAngle}°</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="range"
+                            min="-180"
+                            max="180"
+                            value={coverLogoAngle}
+                            onChange={(e) => setCoverLogoAngle(Number(e.target.value))}
+                            className="w-full accent-allvino-primary"
+                          />
+                          <input
+                            type="number"
+                            value={coverLogoAngle}
+                            onChange={(e) => setCoverLogoAngle(Number(e.target.value))}
+                            className="w-14 text-[10px] p-1 rounded bg-allvino-surface-container-low border border-allvino-outline-variant text-center"
+                          />
+                        </div>
                       </div>
                       <div>
-                        <label className="block text-[10px] text-allvino-on-surface-variant mb-1">
-                          Posição Y ({coverLogoYOffset}px)
-                        </label>
-                        <input
-                          type="range"
-                          min="-150"
-                          max="150"
-                          value={coverLogoYOffset}
-                          onChange={(e) => setCoverLogoYOffset(Number(e.target.value))}
-                          className="w-full accent-allvino-primary"
-                        />
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] text-allvino-on-surface-variant font-medium">
+                            Posição Y (Vert.)
+                          </label>
+                          <span className="text-[10px] font-bold text-allvino-primary">{coverLogoYOffset}px</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="range"
+                            min="-600"
+                            max="600"
+                            value={coverLogoYOffset}
+                            onChange={(e) => setCoverLogoYOffset(Number(e.target.value))}
+                            className="w-full accent-allvino-primary"
+                          />
+                          <input
+                            type="number"
+                            value={coverLogoYOffset}
+                            onChange={(e) => setCoverLogoYOffset(Number(e.target.value))}
+                            className="w-14 text-[10px] p-1 rounded bg-allvino-surface-container-low border border-allvino-outline-variant text-center"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -529,30 +562,52 @@ export default function TemplatesPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[10px] text-allvino-on-surface-variant mb-1">
-                          Ângulo do Título ({coverTitleAngle}°)
-                        </label>
-                        <input
-                          type="range"
-                          min="-45"
-                          max="45"
-                          value={coverTitleAngle}
-                          onChange={(e) => setCoverTitleAngle(Number(e.target.value))}
-                          className="w-full accent-allvino-primary"
-                        />
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] text-allvino-on-surface-variant font-medium">
+                            Ângulo do Título
+                          </label>
+                          <span className="text-[10px] font-bold text-allvino-primary">{coverTitleAngle}°</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="range"
+                            min="-180"
+                            max="180"
+                            value={coverTitleAngle}
+                            onChange={(e) => setCoverTitleAngle(Number(e.target.value))}
+                            className="w-full accent-allvino-primary"
+                          />
+                          <input
+                            type="number"
+                            value={coverTitleAngle}
+                            onChange={(e) => setCoverTitleAngle(Number(e.target.value))}
+                            className="w-14 text-[10px] p-1 rounded bg-allvino-surface-container-low border border-allvino-outline-variant text-center"
+                          />
+                        </div>
                       </div>
                       <div>
-                        <label className="block text-[10px] text-allvino-on-surface-variant mb-1">
-                          Posição Y ({coverTitleYOffset}px)
-                        </label>
-                        <input
-                          type="range"
-                          min="-100"
-                          max="100"
-                          value={coverTitleYOffset}
-                          onChange={(e) => setCoverTitleYOffset(Number(e.target.value))}
-                          className="w-full accent-allvino-primary"
-                        />
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] text-allvino-on-surface-variant font-medium">
+                            Posição Y Título
+                          </label>
+                          <span className="text-[10px] font-bold text-allvino-primary">{coverTitleYOffset}px</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="range"
+                            min="-600"
+                            max="600"
+                            value={coverTitleYOffset}
+                            onChange={(e) => setCoverTitleYOffset(Number(e.target.value))}
+                            className="w-full accent-allvino-primary"
+                          />
+                          <input
+                            type="number"
+                            value={coverTitleYOffset}
+                            onChange={(e) => setCoverTitleYOffset(Number(e.target.value))}
+                            className="w-14 text-[10px] p-1 rounded bg-allvino-surface-container-low border border-allvino-outline-variant text-center"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -605,47 +660,80 @@ export default function TemplatesPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[10px] text-allvino-on-surface-variant mb-1">
-                          Ângulo do Subtítulo ({coverSubtitleAngle}°)
-                        </label>
-                        <input
-                          type="range"
-                          min="-45"
-                          max="45"
-                          value={coverSubtitleAngle}
-                          onChange={(e) => setCoverSubtitleAngle(Number(e.target.value))}
-                          className="w-full accent-allvino-primary"
-                        />
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] text-allvino-on-surface-variant font-medium">
+                            Ângulo Subtítulo
+                          </label>
+                          <span className="text-[10px] font-bold text-allvino-primary">{coverSubtitleAngle}°</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="range"
+                            min="-180"
+                            max="180"
+                            value={coverSubtitleAngle}
+                            onChange={(e) => setCoverSubtitleAngle(Number(e.target.value))}
+                            className="w-full accent-allvino-primary"
+                          />
+                          <input
+                            type="number"
+                            value={coverSubtitleAngle}
+                            onChange={(e) => setCoverSubtitleAngle(Number(e.target.value))}
+                            className="w-14 text-[10px] p-1 rounded bg-allvino-surface-container-low border border-allvino-outline-variant text-center"
+                          />
+                        </div>
                       </div>
                       <div>
-                        <label className="block text-[10px] text-allvino-on-surface-variant mb-1">
-                          Posição Y ({coverSubtitleYOffset}px)
-                        </label>
-                        <input
-                          type="range"
-                          min="-100"
-                          max="100"
-                          value={coverSubtitleYOffset}
-                          onChange={(e) => setCoverSubtitleYOffset(Number(e.target.value))}
-                          className="w-full accent-allvino-primary"
-                        />
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[10px] text-allvino-on-surface-variant font-medium">
+                            Posição Y Subtítulo
+                          </label>
+                          <span className="text-[10px] font-bold text-allvino-primary">{coverSubtitleYOffset}px</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="range"
+                            min="-600"
+                            max="600"
+                            value={coverSubtitleYOffset}
+                            onChange={(e) => setCoverSubtitleYOffset(Number(e.target.value))}
+                            className="w-full accent-allvino-primary"
+                          />
+                          <input
+                            type="number"
+                            value={coverSubtitleYOffset}
+                            onChange={(e) => setCoverSubtitleYOffset(Number(e.target.value))}
+                            className="w-14 text-[10px] p-1 rounded bg-allvino-surface-container-low border border-allvino-outline-variant text-center"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   {/* OVERALL VERTICAL OFFSET */}
                   <div className="pt-3 border-t border-allvino-outline-variant/20">
-                    <label className="block text-[10px] text-allvino-on-surface-variant mb-1">
-                      Posição Vertical Geral do Bloco de Capa ({coverVerticalOffset}px)
-                    </label>
-                    <input
-                      type="range"
-                      min="-150"
-                      max="150"
-                      value={coverVerticalOffset}
-                      onChange={(e) => setCoverVerticalOffset(Number(e.target.value))}
-                      className="w-full accent-allvino-primary"
-                    />
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[10px] text-allvino-on-surface-variant font-medium">
+                        Posição Vertical Geral do Bloco de Capa
+                      </label>
+                      <span className="text-[10px] font-bold text-allvino-primary">{coverVerticalOffset}px</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="range"
+                        min="-600"
+                        max="600"
+                        value={coverVerticalOffset}
+                        onChange={(e) => setCoverVerticalOffset(Number(e.target.value))}
+                        className="w-full accent-allvino-primary"
+                      />
+                      <input
+                        type="number"
+                        value={coverVerticalOffset}
+                        onChange={(e) => setCoverVerticalOffset(Number(e.target.value))}
+                        className="w-16 text-[10px] p-1 rounded bg-allvino-surface-container-low border border-allvino-outline-variant text-center"
+                      />
+                    </div>
                   </div>
                 </div>
 
