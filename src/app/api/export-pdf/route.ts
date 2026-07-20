@@ -6,7 +6,7 @@ import path from "path";
 
 const prisma = new PrismaClient();
 
-const clamp = (val: any, min: number = -200, max: number = 200): number => {
+const clamp = (val: any, min: number = -150, max: number = 150): number => {
   const num = typeof val === "number" ? val : parseFloat(val);
   if (isNaN(num)) return 0;
   return Math.max(min, Math.min(max, num));
@@ -111,6 +111,12 @@ export async function GET() {
     const coverFooterYOffset = clamp(styles.coverFooterYOffset);
     const coverVerticalOffset = clamp(styles.coverVerticalOffset);
 
+    // ── LAYOUT PRESET & ALIGNMENTS ──
+    const productLayoutPreset = styles.productLayoutPreset || "classic"; // "classic" | "side-right" | "side-left" | "price-top"
+    const productDescAngle = typeof styles.productDescAngle === "number" ? styles.productDescAngle : 0;
+    const productDescAlign = styles.productDescAlign || "center"; // "left" | "center" | "right" | "justify"
+    const productPriceAngle = typeof styles.productPriceAngle === "number" ? styles.productPriceAngle : 0;
+
     // ── PRODUCT PAGE BOTTLE & LAYOUT DYNAMIC TUNING ──
     const productImgHeight = typeof styles.productImgHeight === "number" ? styles.productImgHeight : 520;
     const productImgMaxWidth = Math.round(productImgHeight * 0.52);
@@ -136,17 +142,16 @@ export async function GET() {
     const productPriceSide = styles.productPriceSide || "right"; // "right" | "left" | "center"
     const productPriceXOffset = clamp(styles.productPriceXOffset);
     const productPriceYOffset = clamp(styles.productPriceYOffset);
-    const productPriceAngle = typeof styles.productPriceAngle === "number" ? styles.productPriceAngle : 0;
 
     // Price Font Sizes
     const productPriceLabelFontSize = typeof styles.productPriceLabelFontSize === "number" ? styles.productPriceLabelFontSize : 9.5;
     const productPriceInfoFontSize = typeof styles.productPriceInfoFontSize === "number" ? styles.productPriceInfoFontSize : 10;
     const productPriceValueFontSize = typeof styles.productPriceValueFontSize === "number" ? styles.productPriceValueFontSize : 24;
 
-    // Product Details & Description Tuning (Clamping extreme Y offsets!)
+    // Product Details & Description Tuning
     const productDescFontSize = typeof styles.productDescFontSize === "number" ? styles.productDescFontSize : 14.5;
     const productDescXOffset = clamp(styles.productDescXOffset);
-    const productDescYOffset = clamp(styles.productDescYOffset, -150, 150); // Clamp safe Y bounds!
+    const productDescYOffset = clamp(styles.productDescYOffset, -150, 150);
     const productPagePadding = typeof styles.productPagePadding === "number" ? styles.productPagePadding : 28;
     const productTextMaxWidth = typeof styles.productTextMaxWidth === "number" ? styles.productTextMaxWidth : 560;
 
@@ -175,7 +180,7 @@ export async function GET() {
     const coverFootColor = coverFooterColorCustom || (hasCoverBg ? "rgba(255,255,255,0.55)" : "#999999");
     const coverDivColor = coverSubtitleColorCustom || (hasCoverBg ? "rgba(255,255,255,0.35)" : secondaryColor);
 
-    // 8. Generate product pages HTML
+    // 8. Generate product pages HTML according to selected layout preset
     let productPagesHtml = "";
     products.forEach((product, idx) => {
       let priceHtml: string;
@@ -193,37 +198,109 @@ export async function GET() {
 
       const notasText = product.notasDegustacao || "Vinho de excelente estrutura, aromas harmoniosos e notas marcantes.";
 
-      productPagesHtml += `
-      <div class="prod-page" style="${pageBg}">
-        <div class="prod-top" style="transform: translate(${productNameXOffset}px, ${productNameYOffset}px);">
-          <h2 class="prod-name" style="color:${productNameColor}; font-size:${productNameFontSize}px;">${product.name}</h2>
-          <p class="prod-origin" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px; transform: translateY(${productOriginYOffset}px);">${product.paisOrigem} · ${product.regiao}</p>
-          <div class="prod-line" style="background:${productSpecsColor};"></div>
-        </div>
-
-        <div class="prod-middle">
-          <div class="prod-img-area" style="transform: translate(${productImgXOffset}px, ${productImgYOffset}px) rotate(${productImgAngle}deg);">
-            <img src="${product.imagemUrl}" class="prod-img" style="max-height: min(${productImgHeight}px, 100%); max-width:${productImgMaxWidth}px;" />
+      if (productLayoutPreset === "side-right" || productLayoutPreset === "side-left") {
+        // SIDE-BY-SIDE MAGAZINE LAYOUT (Bottle on one side, Price + Specs + Description on the other)
+        const isReverse = productLayoutPreset === "side-left";
+        productPagesHtml += `
+        <div class="prod-page" style="${pageBg}">
+          <div class="prod-top" style="transform: translate(${productNameXOffset}px, ${productNameYOffset}px);">
+            <h2 class="prod-name" style="color:${productNameColor}; font-size:${productNameFontSize}px;">${product.name}</h2>
+            <p class="prod-origin" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px; transform: translateY(${productOriginYOffset}px);">${product.paisOrigem} · ${product.regiao}</p>
+            <div class="prod-line" style="background:${productSpecsColor};"></div>
           </div>
 
-          <!-- Price text freely positionable anywhere on page -->
-          <div class="prod-price-badge-side ${productPriceSide === 'left' ? 'price-left' : productPriceSide === 'center' ? 'price-center' : 'price-right'}" style="transform: translateY(${productPriceYOffset}px) rotate(${productPriceAngle}deg);">
-            <p class="prod-price-label" style="color:${productPriceLabelColor}; font-size:${productPriceLabelFontSize}px;">Preço Unitário B2B</p>
-            <p class="prod-price-info" style="color:${productPriceInfoColor}; font-size:${productPriceInfoFontSize}px;">Caixa c/ 6 garrafas</p>
-            <div class="prod-price-row">${priceHtml}</div>
+          <div class="prod-body-side ${isReverse ? 'side-reverse' : ''}">
+            <div class="side-col-bottle" style="transform: translate(${productImgXOffset}px, ${productImgYOffset}px) rotate(${productImgAngle}deg);">
+              <img src="${product.imagemUrl}" class="prod-img-side" style="max-height: min(${productImgHeight}px, 100%);" />
+            </div>
+
+            <div class="side-col-content">
+              <!-- Price Block in side column -->
+              <div class="prod-price-badge-side inline-price" style="transform: translate(${productPriceXOffset}px, ${productPriceYOffset}px) rotate(${productPriceAngle}deg); text-align: ${productPriceSide === 'center' ? 'center' : productPriceSide === 'left' ? 'right' : 'left'};">
+                <p class="prod-price-label" style="color:${productPriceLabelColor}; font-size:${productPriceLabelFontSize}px;">Preço Unitário B2B</p>
+                <p class="prod-price-info" style="color:${productPriceInfoColor}; font-size:${productPriceInfoFontSize}px;">Caixa c/ 6 garrafas</p>
+                <div class="prod-price-row">${priceHtml}</div>
+              </div>
+
+              <!-- Specs & Tasting Notes in side column -->
+              <div class="prod-desc-block" style="transform: translate(${productDescXOffset}px, ${productDescYOffset}px) rotate(${productDescAngle}deg); text-align: ${productDescAlign}; max-width:${productTextMaxWidth}px;">
+                <p class="prod-specs" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px; margin-bottom: 8px;">${product.vinicola} · ${product.uva} · Safra ${product.safra} · ${product.teorAlcoolico}% vol</p>
+                <p class="prod-desc" style="color:${productDescColor}; font-size:${productDescFontSize}px;">${notasText}</p>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div class="prod-bottom" style="transform: translate(${productDescXOffset}px, ${productDescYOffset}px);">
-          <p class="prod-specs" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px;">${product.vinicola} · ${product.uva} · Safra ${product.safra} · ${product.teorAlcoolico}% vol</p>
-          <p class="prod-desc" style="color:${productDescColor}; font-size:${productDescFontSize}px;">${notasText}</p>
-        </div>
+          <div class="page-foot">
+            <span>${footerText}</span>
+            <span>Página ${idx + 2}</span>
+          </div>
+        </div>`;
+      } else if (productLayoutPreset === "price-top") {
+        // PRICE-TOP LAYOUT (Price in header area, Bottle in center)
+        productPagesHtml += `
+        <div class="prod-page" style="${pageBg}">
+          <div class="prod-top" style="transform: translate(${productNameXOffset}px, ${productNameYOffset}px);">
+            <h2 class="prod-name" style="color:${productNameColor}; font-size:${productNameFontSize}px;">${product.name}</h2>
+            <p class="prod-origin" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px; transform: translateY(${productOriginYOffset}px);">${product.paisOrigem} · ${product.regiao}</p>
+            <div class="prod-line" style="background:${productSpecsColor};"></div>
+            
+            <div class="prod-price-badge-top" style="transform: translate(${productPriceXOffset}px, ${productPriceYOffset}px) rotate(${productPriceAngle}deg); margin-top: 6px;">
+              <p class="prod-price-label" style="color:${productPriceLabelColor}; font-size:${productPriceLabelFontSize}px;">Preço Unitário B2B</p>
+              <p class="prod-price-info" style="color:${productPriceInfoColor}; font-size:${productPriceInfoFontSize}px;">Caixa c/ 6 garrafas</p>
+              <div class="prod-price-row flex-center">${priceHtml}</div>
+            </div>
+          </div>
 
-        <div class="page-foot">
-          <span>${footerText}</span>
-          <span>Página ${idx + 2}</span>
-        </div>
-      </div>`;
+          <div class="prod-middle">
+            <div class="prod-img-area" style="transform: translate(${productImgXOffset}px, ${productImgYOffset}px) rotate(${productImgAngle}deg);">
+              <img src="${product.imagemUrl}" class="prod-img" style="max-height: min(${productImgHeight}px, 100%); max-width:${productImgMaxWidth}px;" />
+            </div>
+          </div>
+
+          <div class="prod-bottom" style="transform: translate(${productDescXOffset}px, ${productDescYOffset}px) rotate(${productDescAngle}deg); text-align: ${productDescAlign};">
+            <p class="prod-specs" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px;">${product.vinicola} · ${product.uva} · Safra ${product.safra} · ${product.teorAlcoolico}% vol</p>
+            <p class="prod-desc" style="color:${productDescColor}; font-size:${productDescFontSize}px;">${notasText}</p>
+          </div>
+
+          <div class="page-foot">
+            <span>${footerText}</span>
+            <span>Página ${idx + 2}</span>
+          </div>
+        </div>`;
+      } else {
+        // CLASSIC VERTICAL LAYOUT
+        productPagesHtml += `
+        <div class="prod-page" style="${pageBg}">
+          <div class="prod-top" style="transform: translate(${productNameXOffset}px, ${productNameYOffset}px);">
+            <h2 class="prod-name" style="color:${productNameColor}; font-size:${productNameFontSize}px;">${product.name}</h2>
+            <p class="prod-origin" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px; transform: translateY(${productOriginYOffset}px);">${product.paisOrigem} · ${product.regiao}</p>
+            <div class="prod-line" style="background:${productSpecsColor};"></div>
+          </div>
+
+          <div class="prod-middle">
+            <div class="prod-img-area" style="transform: translate(${productImgXOffset}px, ${productImgYOffset}px) rotate(${productImgAngle}deg);">
+              <img src="${product.imagemUrl}" class="prod-img" style="max-height: min(${productImgHeight}px, 100%); max-width:${productImgMaxWidth}px;" />
+            </div>
+
+            <!-- Price text freely positionable -->
+            <div class="prod-price-badge-side ${productPriceSide === 'left' ? 'price-left' : productPriceSide === 'center' ? 'price-center' : 'price-right'}" style="transform: translateY(${productPriceYOffset}px) rotate(${productPriceAngle}deg);">
+              <p class="prod-price-label" style="color:${productPriceLabelColor}; font-size:${productPriceLabelFontSize}px;">Preço Unitário B2B</p>
+              <p class="prod-price-info" style="color:${productPriceInfoColor}; font-size:${productPriceInfoFontSize}px;">Caixa c/ 6 garrafas</p>
+              <div class="prod-price-row">${priceHtml}</div>
+            </div>
+          </div>
+
+          <div class="prod-bottom" style="transform: translate(${productDescXOffset}px, ${productDescYOffset}px) rotate(${productDescAngle}deg); text-align: ${productDescAlign};">
+            <p class="prod-specs" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px;">${product.vinicola} · ${product.uva} · Safra ${product.safra} · ${product.teorAlcoolico}% vol</p>
+            <p class="prod-desc" style="color:${productDescColor}; font-size:${productDescFontSize}px;">${notasText}</p>
+          </div>
+
+          <div class="page-foot">
+            <span>${footerText}</span>
+            <span>Página ${idx + 2}</span>
+          </div>
+        </div>`;
+      }
     });
 
     // 9. Assemble full HTML document
@@ -301,7 +378,7 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
 .cover-brd-t{top:35px}
 .cover-brd-b{bottom:75px}
 
-/* ── PRODUCT PAGE (Strict Flexible A4 layout with zero text overflow) ── */
+/* ── PRODUCT PAGE (Flexible A4 layout with Presets) ── */
 .prod-page{
   width:210mm;height:297mm;
   padding:${productPagePadding}px 45px 38px;
@@ -331,6 +408,8 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
   width:50px;height:1.5px;
   margin:8px auto;
 }
+
+/* Classic & Price Top Layouts */
 .prod-middle{
   flex:1 1 0%;
   width:100%;
@@ -352,7 +431,51 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
   filter:drop-shadow(0 10px 30px rgba(0,0,0,.14));
 }
 
-/* Price block freely positionable */
+/* Side-by-Side Magazine Layout */
+.prod-body-side{
+  flex:1 1 0%;
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:24px;
+  min-height:0;
+  overflow:visible;
+  padding:10px 0;
+}
+.prod-body-side.side-reverse{
+  flex-direction:row-reverse;
+}
+.side-col-bottle{
+  flex:1 1 45%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition: transform 0.15s ease;
+}
+.prod-img-side{
+  max-height:100%;
+  max-width:100%;
+  object-fit:contain;
+  filter:drop-shadow(0 10px 30px rgba(0,0,0,.14));
+}
+.side-col-content{
+  flex:1 1 55%;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:18px;
+}
+.inline-price{
+  position:relative!important;
+  bottom:auto!important;
+  left:auto!important;
+  right:auto!important;
+  transform:none!important;
+}
+
+/* Price block */
 .prod-price-badge-side{
   position:absolute;bottom:10px;
   background:transparent !important;
@@ -376,6 +499,10 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
   transform: translateX(-50%);
   text-align:center;
 }
+.prod-price-badge-top{
+  display:inline-block;
+  text-align:center;
+}
 .prod-price-label{
   text-transform:uppercase;
   letter-spacing:2px;font-weight:700;margin-bottom:2px;
@@ -386,6 +513,9 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
 .prod-price-row{
   display:flex;align-items:baseline;
   gap:10px;
+}
+.prod-price-row.flex-center{
+  justify-content:center;
 }
 .price-val{
   font-weight:800;
