@@ -89,6 +89,13 @@ export async function GET() {
     const productNameFontSize = typeof styles.productNameFontSize === "number" ? styles.productNameFontSize : 32;
     const productSpecsFontSize = typeof styles.productSpecsFontSize === "number" ? styles.productSpecsFontSize : 11.5;
 
+    // Fine-tuning product page text colors
+    const productNameColor = styles.productNameColor || primaryColor;
+    const productSpecsColor = styles.productSpecsColor || secondaryColor;
+    const productDescColor = styles.productDescColor || textColor;
+    const productPriceColor = styles.productPriceColor || primaryColor;
+    const productPriceSide = styles.productPriceSide || "right"; // "right" or "left"
+
     // 6. Resolve font family CSS
     const fontCSS =
       fontFamily === "Inter"
@@ -110,10 +117,10 @@ export async function GET() {
       let priceHtml: string;
       if (product.precoPromocional) {
         priceHtml = `
-          <span class="price-val">R$ ${product.precoPromocional.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+          <span class="price-val" style="color:${productPriceColor};">R$ ${product.precoPromocional.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
           <span class="price-old">R$ ${product.precoOriginal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>`;
       } else {
-        priceHtml = `<span class="price-val">R$ ${product.precoOriginal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>`;
+        priceHtml = `<span class="price-val" style="color:${productPriceColor};">R$ ${product.precoOriginal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>`;
       }
 
       const pageBg = backgroundImageUrl
@@ -123,23 +130,27 @@ export async function GET() {
       productPagesHtml += `
       <div class="prod-page" style="${pageBg}">
         <div class="prod-top">
-          <h2 class="prod-name">${product.name}</h2>
-          <p class="prod-origin">${product.paisOrigem} · ${product.regiao}</p>
-          <div class="prod-line"></div>
+          <h2 class="prod-name" style="color:${productNameColor}; font-size:${productNameFontSize}px;">${product.name}</h2>
+          <p class="prod-origin" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px;">${product.paisOrigem} · ${product.regiao}</p>
+          <div class="prod-line" style="background:${productSpecsColor};"></div>
         </div>
 
-        <div class="prod-img-area">
-          <img src="${product.imagemUrl}" class="prod-img" />
+        <div class="prod-middle">
+          <div class="prod-img-area">
+            <img src="${product.imagemUrl}" class="prod-img" style="max-height:${productImgHeight}px; max-width:${productImgMaxWidth}px;" />
+          </div>
+
+          <!-- Price badge beside bottle at the bottom -->
+          <div class="prod-price-badge-side ${productPriceSide === 'left' ? 'price-left' : 'price-right'}" style="border-color:${productPriceColor};">
+            <p class="prod-price-label">Preço Unitário B2B</p>
+            <p class="prod-price-info" style="color:${productSpecsColor};">Caixa c/ 6 garrafas</p>
+            <div class="prod-price-row">${priceHtml}</div>
+          </div>
         </div>
 
         <div class="prod-bottom">
-          <p class="prod-specs">${product.vinicola} · ${product.uva} · Safra ${product.safra} · ${product.teorAlcoolico}% vol</p>
-          <p class="prod-desc">${product.notasDegustacao}</p>
-          <div class="prod-price-box">
-            <p class="prod-price-label">Preço Unitário B2B</p>
-            <p class="prod-price-info">Caixa c/ 6 garrafas</p>
-            <div class="prod-price-row">${priceHtml}</div>
-          </div>
+          <p class="prod-specs" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px;">${product.vinicola} · ${product.uva} · Safra ${product.safra} · ${product.teorAlcoolico}% vol</p>
+          <p class="prod-desc" style="color:${productDescColor}; font-size:${productDescFontSize}px;">${product.notasDegustacao}</p>
         </div>
 
         <div class="page-foot">
@@ -215,7 +226,6 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
   text-align:center;z-index:2;
   font-size:9px;color:${coverFootColor};letter-spacing:1px;
 }
-/* decorative borders for plain covers */
 .cover-brd{
   position:absolute;left:35px;right:35px;
   height:1px;background:${secondaryColor};opacity:.3;z-index:2;
@@ -237,63 +247,71 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
 }
 .prod-name{
   font-family:${fontCSS};
-  font-size:${productNameFontSize}px;font-weight:700;
-  color:${primaryColor};
+  font-weight:700;
   letter-spacing:1px;margin-bottom:8px;
 }
 .prod-origin{
-  font-size:${productSpecsFontSize}px;color:${secondaryColor};
   text-transform:uppercase;letter-spacing:3px;font-weight:600;
 }
 .prod-line{
   width:50px;height:1.5px;
-  background:${secondaryColor};
   margin:14px auto;
 }
+.prod-middle{
+  flex:1;width:100%;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;padding:10px 0;
+}
 .prod-img-area{
-  flex:1;display:flex;
-  align-items:center;justify-content:center;
-  padding:5px 0;
+  display:flex;align-items:center;justify-content:center;
 }
 .prod-img{
-  max-height:${productImgHeight}px;
-  max-width:${productImgMaxWidth}px;
   object-fit:contain;
   filter:drop-shadow(0 10px 30px rgba(0,0,0,.14));
+}
+.prod-price-badge-side{
+  position:absolute;bottom:15px;
+  background:rgba(255,255,255,0.92);
+  backdrop-filter:blur(6px);
+  border:1.5px solid ${productPriceColor};
+  border-radius:10px;
+  padding:10px 16px;
+  text-align:center;
+  box-shadow:0 6px 20px rgba(0,0,0,0.08);
+}
+.prod-price-badge-side.price-right{
+  right:10px;
+}
+.prod-price-badge-side.price-left{
+  left:10px;
+}
+.prod-price-label{
+  font-size:7.5px;text-transform:uppercase;
+  letter-spacing:3px;color:#aaa;margin-bottom:2px;
+}
+.prod-price-info{
+  font-size:9px;font-weight:600;margin-bottom:4px;
+}
+.prod-price-row{
+  display:flex;align-items:baseline;
+  justify-content:center;gap:10px;
+}
+.price-val{
+  font-size:22px;font-weight:800;
+}
+.price-old{
+  font-size:12px;color:#bbb;text-decoration:line-through;
 }
 .prod-bottom{
   text-align:center;width:100%;max-width:500px;
 }
 .prod-specs{
-  font-size:${productSpecsFontSize}px;color:#888;
   text-transform:uppercase;letter-spacing:1.5px;
   margin-bottom:10px;
 }
 .prod-desc{
-  font-size:${productDescFontSize}px;line-height:1.8;
-  color:${textColor};font-weight:400;
+  line-height:1.8;font-weight:400;
   margin-bottom:16px;
-}
-.prod-price-box{
-  border-top:1px solid #e4e4e4;padding-top:12px;
-}
-.prod-price-label{
-  font-size:8px;text-transform:uppercase;
-  letter-spacing:3px;color:#aaa;margin-bottom:2px;
-}
-.prod-price-info{
-  font-size:9.5px;color:${secondaryColor};
-  font-weight:600;margin-bottom:6px;
-}
-.prod-price-row{
-  display:flex;align-items:baseline;
-  justify-content:center;gap:12px;
-}
-.price-val{
-  font-size:22px;font-weight:800;color:${primaryColor};
-}
-.price-old{
-  font-size:13px;color:#bbb;text-decoration:line-through;
 }
 .page-foot{
   position:absolute;bottom:20px;left:48px;right:48px;

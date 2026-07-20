@@ -31,6 +31,12 @@ interface TemplateStyles {
   productDescFontSize?: number;
   productNameFontSize?: number;
   productSpecsFontSize?: number;
+  // Dedicated product page colors & price position
+  productNameColor?: string;
+  productSpecsColor?: string;
+  productDescColor?: string;
+  productPriceColor?: string;
+  productPriceSide?: "right" | "left";
 }
 
 interface Template {
@@ -94,11 +100,17 @@ export default function TemplatesPage() {
 
   const [coverVerticalOffset, setCoverVerticalOffset] = useState(0);
 
-  // Product Page Fine-Tuning State (Bottle & Descriptions)
+  // Product Page Fine-Tuning State (Bottle, Text Sizes & Dedicated Colors)
   const [productImgHeight, setProductImgHeight] = useState(560);
   const [productDescFontSize, setProductDescFontSize] = useState(16);
   const [productNameFontSize, setProductNameFontSize] = useState(32);
   const [productSpecsFontSize, setProductSpecsFontSize] = useState(11.5);
+
+  const [productNameColor, setProductNameColor] = useState("");
+  const [productSpecsColor, setProductSpecsColor] = useState("");
+  const [productDescColor, setProductDescColor] = useState("");
+  const [productPriceColor, setProductPriceColor] = useState("");
+  const [productPriceSide, setProductPriceSide] = useState<"right" | "left">("right");
 
   // Preview tab
   const [previewTab, setPreviewTab] = useState<"cover" | "product">("cover");
@@ -171,6 +183,12 @@ export default function TemplatesPage() {
       setProductDescFontSize(typeof s.productDescFontSize === "number" ? s.productDescFontSize : 16);
       setProductNameFontSize(typeof s.productNameFontSize === "number" ? s.productNameFontSize : 32);
       setProductSpecsFontSize(typeof s.productSpecsFontSize === "number" ? s.productSpecsFontSize : 11.5);
+
+      setProductNameColor(s.productNameColor || "");
+      setProductSpecsColor(s.productSpecsColor || "");
+      setProductDescColor(s.productDescColor || "");
+      setProductPriceColor(s.productPriceColor || "");
+      setProductPriceSide(s.productPriceSide || "right");
     } catch {
       console.error("Erro ao interpretar estilos do template.");
     }
@@ -209,6 +227,11 @@ export default function TemplatesPage() {
         productDescFontSize,
         productNameFontSize,
         productSpecsFontSize,
+        productNameColor,
+        productSpecsColor,
+        productDescColor,
+        productPriceColor,
+        productPriceSide,
       }),
     };
 
@@ -254,6 +277,11 @@ export default function TemplatesPage() {
 
   const resolvedCoverTitleColor = coverTitleColor || (hasCoverBg ? "#ffffff" : primaryColor);
   const resolvedCoverSubColor = coverSubtitleColor || (hasCoverBg ? "rgba(255,255,255,0.78)" : secondaryColor);
+
+  const resolvedProductNameColor = productNameColor || primaryColor;
+  const resolvedProductSpecsColor = productSpecsColor || secondaryColor;
+  const resolvedProductDescColor = productDescColor || textColor;
+  const resolvedProductPriceColor = productPriceColor || primaryColor;
 
   return (
     <div className="min-h-screen bg-allvino-background text-allvino-text font-sans pb-12">
@@ -327,7 +355,7 @@ export default function TemplatesPage() {
             Editor de Templates PDF
           </h1>
           <p className="text-allvino-on-surface-variant text-sm mt-1">
-            Personalize a capa (logo, posições, ângulos) e as páginas internas (tamanho da garrafa e textos da descrição).
+            Personalize a capa (logo, posições, ângulos) e as páginas internas (posicionamento de preço, tamanho da garrafa e paleta de cores dos textos).
           </p>
         </div>
 
@@ -759,13 +787,129 @@ export default function TemplatesPage() {
                 {/* ── PRODUCT PAGE FINE-TUNING PANEL ── */}
                 <div className="space-y-4 pt-4 border-t border-allvino-outline-variant/20 bg-allvino-surface-container-low/30 p-4 rounded-xl border">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-allvino-primary flex items-center justify-between">
-                    <span>🍷 Dimensão da Garrafa e Textos do Produto</span>
+                    <span>🍷 Dimensão da Garrafa, Preço e Cores do Produto</span>
                     <span className="text-[9px] text-allvino-secondary bg-allvino-secondary/10 px-2 py-0.5 rounded font-bold">
                       Layout de Produto
                     </span>
                   </h4>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                  {/* PRICE POSITION SELECTOR */}
+                  <div className="pt-1 pb-2 border-b border-allvino-outline-variant/20">
+                    <label className="block text-[10px] font-semibold text-allvino-primary mb-1">
+                      Posição do Quadro de Preço B2B
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setProductPriceSide("right")}
+                        className={`py-2 px-3 rounded text-xs font-bold transition border ${
+                          productPriceSide === "right"
+                            ? "bg-allvino-primary text-white border-allvino-primary shadow"
+                            : "bg-allvino-surface-container-low border-allvino-outline-variant text-allvino-text hover:bg-allvino-surface-container-high"
+                        }`}
+                      >
+                        👉 Ao lado Direito da Garrafa
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setProductPriceSide("left")}
+                        className={`py-2 px-3 rounded text-xs font-bold transition border ${
+                          productPriceSide === "left"
+                            ? "bg-allvino-primary text-white border-allvino-primary shadow"
+                            : "bg-allvino-surface-container-low border-allvino-outline-variant text-allvino-text hover:bg-allvino-surface-container-high"
+                        }`}
+                      >
+                        👈 Ao lado Esquerdo da Garrafa
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* DEDICATED PRODUCT TEXT COLOR PALETTE */}
+                  <div className="space-y-3 pt-2">
+                    <p className="text-[11px] font-bold text-allvino-primary">
+                      Paleta de Cores dos Textos do Produto
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] text-allvino-on-surface-variant mb-1">Nome do Vinho</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={resolvedProductNameColor}
+                            onChange={(e) => setProductNameColor(e.target.value)}
+                            className="w-7 h-7 border rounded cursor-pointer bg-transparent"
+                          />
+                          <input
+                            type="text"
+                            value={productNameColor}
+                            onChange={(e) => setProductNameColor(e.target.value)}
+                            placeholder="Auto"
+                            className="w-full text-[10px] p-1.5 rounded bg-allvino-surface-container-low border border-allvino-outline-variant"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] text-allvino-on-surface-variant mb-1">Origem & Ficha</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={resolvedProductSpecsColor}
+                            onChange={(e) => setProductSpecsColor(e.target.value)}
+                            className="w-7 h-7 border rounded cursor-pointer bg-transparent"
+                          />
+                          <input
+                            type="text"
+                            value={productSpecsColor}
+                            onChange={(e) => setProductSpecsColor(e.target.value)}
+                            placeholder="Auto"
+                            className="w-full text-[10px] p-1.5 rounded bg-allvino-surface-container-low border border-allvino-outline-variant"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] text-allvino-on-surface-variant mb-1">Notas / Descrição</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={resolvedProductDescColor}
+                            onChange={(e) => setProductDescColor(e.target.value)}
+                            className="w-7 h-7 border rounded cursor-pointer bg-transparent"
+                          />
+                          <input
+                            type="text"
+                            value={productDescColor}
+                            onChange={(e) => setProductDescColor(e.target.value)}
+                            placeholder="Auto"
+                            className="w-full text-[10px] p-1.5 rounded bg-allvino-surface-container-low border border-allvino-outline-variant"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] text-allvino-on-surface-variant mb-1">Destaque do Preço</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={resolvedProductPriceColor}
+                            onChange={(e) => setProductPriceColor(e.target.value)}
+                            className="w-7 h-7 border rounded cursor-pointer bg-transparent"
+                          />
+                          <input
+                            type="text"
+                            value={productPriceColor}
+                            onChange={(e) => setProductPriceColor(e.target.value)}
+                            placeholder="Auto"
+                            className="w-full text-[10px] p-1.5 rounded bg-allvino-surface-container-low border border-allvino-outline-variant"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* DIMENSIONS & FONT SIZES */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-allvino-outline-variant/20">
                     {/* Bottle Image Height */}
                     <div>
                       <div className="flex items-center justify-between mb-1">
@@ -872,30 +1016,30 @@ export default function TemplatesPage() {
                   </div>
                 </div>
 
-                {/* ── COLOR PICKERS ── */}
+                {/* ── COLOR PICKERS GENERAL ── */}
                 <div className="space-y-4 pt-4 border-t border-allvino-outline-variant/10">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-allvino-primary">
-                    Paleta Geral do PDF (Páginas de Produto)
+                    Paleta Geral do PDF (Fundo & Fontes)
                   </h4>
                   <div className="grid grid-cols-2 gap-4">
                     {[
                       {
-                        label: "Cor Primária",
+                        label: "Cor Primária Base",
                         val: primaryColor,
                         set: setPrimaryColor,
                       },
                       {
-                        label: "Cor Secundária",
+                        label: "Cor Secundária Base",
                         val: secondaryColor,
                         set: setSecondaryColor,
                       },
                       {
-                        label: "Cor do Fundo",
+                        label: "Cor do Fundo do PDF",
                         val: backgroundColor,
                         set: setBackgroundColor,
                       },
                       {
-                        label: "Cor do Texto",
+                        label: "Cor do Texto Base",
                         val: textColor,
                         set: setTextColor,
                       },
@@ -1210,7 +1354,7 @@ export default function TemplatesPage() {
                         <h2
                           className="font-bold mb-1 transition-all"
                           style={{
-                            color: primaryColor,
+                            color: resolvedProductNameColor,
                             fontFamily: previewFont,
                             fontSize: `${Math.round(productNameFontSize * 0.7)}px`,
                           }}
@@ -1220,7 +1364,7 @@ export default function TemplatesPage() {
                         <p
                           className="uppercase tracking-[3px] font-semibold transition-all"
                           style={{
-                            color: secondaryColor,
+                            color: resolvedProductSpecsColor,
                             fontSize: `${Math.round(productSpecsFontSize * 0.85)}px`,
                           }}
                         >
@@ -1229,30 +1373,63 @@ export default function TemplatesPage() {
                         </p>
                         <div
                           className="w-10 h-px mx-auto my-3"
-                          style={{ background: secondaryColor }}
+                          style={{ background: resolvedProductSpecsColor }}
                         />
                       </div>
 
-                      {/* Bottle image */}
-                      <div className="flex-1 flex items-center justify-center py-1 overflow-hidden">
-                        <img
-                          src={PREVIEW_WINE.imagemUrl}
-                          alt={PREVIEW_WINE.name}
-                          className="object-contain transition-all duration-150"
-                          style={{
-                            maxHeight: `${Math.round(productImgHeight * 0.56)}px`,
-                            maxWidth: `${Math.round(productImgHeight * 0.28)}px`,
-                            filter:
-                              "drop-shadow(0 8px 20px rgba(0,0,0,.12))",
-                          }}
-                        />
+                      {/* Middle Section: Bottle & Side Price Badge */}
+                      <div className="flex-1 w-full flex items-center justify-center py-1 relative">
+                        <div className="flex items-center justify-center">
+                          <img
+                            src={PREVIEW_WINE.imagemUrl}
+                            alt={PREVIEW_WINE.name}
+                            className="object-contain transition-all duration-150"
+                            style={{
+                              maxHeight: `${Math.round(productImgHeight * 0.52)}px`,
+                              maxWidth: `${Math.round(productImgHeight * 0.26)}px`,
+                              filter:
+                                "drop-shadow(0 8px 20px rgba(0,0,0,.12))",
+                            }}
+                          />
+                        </div>
+
+                        {/* Price Badge beside bottle on the lower side */}
+                        <div
+                          className={`absolute bottom-3 bg-white/90 backdrop-blur border rounded-lg p-2.5 text-center shadow-md border-l-4 transition-all ${
+                            productPriceSide === "left" ? "left-2" : "right-2"
+                          }`}
+                          style={{ borderColor: resolvedProductPriceColor }}
+                        >
+                          <p className="text-[5.5px] uppercase tracking-[2px] text-gray-400 mb-0.5">
+                            Preço Unitário B2B
+                          </p>
+                          <p
+                            className="text-[6.5px] font-semibold mb-1"
+                            style={{ color: resolvedProductSpecsColor }}
+                          >
+                            Caixa c/ 6 garrafas
+                          </p>
+                          <div className="flex items-baseline justify-center gap-1.5">
+                            <span
+                              className="text-sm font-extrabold"
+                              style={{ color: resolvedProductPriceColor }}
+                            >
+                              R${" "}
+                              {PREVIEW_WINE.precoPromocional?.toFixed(2)}
+                            </span>
+                            <span className="text-[8px] text-gray-400 line-through">
+                              R$ {PREVIEW_WINE.precoOriginal.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
                       </div>
 
                       {/* Details */}
                       <div className="text-center w-full max-w-sm">
                         <p
-                          className="text-gray-400 uppercase tracking-wider mb-2 transition-all"
+                          className="uppercase tracking-wider mb-2 transition-all"
                           style={{
+                            color: resolvedProductSpecsColor,
                             fontSize: `${Math.round(productSpecsFontSize * 0.8)}px`,
                           }}
                         >
@@ -1263,44 +1440,18 @@ export default function TemplatesPage() {
                         <p
                           className="leading-relaxed mb-3 transition-all"
                           style={{
-                            color: textColor,
+                            color: resolvedProductDescColor,
                             fontWeight: 400,
                             fontSize: `${Math.round(productDescFontSize * 0.75)}px`,
                           }}
                         >
                           {PREVIEW_WINE.desc}
                         </p>
-                        <div
-                          className="border-t pt-2"
-                          style={{ borderColor: "#e4e4e4" }}
-                        >
-                          <p className="text-[6.5px] uppercase tracking-[3px] text-gray-400 mb-0.5">
-                            Preço Unitário B2B
-                          </p>
-                          <p
-                            className="text-[7.5px] font-semibold mb-1"
-                            style={{ color: secondaryColor }}
-                          >
-                            Caixa c/ 6 garrafas
-                          </p>
-                          <div className="flex items-baseline justify-center gap-2">
-                            <span
-                              className="text-base font-extrabold"
-                              style={{ color: primaryColor }}
-                            >
-                              R${" "}
-                              {PREVIEW_WINE.precoPromocional?.toFixed(2)}
-                            </span>
-                            <span className="text-[9px] text-gray-400 line-through">
-                              R$ {PREVIEW_WINE.precoOriginal.toFixed(2)}
-                            </span>
-                          </div>
-                        </div>
                       </div>
 
                       {/* Footer */}
                       <div
-                        className="absolute bottom-4 left-10 right-10 border-t pt-2 flex justify-between text-[6.5px] text-gray-300"
+                        className="absolute bottom-3 left-10 right-10 border-t pt-2 flex justify-between text-[6.5px] text-gray-300"
                         style={{ borderColor: "#eee" }}
                       >
                         <span>
