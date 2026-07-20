@@ -106,14 +106,14 @@ export async function GET() {
     const coverVerticalOffset = typeof styles.coverVerticalOffset === "number" ? styles.coverVerticalOffset : 0;
 
     // ── PRODUCT PAGE BOTTLE & LAYOUT DYNAMIC TUNING ──
-    const productImgHeight = typeof styles.productImgHeight === "number" ? styles.productImgHeight : 560;
+    const productImgHeight = typeof styles.productImgHeight === "number" ? styles.productImgHeight : 520;
     const productImgMaxWidth = Math.round(productImgHeight * 0.52);
     const productImgXOffset = typeof styles.productImgXOffset === "number" ? styles.productImgXOffset : 0;
     const productImgYOffset = typeof styles.productImgYOffset === "number" ? styles.productImgYOffset : 0;
     const productImgAngle = typeof styles.productImgAngle === "number" ? styles.productImgAngle : 0;
 
     // Product Header Tuning
-    const productNameFontSize = typeof styles.productNameFontSize === "number" ? styles.productNameFontSize : 30;
+    const productNameFontSize = typeof styles.productNameFontSize === "number" ? styles.productNameFontSize : 28;
     const productNameXOffset = typeof styles.productNameXOffset === "number" ? styles.productNameXOffset : 0;
     const productNameYOffset = typeof styles.productNameYOffset === "number" ? styles.productNameYOffset : 0;
 
@@ -138,10 +138,10 @@ export async function GET() {
     const productPriceValueFontSize = typeof styles.productPriceValueFontSize === "number" ? styles.productPriceValueFontSize : 24;
 
     // Product Details & Description Tuning
-    const productDescFontSize = typeof styles.productDescFontSize === "number" ? styles.productDescFontSize : 15;
+    const productDescFontSize = typeof styles.productDescFontSize === "number" ? styles.productDescFontSize : 14.5;
     const productDescXOffset = typeof styles.productDescXOffset === "number" ? styles.productDescXOffset : 0;
     const productDescYOffset = typeof styles.productDescYOffset === "number" ? styles.productDescYOffset : 0;
-    const productPagePadding = typeof styles.productPagePadding === "number" ? styles.productPagePadding : 32;
+    const productPagePadding = typeof styles.productPagePadding === "number" ? styles.productPagePadding : 28;
     const productTextMaxWidth = typeof styles.productTextMaxWidth === "number" ? styles.productTextMaxWidth : 560;
 
     // 6. Resolve font family CSS
@@ -186,6 +186,8 @@ export async function GET() {
         ? `background-image:url('${backgroundImageUrl}');background-size:cover;background-position:center;`
         : `background-color:${backgroundColor};`;
 
+      const notasText = product.notasDegustacao || "Vinho de excelente estrutura, aromas harmoniosos e notas marcantes.";
+
       productPagesHtml += `
       <div class="prod-page" style="${pageBg}">
         <div class="prod-top" style="transform: translate(${productNameXOffset}px, ${productNameYOffset}px);">
@@ -196,7 +198,7 @@ export async function GET() {
 
         <div class="prod-middle">
           <div class="prod-img-area" style="transform: translate(${productImgXOffset}px, ${productImgYOffset}px) rotate(${productImgAngle}deg);">
-            <img src="${product.imagemUrl}" class="prod-img" style="max-height:${productImgHeight}px; max-width:${productImgMaxWidth}px;" />
+            <img src="${product.imagemUrl}" class="prod-img" style="max-height: min(${productImgHeight}px, 100%); max-width:${productImgMaxWidth}px;" />
           </div>
 
           <!-- Price text freely positionable anywhere on page -->
@@ -209,7 +211,7 @@ export async function GET() {
 
         <div class="prod-bottom" style="transform: translate(${productDescXOffset}px, ${productDescYOffset}px);">
           <p class="prod-specs" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px;">${product.vinicola} · ${product.uva} · Safra ${product.safra} · ${product.teorAlcoolico}% vol</p>
-          <p class="prod-desc" style="color:${productDescColor}; font-size:${productDescFontSize}px;">${product.notasDegustacao}</p>
+          <p class="prod-desc" style="color:${productDescColor}; font-size:${productDescFontSize}px;">${notasText}</p>
         </div>
 
         <div class="page-foot">
@@ -294,10 +296,10 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
 .cover-brd-t{top:35px}
 .cover-brd-b{bottom:75px}
 
-/* ── PRODUCT PAGE (Fully Customizable Layout) ── */
+/* ── PRODUCT PAGE (Strict Flexible A4 layout with zero text overflow) ── */
 .prod-page{
   width:210mm;height:297mm;
-  padding:${productPagePadding}px 45px 42px;
+  padding:${productPagePadding}px 42px 38px;
   display:flex;flex-direction:column;
   align-items:center;justify-content:space-between;
   position:relative;
@@ -307,12 +309,13 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
 .prod-top{
   text-align:center;width:100%;padding-top:2px;
   flex-shrink:0;
+  z-index:2;
   transition: transform 0.15s ease;
 }
 .prod-name{
   font-family:${fontCSS};
   font-weight:700;
-  letter-spacing:1px;margin-bottom:6px;
+  letter-spacing:1px;margin-bottom:4px;
   line-height:1.2;
 }
 .prod-origin{
@@ -321,13 +324,15 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
 }
 .prod-line{
   width:50px;height:1.5px;
-  margin:10px auto;
+  margin:8px auto;
 }
 .prod-middle{
-  flex:1 1 auto;width:100%;
+  flex:1 1 0%;
+  width:100%;
   display:flex;align-items:center;justify-content:center;
-  position:relative;padding:6px 0;
-  min-height:120px;
+  position:relative;
+  padding:4px 0;
+  min-height:0;
   overflow:visible;
 }
 .prod-img-area{
@@ -336,16 +341,15 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
   transition: transform 0.15s ease;
 }
 .prod-img{
-  max-height:${productImgHeight}px;
+  height:auto;
   max-width:${productImgMaxWidth}px;
   object-fit:contain;
-  flex-shrink:1;
   filter:drop-shadow(0 10px 30px rgba(0,0,0,.14));
 }
 
 /* Price block freely positionable */
 .prod-price-badge-side{
-  position:absolute;bottom:15px;
+  position:absolute;bottom:10px;
   background:transparent !important;
   border:none !important;
   box-shadow:none !important;
@@ -388,22 +392,24 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
   text-align:center;width:100%;
   max-width:${productTextMaxWidth}px;
   flex-shrink:0;
-  margin-bottom:8px;
+  margin-top:auto;
+  margin-bottom:4px;
+  z-index:2;
   transition: transform 0.15s ease;
 }
 .prod-specs{
   text-transform:uppercase;letter-spacing:1.5px;
-  margin-bottom:8px;
-  line-height:1.4;
+  margin-bottom:6px;
+  line-height:1.35;
 }
 .prod-desc{
-  line-height:1.65;font-weight:400;
-  margin-bottom:12px;
+  line-height:1.6;font-weight:400;
+  margin-bottom:8px;
   word-wrap:break-word;
 }
 .page-foot{
-  position:absolute;bottom:16px;left:45px;right:45px;
-  border-top:1px solid #eee;padding-top:6px;
+  position:absolute;bottom:14px;left:42px;right:42px;
+  border-top:1px solid #eee;padding-top:4px;
   display:flex;justify-content:space-between;
   font-size:8px;color:#bbb;letter-spacing:.5px;
 }
