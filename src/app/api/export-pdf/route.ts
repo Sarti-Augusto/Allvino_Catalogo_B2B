@@ -6,6 +6,12 @@ import path from "path";
 
 const prisma = new PrismaClient();
 
+const clamp = (val: any, min: number = -200, max: number = 200): number => {
+  const num = typeof val === "number" ? val : parseFloat(val);
+  if (isNaN(num)) return 0;
+  return Math.max(min, Math.min(max, num));
+};
+
 export async function GET() {
   let browser;
   try {
@@ -84,41 +90,41 @@ export async function GET() {
     const coverSubtitle = styles.coverSubtitle || "Catálogo Exclusivo B2B";
     const coverLogoHeight = typeof styles.coverLogoHeight === "number" ? styles.coverLogoHeight : 110;
     const coverLogoAngle = typeof styles.coverLogoAngle === "number" ? styles.coverLogoAngle : 0;
-    const coverLogoXOffset = typeof styles.coverLogoXOffset === "number" ? styles.coverLogoXOffset : 0;
-    const coverLogoYOffset = typeof styles.coverLogoYOffset === "number" ? styles.coverLogoYOffset : 0;
-    const coverLogoVariant = styles.coverLogoVariant || "auto"; // "auto" | "black" | "white"
+    const coverLogoXOffset = clamp(styles.coverLogoXOffset);
+    const coverLogoYOffset = clamp(styles.coverLogoYOffset);
+    const coverLogoVariant = styles.coverLogoVariant || "auto";
     
     const coverTitleColorCustom = styles.coverTitleColor || "";
     const coverTitleFontSize = typeof styles.coverTitleFontSize === "number" ? styles.coverTitleFontSize : 30;
     const coverTitleAngle = typeof styles.coverTitleAngle === "number" ? styles.coverTitleAngle : 0;
-    const coverTitleXOffset = typeof styles.coverTitleXOffset === "number" ? styles.coverTitleXOffset : 0;
-    const coverTitleYOffset = typeof styles.coverTitleYOffset === "number" ? styles.coverTitleYOffset : 0;
+    const coverTitleXOffset = clamp(styles.coverTitleXOffset);
+    const coverTitleYOffset = clamp(styles.coverTitleYOffset);
     
     const coverSubtitleColorCustom = styles.coverSubtitleColor || "";
     const coverSubtitleFontSize = typeof styles.coverSubtitleFontSize === "number" ? styles.coverSubtitleFontSize : 11;
     const coverSubtitleAngle = typeof styles.coverSubtitleAngle === "number" ? styles.coverSubtitleAngle : 0;
-    const coverSubtitleXOffset = typeof styles.coverSubtitleXOffset === "number" ? styles.coverSubtitleXOffset : 0;
-    const coverSubtitleYOffset = typeof styles.coverSubtitleYOffset === "number" ? styles.coverSubtitleYOffset : 0;
+    const coverSubtitleXOffset = clamp(styles.coverSubtitleXOffset);
+    const coverSubtitleYOffset = clamp(styles.coverSubtitleYOffset);
 
     const coverFooterColorCustom = styles.coverFooterColor || "";
     const coverFooterFontSize = typeof styles.coverFooterFontSize === "number" ? styles.coverFooterFontSize : 9;
-    const coverFooterYOffset = typeof styles.coverFooterYOffset === "number" ? styles.coverFooterYOffset : 0;
-    const coverVerticalOffset = typeof styles.coverVerticalOffset === "number" ? styles.coverVerticalOffset : 0;
+    const coverFooterYOffset = clamp(styles.coverFooterYOffset);
+    const coverVerticalOffset = clamp(styles.coverVerticalOffset);
 
     // ── PRODUCT PAGE BOTTLE & LAYOUT DYNAMIC TUNING ──
     const productImgHeight = typeof styles.productImgHeight === "number" ? styles.productImgHeight : 520;
     const productImgMaxWidth = Math.round(productImgHeight * 0.52);
-    const productImgXOffset = typeof styles.productImgXOffset === "number" ? styles.productImgXOffset : 0;
-    const productImgYOffset = typeof styles.productImgYOffset === "number" ? styles.productImgYOffset : 0;
+    const productImgXOffset = clamp(styles.productImgXOffset);
+    const productImgYOffset = clamp(styles.productImgYOffset);
     const productImgAngle = typeof styles.productImgAngle === "number" ? styles.productImgAngle : 0;
 
     // Product Header Tuning
     const productNameFontSize = typeof styles.productNameFontSize === "number" ? styles.productNameFontSize : 28;
-    const productNameXOffset = typeof styles.productNameXOffset === "number" ? styles.productNameXOffset : 0;
-    const productNameYOffset = typeof styles.productNameYOffset === "number" ? styles.productNameYOffset : 0;
+    const productNameXOffset = clamp(styles.productNameXOffset);
+    const productNameYOffset = clamp(styles.productNameYOffset);
 
     const productSpecsFontSize = typeof styles.productSpecsFontSize === "number" ? styles.productSpecsFontSize : 11;
-    const productOriginYOffset = typeof styles.productOriginYOffset === "number" ? styles.productOriginYOffset : 0;
+    const productOriginYOffset = clamp(styles.productOriginYOffset);
 
     // Product Colors & Price Block Tuning
     const productNameColor = styles.productNameColor || primaryColor;
@@ -128,8 +134,8 @@ export async function GET() {
     const productPriceLabelColor = styles.productPriceLabelColor || "#777777";
     const productPriceInfoColor = styles.productPriceInfoColor || secondaryColor;
     const productPriceSide = styles.productPriceSide || "right"; // "right" | "left" | "center"
-    const productPriceXOffset = typeof styles.productPriceXOffset === "number" ? styles.productPriceXOffset : 0;
-    const productPriceYOffset = typeof styles.productPriceYOffset === "number" ? styles.productPriceYOffset : 0;
+    const productPriceXOffset = clamp(styles.productPriceXOffset);
+    const productPriceYOffset = clamp(styles.productPriceYOffset);
     const productPriceAngle = typeof styles.productPriceAngle === "number" ? styles.productPriceAngle : 0;
 
     // Price Font Sizes
@@ -137,10 +143,10 @@ export async function GET() {
     const productPriceInfoFontSize = typeof styles.productPriceInfoFontSize === "number" ? styles.productPriceInfoFontSize : 10;
     const productPriceValueFontSize = typeof styles.productPriceValueFontSize === "number" ? styles.productPriceValueFontSize : 24;
 
-    // Product Details & Description Tuning
+    // Product Details & Description Tuning (Clamping extreme Y offsets!)
     const productDescFontSize = typeof styles.productDescFontSize === "number" ? styles.productDescFontSize : 14.5;
-    const productDescXOffset = typeof styles.productDescXOffset === "number" ? styles.productDescXOffset : 0;
-    const productDescYOffset = typeof styles.productDescYOffset === "number" ? styles.productDescYOffset : 0;
+    const productDescXOffset = clamp(styles.productDescXOffset);
+    const productDescYOffset = clamp(styles.productDescYOffset, -150, 150); // Clamp safe Y bounds!
     const productPagePadding = typeof styles.productPagePadding === "number" ? styles.productPagePadding : 28;
     const productTextMaxWidth = typeof styles.productTextMaxWidth === "number" ? styles.productTextMaxWidth : 560;
 
@@ -161,7 +167,6 @@ export async function GET() {
     } else if (coverLogoVariant === "black") {
       selectedLogoBase64 = logoBlackBase64;
     } else {
-      // "auto": use white logo for cover background image, else black logo
       selectedLogoBase64 = hasCoverBg ? (logoWhiteBase64 || logoBlackBase64) : logoBlackBase64;
     }
 
@@ -299,7 +304,7 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
 /* ── PRODUCT PAGE (Strict Flexible A4 layout with zero text overflow) ── */
 .prod-page{
   width:210mm;height:297mm;
-  padding:${productPagePadding}px 42px 38px;
+  padding:${productPagePadding}px 45px 38px;
   display:flex;flex-direction:column;
   align-items:center;justify-content:space-between;
   position:relative;
@@ -393,7 +398,7 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
   max-width:${productTextMaxWidth}px;
   flex-shrink:0;
   margin-top:auto;
-  margin-bottom:4px;
+  margin-bottom:8px;
   z-index:2;
   transition: transform 0.15s ease;
 }
@@ -408,7 +413,7 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
   word-wrap:break-word;
 }
 .page-foot{
-  position:absolute;bottom:14px;left:42px;right:42px;
+  position:absolute;bottom:14px;left:45px;right:45px;
   border-top:1px solid #eee;padding-top:4px;
   display:flex;justify-content:space-between;
   font-size:8px;color:#bbb;letter-spacing:.5px;

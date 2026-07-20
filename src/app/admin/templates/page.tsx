@@ -116,6 +116,12 @@ const DEFAULT_PREVIEW_WINE: Product = {
   notasDegustacao: "Notas complexas de frutas negras, fumo de corda, cacau e couro. Corpo encorpado, taninos aveludados e final persistente.",
 };
 
+const clamp = (val: any, min: number = -150, max: number = 150): number => {
+  const num = typeof val === "number" ? val : parseFloat(val);
+  if (isNaN(num)) return 0;
+  return Math.max(min, Math.min(max, num));
+};
+
 export default function TemplatesPage() {
   const { data: session } = useSession();
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -128,8 +134,8 @@ export default function TemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Active control accordion tab ("cover" | "bottle" | "price" | "text" | "general")
-  const [activeTab, setActiveTab] = useState<"cover" | "bottle" | "price" | "text" | "general">("bottle");
+  // Active control accordion tab ("bottle" | "price" | "text" | "cover" | "general")
+  const [activeTab, setActiveTab] = useState<"bottle" | "price" | "text" | "cover" | "general">("bottle");
 
   // General Style state
   const [nome, setNome] = useState("");
@@ -259,6 +265,30 @@ export default function TemplatesPage() {
     }
   };
 
+  const resetAllPositions = () => {
+    setCoverLogoXOffset(0);
+    setCoverLogoYOffset(0);
+    setCoverTitleXOffset(0);
+    setCoverTitleYOffset(0);
+    setCoverSubtitleXOffset(0);
+    setCoverSubtitleYOffset(0);
+    setCoverFooterYOffset(0);
+    setCoverVerticalOffset(0);
+
+    setProductImgXOffset(0);
+    setProductImgYOffset(0);
+    setProductNameXOffset(0);
+    setProductNameYOffset(0);
+    setProductOriginYOffset(0);
+    setProductPriceXOffset(0);
+    setProductPriceYOffset(0);
+    setProductDescXOffset(0);
+    setProductDescYOffset(0);
+    setProductImgHeight(520);
+
+    showToast("Posições resetadas para o padrão centralizado!");
+  };
+
   const handleSelectTemplate = (template: Template) => {
     setSelectedTemplate(template);
     setNome(template.nome);
@@ -279,40 +309,40 @@ export default function TemplatesPage() {
       setCoverSubtitle(s.coverSubtitle || "CATÁLOGO EXCLUSIVO B2B");
       setCoverLogoHeight(typeof s.coverLogoHeight === "number" ? s.coverLogoHeight : 110);
       setCoverLogoAngle(typeof s.coverLogoAngle === "number" ? s.coverLogoAngle : 0);
-      setCoverLogoXOffset(typeof s.coverLogoXOffset === "number" ? s.coverLogoXOffset : 0);
-      setCoverLogoYOffset(typeof s.coverLogoYOffset === "number" ? s.coverLogoYOffset : 0);
+      setCoverLogoXOffset(clamp(s.coverLogoXOffset));
+      setCoverLogoYOffset(clamp(s.coverLogoYOffset));
       setCoverLogoVariant(s.coverLogoVariant || "auto");
 
       setCoverTitleColor(s.coverTitleColor || "");
       setCoverTitleFontSize(typeof s.coverTitleFontSize === "number" ? s.coverTitleFontSize : 30);
       setCoverTitleAngle(typeof s.coverTitleAngle === "number" ? s.coverTitleAngle : 0);
-      setCoverTitleXOffset(typeof s.coverTitleXOffset === "number" ? s.coverTitleXOffset : 0);
-      setCoverTitleYOffset(typeof s.coverTitleYOffset === "number" ? s.coverTitleYOffset : 0);
+      setCoverTitleXOffset(clamp(s.coverTitleXOffset));
+      setCoverTitleYOffset(clamp(s.coverTitleYOffset));
 
       setCoverSubtitleColor(s.coverSubtitleColor || "");
       setCoverSubtitleFontSize(typeof s.coverSubtitleFontSize === "number" ? s.coverSubtitleFontSize : 11);
       setCoverSubtitleAngle(typeof s.coverSubtitleAngle === "number" ? s.coverSubtitleAngle : 0);
-      setCoverSubtitleXOffset(typeof s.coverSubtitleXOffset === "number" ? s.coverSubtitleXOffset : 0);
-      setCoverSubtitleYOffset(typeof s.coverSubtitleYOffset === "number" ? s.coverSubtitleYOffset : 0);
+      setCoverSubtitleXOffset(clamp(s.coverSubtitleXOffset));
+      setCoverSubtitleYOffset(clamp(s.coverSubtitleYOffset));
 
       setCoverFooterColor(s.coverFooterColor || "");
       setCoverFooterFontSize(typeof s.coverFooterFontSize === "number" ? s.coverFooterFontSize : 9);
-      setCoverFooterYOffset(typeof s.coverFooterYOffset === "number" ? s.coverFooterYOffset : 0);
-      setCoverVerticalOffset(typeof s.coverVerticalOffset === "number" ? s.coverVerticalOffset : 0);
+      setCoverFooterYOffset(clamp(s.coverFooterYOffset));
+      setCoverVerticalOffset(clamp(s.coverVerticalOffset));
 
       // Bottle
       setProductImgHeight(typeof s.productImgHeight === "number" ? s.productImgHeight : 520);
-      setProductImgXOffset(typeof s.productImgXOffset === "number" ? s.productImgXOffset : 0);
-      setProductImgYOffset(typeof s.productImgYOffset === "number" ? s.productImgYOffset : 0);
+      setProductImgXOffset(clamp(s.productImgXOffset));
+      setProductImgYOffset(clamp(s.productImgYOffset));
       setProductImgAngle(typeof s.productImgAngle === "number" ? s.productImgAngle : 0);
 
       // Product Header
       setProductNameFontSize(typeof s.productNameFontSize === "number" ? s.productNameFontSize : 28);
-      setProductNameXOffset(typeof s.productNameXOffset === "number" ? s.productNameXOffset : 0);
-      setProductNameYOffset(typeof s.productNameYOffset === "number" ? s.productNameYOffset : 0);
+      setProductNameXOffset(clamp(s.productNameXOffset));
+      setProductNameYOffset(clamp(s.productNameYOffset));
 
       setProductSpecsFontSize(typeof s.productSpecsFontSize === "number" ? s.productSpecsFontSize : 11);
-      setProductOriginYOffset(typeof s.productOriginYOffset === "number" ? s.productOriginYOffset : 0);
+      setProductOriginYOffset(clamp(s.productOriginYOffset));
 
       setProductPagePadding(typeof s.productPagePadding === "number" ? s.productPagePadding : 28);
       setProductTextMaxWidth(typeof s.productTextMaxWidth === "number" ? s.productTextMaxWidth : 560);
@@ -325,8 +355,8 @@ export default function TemplatesPage() {
       setProductPriceLabelColor(s.productPriceLabelColor || "");
       setProductPriceInfoColor(s.productPriceInfoColor || "");
       setProductPriceSide(s.productPriceSide || "right");
-      setProductPriceXOffset(typeof s.productPriceXOffset === "number" ? s.productPriceXOffset : 0);
-      setProductPriceYOffset(typeof s.productPriceYOffset === "number" ? s.productPriceYOffset : 0);
+      setProductPriceXOffset(clamp(s.productPriceXOffset));
+      setProductPriceYOffset(clamp(s.productPriceYOffset));
       setProductPriceAngle(typeof s.productPriceAngle === "number" ? s.productPriceAngle : 0);
 
       setProductPriceLabelFontSize(typeof s.productPriceLabelFontSize === "number" ? s.productPriceLabelFontSize : 9.5);
@@ -335,8 +365,8 @@ export default function TemplatesPage() {
 
       // Description Block
       setProductDescFontSize(typeof s.productDescFontSize === "number" ? s.productDescFontSize : 14.5);
-      setProductDescXOffset(typeof s.productDescXOffset === "number" ? s.productDescXOffset : 0);
-      setProductDescYOffset(typeof s.productDescYOffset === "number" ? s.productDescYOffset : 0);
+      setProductDescXOffset(clamp(s.productDescXOffset));
+      setProductDescYOffset(clamp(s.productDescYOffset, -150, 150));
     } catch {
       console.error("Erro ao interpretar estilos do template.");
     }
@@ -364,38 +394,38 @@ export default function TemplatesPage() {
         coverSubtitle,
         coverLogoHeight,
         coverLogoAngle,
-        coverLogoXOffset,
-        coverLogoYOffset,
+        coverLogoXOffset: clamp(coverLogoXOffset),
+        coverLogoYOffset: clamp(coverLogoYOffset),
         coverLogoVariant,
 
         coverTitleColor,
         coverTitleFontSize,
         coverTitleAngle,
-        coverTitleXOffset,
-        coverTitleYOffset,
+        coverTitleXOffset: clamp(coverTitleXOffset),
+        coverTitleYOffset: clamp(coverTitleYOffset),
 
         coverSubtitleColor,
         coverSubtitleFontSize,
         coverSubtitleAngle,
-        coverSubtitleXOffset,
-        coverSubtitleYOffset,
+        coverSubtitleXOffset: clamp(coverSubtitleXOffset),
+        coverSubtitleYOffset: clamp(coverSubtitleYOffset),
 
         coverFooterColor,
         coverFooterFontSize,
-        coverFooterYOffset,
-        coverVerticalOffset,
+        coverFooterYOffset: clamp(coverFooterYOffset),
+        coverVerticalOffset: clamp(coverVerticalOffset),
 
         productImgHeight,
-        productImgXOffset,
-        productImgYOffset,
+        productImgXOffset: clamp(productImgXOffset),
+        productImgYOffset: clamp(productImgYOffset),
         productImgAngle,
 
         productNameFontSize,
-        productNameXOffset,
-        productNameYOffset,
+        productNameXOffset: clamp(productNameXOffset),
+        productNameYOffset: clamp(productNameYOffset),
 
         productSpecsFontSize,
-        productOriginYOffset,
+        productOriginYOffset: clamp(productOriginYOffset),
 
         productPagePadding,
         productTextMaxWidth,
@@ -407,8 +437,8 @@ export default function TemplatesPage() {
         productPriceLabelColor,
         productPriceInfoColor,
         productPriceSide,
-        productPriceXOffset,
-        productPriceYOffset,
+        productPriceXOffset: clamp(productPriceXOffset),
+        productPriceYOffset: clamp(productPriceYOffset),
         productPriceAngle,
 
         productPriceLabelFontSize,
@@ -416,8 +446,8 @@ export default function TemplatesPage() {
         productPriceValueFontSize,
 
         productDescFontSize,
-        productDescXOffset,
-        productDescYOffset,
+        productDescXOffset: clamp(productDescXOffset),
+        productDescYOffset: clamp(productDescYOffset, -150, 150),
       }),
     };
 
@@ -480,7 +510,6 @@ export default function TemplatesPage() {
       ? "/logo-white.png"
       : "/logo-black.png";
 
-  // Selected wine for real live preview
   const previewWine = dbWines.find((w) => w.id === selectedWineId) || DEFAULT_PREVIEW_WINE;
   const previewWineDesc = previewWine.notasDegustacao || "Vinho de excelente estrutura, aromas harmoniosos e notas marcantes.";
 
@@ -551,13 +580,23 @@ export default function TemplatesPage() {
           </div>
         )}
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold font-serif text-allvino-primary">
-            Editor Dinâmico de Templates PDF
-          </h1>
-          <p className="text-allvino-on-surface-variant text-sm mt-1">
-            Posicionamento livre (X, Y, Ângulo, Tamanho e Cor) da garrafa, textos, preços e capa com preview de vinhos reais cadastrados.
-          </p>
+        <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold font-serif text-allvino-primary">
+              Editor Dinâmico de Templates PDF
+            </h1>
+            <p className="text-allvino-on-surface-variant text-sm mt-1">
+              Posicionamento livre (X, Y, Ângulo, Tamanho e Cor) com equivalência 100% fiel entre Preview e PDF.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={resetAllPositions}
+            className="px-4 py-2 bg-allvino-surface-container-high hover:bg-allvino-secondary hover:text-white border border-allvino-outline-variant text-allvino-primary rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1.5 self-start md:self-auto"
+          >
+            <span>🔄</span>
+            <span>Resetar Posições (Centralizar)</span>
+          </button>
         </div>
 
         {loading ? (
@@ -654,7 +693,7 @@ export default function TemplatesPage() {
                 {activeTab === "bottle" && (
                   <div className="space-y-4">
                     <p className="text-[11px] text-allvino-on-surface-variant leading-relaxed">
-                      Posicione a garrafa de vinho em qualquer área da página de produto, ajustando altura máxima, rotação e deslocamento livre X e Y.
+                      Posicione a garrafa de vinho na folha de produto, ajustando a altura máxima e deslocamentos suaves.
                     </p>
 
                     <div>
@@ -667,8 +706,8 @@ export default function TemplatesPage() {
                       <div className="flex items-center gap-2">
                         <input
                           type="range"
-                          min="200"
-                          max="850"
+                          min="250"
+                          max="650"
                           value={productImgHeight}
                           onChange={(e) => setProductImgHeight(Number(e.target.value))}
                           className="w-full accent-allvino-primary"
@@ -693,16 +732,16 @@ export default function TemplatesPage() {
                         <div className="flex items-center gap-2">
                           <input
                             type="range"
-                            min="-250"
-                            max="250"
+                            min="-150"
+                            max="150"
                             value={productImgXOffset}
-                            onChange={(e) => setProductImgXOffset(Number(e.target.value))}
+                            onChange={(e) => setProductImgXOffset(clamp(e.target.value))}
                             className="w-full accent-allvino-primary"
                           />
                           <input
                             type="number"
                             value={productImgXOffset}
-                            onChange={(e) => setProductImgXOffset(Number(e.target.value))}
+                            onChange={(e) => setProductImgXOffset(clamp(e.target.value))}
                             className="w-14 text-[10px] p-1 rounded bg-allvino-surface-container-low border text-center"
                           />
                         </div>
@@ -718,16 +757,16 @@ export default function TemplatesPage() {
                         <div className="flex items-center gap-2">
                           <input
                             type="range"
-                            min="-250"
-                            max="250"
+                            min="-150"
+                            max="150"
                             value={productImgYOffset}
-                            onChange={(e) => setProductImgYOffset(Number(e.target.value))}
+                            onChange={(e) => setProductImgYOffset(clamp(e.target.value))}
                             className="w-full accent-allvino-primary"
                           />
                           <input
                             type="number"
                             value={productImgYOffset}
-                            onChange={(e) => setProductImgYOffset(Number(e.target.value))}
+                            onChange={(e) => setProductImgYOffset(clamp(e.target.value))}
                             className="w-14 text-[10px] p-1 rounded bg-allvino-surface-container-low border text-center"
                           />
                         </div>
@@ -744,8 +783,8 @@ export default function TemplatesPage() {
                       <div className="flex items-center gap-2">
                         <input
                           type="range"
-                          min="-180"
-                          max="180"
+                          min="-45"
+                          max="45"
                           value={productImgAngle}
                           onChange={(e) => setProductImgAngle(Number(e.target.value))}
                           className="w-full accent-allvino-primary"
@@ -765,7 +804,7 @@ export default function TemplatesPage() {
                 {activeTab === "price" && (
                   <div className="space-y-4">
                     <p className="text-[11px] text-allvino-on-surface-variant leading-relaxed">
-                      Ajuste a posição livre X e Y do bloco de preço, alinhamento, ângulo, tamanhos de fonte e cores individuais.
+                      Ajuste a posição X e Y do bloco de preço, alinhamento, tamanhos de fonte e cores individuais.
                     </p>
 
                     <div>
@@ -803,16 +842,16 @@ export default function TemplatesPage() {
                         <div className="flex items-center gap-2">
                           <input
                             type="range"
-                            min="-250"
-                            max="250"
+                            min="-150"
+                            max="150"
                             value={productPriceXOffset}
-                            onChange={(e) => setProductPriceXOffset(Number(e.target.value))}
+                            onChange={(e) => setProductPriceXOffset(clamp(e.target.value))}
                             className="w-full accent-allvino-primary"
                           />
                           <input
                             type="number"
                             value={productPriceXOffset}
-                            onChange={(e) => setProductPriceXOffset(Number(e.target.value))}
+                            onChange={(e) => setProductPriceXOffset(clamp(e.target.value))}
                             className="w-14 text-[10px] p-1 rounded bg-allvino-surface-container-low border text-center"
                           />
                         </div>
@@ -826,16 +865,16 @@ export default function TemplatesPage() {
                         <div className="flex items-center gap-2">
                           <input
                             type="range"
-                            min="-250"
-                            max="250"
+                            min="-150"
+                            max="150"
                             value={productPriceYOffset}
-                            onChange={(e) => setProductPriceYOffset(Number(e.target.value))}
+                            onChange={(e) => setProductPriceYOffset(clamp(e.target.value))}
                             className="w-full accent-allvino-primary"
                           />
                           <input
                             type="number"
                             value={productPriceYOffset}
-                            onChange={(e) => setProductPriceYOffset(Number(e.target.value))}
+                            onChange={(e) => setProductPriceYOffset(clamp(e.target.value))}
                             className="w-14 text-[10px] p-1 rounded bg-allvino-surface-container-low border text-center"
                           />
                         </div>
@@ -920,7 +959,7 @@ export default function TemplatesPage() {
                 {activeTab === "text" && (
                   <div className="space-y-4">
                     <p className="text-[11px] text-allvino-on-surface-variant leading-relaxed">
-                      Ajuste posições livre X/Y, tamanhos e cores do Nome do Vinho, Origem, Ficha Técnica e Notas de Degustação.
+                      Ajuste tamanhos e cores do Nome do Vinho, Origem, Ficha Técnica e Notas de Degustação.
                     </p>
 
                     {/* Wine Name */}
@@ -941,7 +980,7 @@ export default function TemplatesPage() {
                           <input
                             type="number"
                             value={productNameXOffset}
-                            onChange={(e) => setProductNameXOffset(Number(e.target.value))}
+                            onChange={(e) => setProductNameXOffset(clamp(e.target.value))}
                             className="w-full text-xs p-1.5 rounded bg-allvino-surface-container-low border text-center"
                           />
                         </div>
@@ -950,7 +989,7 @@ export default function TemplatesPage() {
                           <input
                             type="number"
                             value={productNameYOffset}
-                            onChange={(e) => setProductNameYOffset(Number(e.target.value))}
+                            onChange={(e) => setProductNameYOffset(clamp(e.target.value))}
                             className="w-full text-xs p-1.5 rounded bg-allvino-surface-container-low border text-center"
                           />
                         </div>
@@ -994,7 +1033,7 @@ export default function TemplatesPage() {
                           <input
                             type="number"
                             value={productOriginYOffset}
-                            onChange={(e) => setProductOriginYOffset(Number(e.target.value))}
+                            onChange={(e) => setProductOriginYOffset(clamp(e.target.value))}
                             className="w-full text-xs p-1.5 rounded bg-allvino-surface-container-low border text-center"
                           />
                         </div>
@@ -1037,7 +1076,7 @@ export default function TemplatesPage() {
                           <input
                             type="number"
                             value={productDescXOffset}
-                            onChange={(e) => setProductDescXOffset(Number(e.target.value))}
+                            onChange={(e) => setProductDescXOffset(clamp(e.target.value))}
                             className="w-full text-xs p-1.5 rounded bg-allvino-surface-container-low border text-center"
                           />
                         </div>
@@ -1046,8 +1085,8 @@ export default function TemplatesPage() {
                           <input
                             type="number"
                             value={productDescYOffset}
-                            onChange={(e) => setProductDescYOffset(Number(e.target.value))}
-                            className="w-full text-xs p-1.5 rounded bg-allvino-surface-container-low border text-center"
+                            onChange={(e) => setProductDescYOffset(clamp(e.target.value, -100, 100))}
+                            className="w-full text-xs p-1.5 rounded bg-allvino-surface-container-low border text-center font-bold"
                           />
                         </div>
                       </div>
@@ -1129,7 +1168,7 @@ export default function TemplatesPage() {
                           <input
                             type="number"
                             value={coverLogoXOffset}
-                            onChange={(e) => setCoverLogoXOffset(Number(e.target.value))}
+                            onChange={(e) => setCoverLogoXOffset(clamp(e.target.value))}
                             className="w-full text-xs p-1.5 rounded bg-allvino-surface-container-low border text-center"
                           />
                         </div>
@@ -1138,7 +1177,7 @@ export default function TemplatesPage() {
                           <input
                             type="number"
                             value={coverLogoYOffset}
-                            onChange={(e) => setCoverLogoYOffset(Number(e.target.value))}
+                            onChange={(e) => setCoverLogoYOffset(clamp(e.target.value))}
                             className="w-full text-xs p-1.5 rounded bg-allvino-surface-container-low border text-center"
                           />
                         </div>
@@ -1170,7 +1209,7 @@ export default function TemplatesPage() {
                           <input
                             type="number"
                             value={coverTitleXOffset}
-                            onChange={(e) => setCoverTitleXOffset(Number(e.target.value))}
+                            onChange={(e) => setCoverTitleXOffset(clamp(e.target.value))}
                             className="w-full text-xs p-1.5 rounded bg-allvino-surface-container-low border text-center"
                           />
                         </div>
@@ -1179,7 +1218,7 @@ export default function TemplatesPage() {
                           <input
                             type="number"
                             value={coverTitleYOffset}
-                            onChange={(e) => setCoverTitleYOffset(Number(e.target.value))}
+                            onChange={(e) => setCoverTitleYOffset(clamp(e.target.value))}
                             className="w-full text-xs p-1.5 rounded bg-allvino-surface-container-low border text-center"
                           />
                         </div>
@@ -1229,7 +1268,7 @@ export default function TemplatesPage() {
                           <input
                             type="number"
                             value={coverSubtitleXOffset}
-                            onChange={(e) => setCoverSubtitleXOffset(Number(e.target.value))}
+                            onChange={(e) => setCoverSubtitleXOffset(clamp(e.target.value))}
                             className="w-full text-xs p-1.5 rounded bg-allvino-surface-container-low border text-center"
                           />
                         </div>
@@ -1238,7 +1277,7 @@ export default function TemplatesPage() {
                           <input
                             type="number"
                             value={coverSubtitleYOffset}
-                            onChange={(e) => setCoverSubtitleYOffset(Number(e.target.value))}
+                            onChange={(e) => setCoverSubtitleYOffset(clamp(e.target.value))}
                             className="w-full text-xs p-1.5 rounded bg-allvino-surface-container-low border text-center"
                           />
                         </div>
@@ -1458,7 +1497,7 @@ export default function TemplatesPage() {
                       <div
                         className="relative z-10 text-center px-12 transition-transform duration-150"
                         style={{
-                          transform: `translateY(${coverVerticalOffset * 0.5}px)`,
+                          transform: `translateY(${clamp(coverVerticalOffset) * 0.4}px)`,
                         }}
                       >
                         <img
@@ -1467,7 +1506,7 @@ export default function TemplatesPage() {
                           className="mx-auto mb-6 object-contain transition-all duration-150"
                           style={{
                             height: `${coverLogoHeight * 0.6}px`,
-                            transform: `translate(${coverLogoXOffset * 0.4}px, ${coverLogoYOffset * 0.4}px) rotate(${coverLogoAngle}deg)`,
+                            transform: `translate(${clamp(coverLogoXOffset) * 0.4}px, ${clamp(coverLogoYOffset) * 0.4}px) rotate(${coverLogoAngle}deg)`,
                           }}
                           onError={(e) => {
                             e.currentTarget.style.display = "none";
@@ -1486,7 +1525,7 @@ export default function TemplatesPage() {
                             fontFamily: previewFont,
                             fontSize: `${Math.round(coverTitleFontSize * 0.7)}px`,
                             fontWeight: 700,
-                            transform: `translate(${coverTitleXOffset * 0.4}px, ${coverTitleYOffset * 0.4}px) rotate(${coverTitleAngle}deg)`,
+                            transform: `translate(${clamp(coverTitleXOffset) * 0.4}px, ${clamp(coverTitleYOffset) * 0.4}px) rotate(${coverTitleAngle}deg)`,
                             textShadow: hasCoverBg
                               ? "0 2px 10px rgba(0,0,0,.25)"
                               : "none",
@@ -1499,7 +1538,7 @@ export default function TemplatesPage() {
                           style={{
                             color: resolvedCoverSubColor,
                             fontSize: `${Math.round(coverSubtitleFontSize * 0.7)}px`,
-                            transform: `translate(${coverSubtitleXOffset * 0.4}px, ${coverSubtitleYOffset * 0.4}px) rotate(${coverSubtitleAngle}deg)`,
+                            transform: `translate(${clamp(coverSubtitleXOffset) * 0.4}px, ${clamp(coverSubtitleYOffset) * 0.4}px) rotate(${coverSubtitleAngle}deg)`,
                           }}
                         >
                           {coverSubtitle || "CATÁLOGO EXCLUSIVO B2B"}
@@ -1510,7 +1549,7 @@ export default function TemplatesPage() {
                         style={{
                           color: coverFooterColor || (hasCoverBg ? "rgba(255,255,255,0.55)" : "#999"),
                           fontSize: `${Math.round(coverFooterFontSize * 0.75)}px`,
-                          transform: `translateY(${coverFooterYOffset * 0.4}px)`,
+                          transform: `translateY(${clamp(coverFooterYOffset) * 0.4}px)`,
                         }}
                       >
                         {footerText || "Allvino Importadora de Vinhos B2B"}
@@ -1527,7 +1566,7 @@ export default function TemplatesPage() {
                       {/* Product header */}
                       <div
                         className="text-center w-full pt-2 flex-shrink-0 transition-transform duration-150"
-                        style={{ transform: `translate(${productNameXOffset * 0.4}px, ${productNameYOffset * 0.4}px)` }}
+                        style={{ transform: `translate(${clamp(productNameXOffset) * 0.4}px, ${clamp(productNameYOffset) * 0.4}px)` }}
                       >
                         <h2
                           className="font-bold mb-1 transition-all leading-tight"
@@ -1544,7 +1583,7 @@ export default function TemplatesPage() {
                           style={{
                             color: resolvedProductSpecsColor,
                             fontSize: `${Math.round(productSpecsFontSize * 0.8)}px`,
-                            transform: `translateY(${productOriginYOffset * 0.4}px)`,
+                            transform: `translateY(${clamp(productOriginYOffset) * 0.4}px)`,
                           }}
                         >
                           {previewWine.paisOrigem} · {previewWine.regiao}
@@ -1560,7 +1599,7 @@ export default function TemplatesPage() {
                         <div
                           className="flex items-center justify-center h-full transition-transform duration-150"
                           style={{
-                            transform: `translate(${productImgXOffset * 0.4}px, ${productImgYOffset * 0.4}px) rotate(${productImgAngle}deg)`,
+                            transform: `translate(${clamp(productImgXOffset) * 0.4}px, ${clamp(productImgYOffset) * 0.4}px) rotate(${productImgAngle}deg)`,
                           }}
                         >
                           <img
@@ -1580,12 +1619,12 @@ export default function TemplatesPage() {
                         <div
                           className="absolute bottom-3 transition-all whitespace-nowrap z-10"
                           style={{
-                            transform: `translateY(${productPriceYOffset * 0.4}px) rotate(${productPriceAngle}deg)`,
+                            transform: `translateY(${clamp(productPriceYOffset) * 0.4}px) rotate(${productPriceAngle}deg)`,
                             ...(productPriceSide === "left"
-                              ? { right: `calc(50% + ${Math.round(productImgHeight * 0.12) + 6 - productPriceXOffset * 0.4}px)`, textAlign: "right" }
+                              ? { right: `calc(50% + ${Math.round(productImgHeight * 0.12) + 6 - clamp(productPriceXOffset) * 0.4}px)`, textAlign: "right" }
                               : productPriceSide === "center"
-                              ? { left: `calc(50% + ${productPriceXOffset * 0.4}px)`, transform: `translateX(-50%) translateY(${productPriceYOffset * 0.4}px) rotate(${productPriceAngle}deg)`, textAlign: "center" }
-                              : { left: `calc(50% + ${Math.round(productImgHeight * 0.12) + 6 + productPriceXOffset * 0.4}px)`, textAlign: "left" }),
+                              ? { left: `calc(50% + ${clamp(productPriceXOffset) * 0.4}px)`, transform: `translateX(-50%) translateY(${clamp(productPriceYOffset) * 0.4}px) rotate(${productPriceAngle}deg)`, textAlign: "center" }
+                              : { left: `calc(50% + ${Math.round(productImgHeight * 0.12) + 6 + clamp(productPriceXOffset) * 0.4}px)`, textAlign: "left" }),
                           }}
                         >
                           <p
@@ -1625,7 +1664,7 @@ export default function TemplatesPage() {
                         className="text-center w-full flex-shrink-0 my-1 transition-transform duration-150"
                         style={{
                           maxWidth: `${Math.round(productTextMaxWidth * 0.75)}px`,
-                          transform: `translate(${productDescXOffset * 0.4}px, ${productDescYOffset * 0.4}px)`,
+                          transform: `translate(${clamp(productDescXOffset) * 0.4}px, ${clamp(productDescYOffset, -100, 100) * 0.4}px)`,
                         }}
                       >
                         <p
