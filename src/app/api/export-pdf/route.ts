@@ -575,10 +575,17 @@ ${productPagesHtml}
     }
 
     const page = await browser.newPage();
-    await page.setContent(fullHtml, { waitUntil: "load", timeout: 30000 });
+    await page.setContent(fullHtml, { waitUntil: "domcontentloaded", timeout: 15000 });
 
-    // Wait for Google Fonts to load
-    await page.evaluateHandle('document.fonts.ready');
+    // Wait for Google Fonts to load with a max 2-second timeout to prevent serverless function hangs
+    try {
+      await Promise.race([
+        page.evaluateHandle('document.fonts.ready'),
+        new Promise((resolve) => setTimeout(resolve, 2000))
+      ]);
+    } catch (e) {
+      console.warn("Timeout ao carregar fontes do Google:", e);
+    }
 
     const pdfBuffer = await page.pdf({
       format: "A4",
