@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import puppeteer from "puppeteer";
 import fs from "fs";
 import path from "path";
-
-const prisma = new PrismaClient();
 
 const clamp = (val: any, min: number = -350, max: number = 350): number => {
   const num = typeof val === "number" ? val : parseFloat(val);

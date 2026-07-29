@@ -27,6 +27,7 @@ yarn-error.log*
 # system files
 .DS_Store
 Thumbs.db
+*.tsbuildinfo
 
 # GSD runtime config and dependencies
 .agents/

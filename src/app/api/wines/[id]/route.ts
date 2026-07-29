@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 
-const prisma = new PrismaClient();
+const parseNumber = (val: any): number => {
+  if (val === null || val === undefined || val === "") return NaN;
+  if (typeof val === "number") return val;
+  const sanitized = String(val).replace(",", ".").trim();
+  return parseFloat(sanitized);
+};
 
 export async function PUT(
   request: Request,
@@ -50,30 +55,49 @@ export async function PUT(
       );
     }
 
+    const parsedTeor = teorAlcoolico !== undefined ? parseNumber(teorAlcoolico) : existingProduct.teorAlcoolico;
+    const parsedPrecoOrig = precoOriginal !== undefined ? parseNumber(precoOriginal) : existingProduct.precoOriginal;
+    const parsedPrecoPromo = precoPromocional !== undefined
+      ? (precoPromocional !== null && precoPromocional !== "" ? parseNumber(precoPromocional) : null)
+      : existingProduct.precoPromocional;
+    const parsedEstoque = estoque !== undefined ? parseInt(String(estoque).trim(), 10) : existingProduct.estoque;
+
+    if (
+      (teorAlcoolico !== undefined && isNaN(parsedTeor)) ||
+      (precoOriginal !== undefined && isNaN(parsedPrecoOrig)) ||
+      (parsedPrecoPromo !== null && isNaN(parsedPrecoPromo))
+    ) {
+      return NextResponse.json(
+        { error: "Valores numéricos inválidos para preço ou teor alcoólico." },
+        { status: 400 }
+      );
+    }
+
     const updatedProduct = await prisma.product.update({
       where: { id },
       data: {
-        name: name !== undefined ? name : existingProduct.name,
-        vinicola: vinicola !== undefined ? vinicola : existingProduct.vinicola,
-        uva: uva !== undefined ? uva : existingProduct.uva,
-        teorAlcoolico: teorAlcoolico !== undefined ? parseFloat(teorAlcoolico) : existingProduct.teorAlcoolico,
-        safra: safra !== undefined ? safra : existingProduct.safra,
-        paisOrigem: paisOrigem !== undefined ? paisOrigem : existingProduct.paisOrigem,
-        regiao: regiao !== undefined ? regiao : existingProduct.regiao,
-        notasDegustacao: notasDegustacao !== undefined ? notasDegustacao : existingProduct.notasDegustacao,
-        precoOriginal: precoOriginal !== undefined ? parseFloat(precoOriginal) : existingProduct.precoOriginal,
-        precoPromocional: precoPromocional !== undefined ? (precoPromocional ? parseFloat(precoPromocional) : null) : existingProduct.precoPromocional,
+        name: name !== undefined ? String(name).trim() : existingProduct.name,
+        vinicola: vinicola !== undefined ? String(vinicola).trim() : existingProduct.vinicola,
+        uva: uva !== undefined ? String(uva).trim() : existingProduct.uva,
+        teorAlcoolico: parsedTeor,
+        safra: safra !== undefined ? String(safra).trim() : existingProduct.safra,
+        paisOrigem: paisOrigem !== undefined ? String(paisOrigem).trim() : existingProduct.paisOrigem,
+        regiao: regiao !== undefined ? String(regiao).trim() : existingProduct.regiao,
+        notasDegustacao: notasDegustacao !== undefined ? String(notasDegustacao).trim() : existingProduct.notasDegustacao,
+        precoOriginal: parsedPrecoOrig,
+        precoPromocional: parsedPrecoPromo,
         status: status !== undefined ? Boolean(status) : existingProduct.status,
         imagemUrl: imagemUrl !== undefined ? imagemUrl : existingProduct.imagemUrl,
-        categoria: categoria !== undefined ? categoria : (existingProduct as any).categoria,
-        estoque: estoque !== undefined ? parseInt(estoque) : existingProduct.estoque,
+        categoria: categoria !== undefined ? String(categoria).trim() : existingProduct.categoria,
+        estoque: isNaN(parsedEstoque) ? existingProduct.estoque : parsedEstoque,
       },
     });
 
     return NextResponse.json(updatedProduct);
-  } catch (error) {
+  } catch (error: any) {
+    console.error("Erro ao atualizar produto:", error);
     return NextResponse.json(
-      { error: "Erro ao atualizar o vinho." },
+      { error: error?.message || "Erro ao atualizar o vinho." },
       { status: 500 }
     );
   }
@@ -111,9 +135,10 @@ export async function DELETE(
     });
 
     return NextResponse.json({ message: "Vinho excluído com sucesso." });
-  } catch (error) {
+  } catch (error: any) {
+    console.error("Erro ao excluir produto:", error);
     return NextResponse.json(
-      { error: "Erro ao excluir o vinho." },
+      { error: error?.message || "Erro ao excluir o vinho." },
       { status: 500 }
     );
   }
@@ -137,11 +162,10 @@ export async function GET(
     }
 
     return NextResponse.json(product);
-  } catch (error) {
+  } catch (error: any) {
     return NextResponse.json(
       { error: "Erro ao buscar o vinho." },
       { status: 500 }
     );
   }
 }
-

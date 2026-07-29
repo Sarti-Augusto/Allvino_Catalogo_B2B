@@ -175,16 +175,26 @@ export default function DashboardPage() {
         body: JSON.stringify(payload),
       });
 
+      let responseData: any = {};
+      try {
+        responseData = await res.json();
+      } catch {
+        // Ignora falha de parse se a resposta for HTML de erro do servidor
+      }
+
       if (res.ok) {
         showToast(editingProduct ? "Vinho atualizado com sucesso!" : "Vinho cadastrado com sucesso!");
         setShowModal(false);
         fetchProducts();
       } else {
-        const errorData = await res.json();
-        showToast(errorData.error || "Erro ao salvar alterações.", "error");
+        showToast(
+          responseData.error || `Erro (${res.status}): Não foi possível salvar o vinho.`,
+          "error"
+        );
       }
     } catch (err) {
-      showToast("Erro na requisição. Tente novamente.", "error");
+      console.error("Erro na requisição:", err);
+      showToast("Erro na requisição. Verifique sua conexão e tente novamente.", "error");
     }
   };
 
@@ -670,10 +680,32 @@ export default function DashboardPage() {
                         const file = e.target.files?.[0];
                         if (file) {
                           const reader = new FileReader();
-                          reader.onloadend = () => {
-                            if (typeof reader.result === "string") {
-                              setImagemUrl(reader.result);
-                            }
+                          reader.onload = (event) => {
+                            const img = new Image();
+                            img.onload = () => {
+                              const maxW = 600;
+                              const maxH = 1200;
+                              let width = img.width;
+                              let height = img.height;
+
+                              if (width > maxW || height > maxH) {
+                                const ratio = Math.min(maxW / width, maxH / height);
+                                width = Math.round(width * ratio);
+                                height = Math.round(height * ratio);
+                              }
+
+                              const canvas = document.createElement("canvas");
+                              canvas.width = width;
+                              canvas.height = height;
+                              const ctx = canvas.getContext("2d");
+                              if (ctx) {
+                                ctx.drawImage(img, 0, 0, width, height);
+                                setImagemUrl(canvas.toDataURL("image/png", 0.85));
+                              } else if (typeof event.target?.result === "string") {
+                                setImagemUrl(event.target.result);
+                              }
+                            };
+                            img.src = event.target?.result as string;
                           };
                           reader.readAsDataURL(file);
                         }
