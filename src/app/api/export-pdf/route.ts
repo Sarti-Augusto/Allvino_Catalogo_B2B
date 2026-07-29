@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import puppeteer from "puppeteer";
+import puppeteerCore from "puppeteer-core";
+import chromium from "@sparticuz/chromium";
 import fs from "fs";
 import path from "path";
 
@@ -9,6 +10,10 @@ const clamp = (val: any, min: number = -350, max: number = 350): number => {
   if (isNaN(num)) return 0;
   return Math.max(min, Math.min(max, num));
 };
+
+// Vercel serverless config: extend timeout for PDF generation
+export const maxDuration = 60;
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   let browser;
@@ -517,19 +522,63 @@ ${productPagesHtml}
 </body>
 </html>`;
 
-    // 10. Launch Puppeteer (local or remote Browserless)
+    // 10. Launch Puppeteer (Vercel serverless or local)
+    const isVercel = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
     const browserWSEndpoint = process.env.BROWSERLESS_CONNECT_URL;
+
     if (browserWSEndpoint) {
-      browser = await puppeteer.connect({ browserWSEndpoint });
-    } else {
-      browser = await puppeteer.launch({
+      // Remote Browserless.io connection
+      browser = await puppeteerCore.connect({ browserWSEndpoint });
+    } else if (isVercel) {
+      // Vercel serverless: use @sparticuz/chromium
+      chromium.setGraphicsMode = false;
+      browser = await puppeteerCore.launch({
+        args: chromium.args,
+        defaultViewport: {
+          deviceScaleFactor: 1,
+          hasTouch: false,
+          height: 1080,
+          isLandscape: false,
+          isMobile: false,
+          width: 1920,
+        },
+        executablePath: await chromium.executablePath(),
         headless: true,
+      });
+    } else {
+      // Local development: try common Chrome paths
+      const possiblePaths = [
+        "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+        "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+        "/usr/bin/google-chrome",
+        "/usr/bin/chromium-browser",
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      ];
+      let localChromePath = "";
+      for (const p of possiblePaths) {
+        if (fs.existsSync(p)) {
+          localChromePath = p;
+          break;
+        }
+      }
+      if (!localChromePath) {
+        return NextResponse.json(
+          { error: "Chrome não encontrado. Instale o Google Chrome para gerar PDFs localmente." },
+          { status: 500 }
+        );
+      }
+      browser = await puppeteerCore.launch({
+        headless: true,
+        executablePath: localChromePath,
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
       });
     }
 
     const page = await browser.newPage();
-    await page.setContent(fullHtml, { waitUntil: "load" });
+    await page.setContent(fullHtml, { waitUntil: "load", timeout: 30000 });
+
+    // Wait for Google Fonts to load
+    await page.evaluateHandle('document.fonts.ready');
 
     const pdfBuffer = await page.pdf({
       format: "A4",
