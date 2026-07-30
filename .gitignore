@@ -31,3 +31,5 @@ Thumbs.db
 
 # GSD runtime config and dependencies
 .agents/
+
+.vercel

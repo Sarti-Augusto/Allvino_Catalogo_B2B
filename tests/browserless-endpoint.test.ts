@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import { resolveBrowserlessEndpoint } from "../src/lib/browserless";
+import {
+  resolveBrowserlessEndpoint,
+  resolveBrowserlessPdfEndpoint,
+} from "../src/lib/browserless";
 
 assert.equal(resolveBrowserlessEndpoint(undefined), undefined);
 assert.equal(resolveBrowserlessEndpoint("   "), undefined);
@@ -31,6 +34,20 @@ assert.equal(
 assert.throws(
   () => resolveBrowserlessEndpoint("ftp://production-sfo.browserless.io"),
   /token ou uma URL HTTP\/WebSocket válida/
+);
+
+assert.equal(resolveBrowserlessPdfEndpoint(undefined), undefined);
+
+assert.equal(
+  resolveBrowserlessPdfEndpoint("browserless-token"),
+  "https://production-sfo.browserless.io/pdf?token=browserless-token"
+);
+
+assert.equal(
+  resolveBrowserlessPdfEndpoint(
+    "wss://production-ams.browserless.io/chromium?token=browserless-token&proxy=residential"
+  ),
+  "https://production-ams.browserless.io/pdf?token=browserless-token&proxy=residential"
 );
 
 console.log("browserless endpoint tests passed");

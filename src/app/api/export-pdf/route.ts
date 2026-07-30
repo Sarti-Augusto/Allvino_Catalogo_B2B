@@ -4,7 +4,8 @@ import puppeteerCore from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 import fs from "fs";
 import path from "path";
-import { resolveBrowserlessEndpoint } from "@/lib/browserless";
+import sharp from "sharp";
+import { resolveBrowserlessPdfEndpoint } from "@/lib/browserless";
 
 const clamp = (val: any, min: number = -350, max: number = 350): number => {
   const num = typeof val === "number" ? val : parseFloat(val);
@@ -33,6 +34,39 @@ const safeImageSource = (value: unknown): string => {
   }
 
   return source.replace(/'/g, "%27");
+};
+
+const optimizeImageSource = async (
+  value: unknown,
+  width: number,
+  height: number,
+  quality: number
+): Promise<string> => {
+  const source = safeImageSource(value);
+  const match = source.match(
+    /^data:image\/(?:png|jpe?g|webp);base64,([A-Za-z0-9+/=\s]+)$/i
+  );
+
+  if (!match) return source;
+
+  try {
+    const input = Buffer.from(match[1].replace(/\s/g, ""), "base64");
+    const output = await sharp(input)
+      .rotate()
+      .resize({
+        width,
+        height,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .webp({ quality, alphaQuality: 90, effort: 4 })
+      .toBuffer();
+
+    return `data:image/webp;base64,${output.toString("base64")}`;
+  } catch (error) {
+    console.warn("Não foi possível otimizar uma imagem do catálogo:", error);
+    return source;
+  }
 };
 
 const safeCssValue = (value: unknown, fallback: string): string => {
@@ -116,8 +150,10 @@ export async function GET() {
     const fontFamily = styles.fontFamily || "Playfair Display";
     const headerTitle = escapeHtml(styles.headerTitle || "ALLVINO");
     const footerText = escapeHtml(styles.footerText || "Allvino Importadora de Vinhos B2B");
-    const coverImageUrl = safeImageSource(styles.coverImageUrl);
-    const backgroundImageUrl = safeImageSource(styles.backgroundImageUrl);
+    const [coverImageUrl, backgroundImageUrl] = await Promise.all([
+      optimizeImageSource(styles.coverImageUrl, 1200, 1700, 80),
+      optimizeImageSource(styles.backgroundImageUrl, 1200, 1700, 80),
+    ]);
 
     // ── COVER DYNAMIC TUNING ────────────────────────
     const coverSubtitle = escapeHtml(styles.coverSubtitle || "Catálogo Exclusivo B2B");
@@ -221,13 +257,22 @@ export async function GET() {
 
     // 8. Generate product pages HTML
     let productPagesHtml = "";
+    const productImageUrls = await Promise.all(
+      products.map((product) =>
+        optimizeImageSource(product.imagemUrl, 800, 1200, 78)
+      )
+    );
+    const productPageBackgroundCSS = backgroundImageUrl
+      ? `background-image:url('${backgroundImageUrl}');background-size:cover;background-position:center;`
+      : `background-color:${backgroundColor};`;
+
     products.forEach((product, idx) => {
       const productName = escapeHtml(product.name);
       const productOrigin = escapeHtml(`${product.paisOrigem} · ${product.regiao}`);
       const productSpecs = escapeHtml(
         `${product.vinicola} · ${product.uva} · Safra ${product.safra} · ${product.teorAlcoolico}% vol`,
       );
-      const productImageUrl = safeImageSource(product.imagemUrl);
+      const productImageUrl = productImageUrls[idx];
       let priceHtml: string;
       if (product.precoPromocional) {
         priceHtml = `
@@ -236,10 +281,6 @@ export async function GET() {
       } else {
         priceHtml = `<span class="price-val" style="color:${productPriceColor}; font-size:${productPriceValueFontSize}px;">R$ ${product.precoOriginal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>`;
       }
-
-      const pageBg = backgroundImageUrl
-        ? `background-image:url('${backgroundImageUrl}');background-size:cover;background-position:center;`
-        : `background-color:${backgroundColor};`;
 
       const notasText = escapeHtml(
         product.notasDegustacao || "Vinho de excelente estrutura, aromas harmoniosos e notas marcantes.",
@@ -258,7 +299,7 @@ export async function GET() {
       if (productLayoutPreset === "side-right" || productLayoutPreset === "side-left") {
         const isReverse = productLayoutPreset === "side-left";
         productPagesHtml += `
-        <div class="prod-page" style="${pageBg}">
+        <div class="prod-page">
           <div class="prod-top" style="transform: translate(${productNameXOffset}px, ${productNameYOffset}px);">
             <h2 class="prod-name" style="color:${productNameColor}; font-size:${productNameFontSize}px;">${productName}</h2>
             <p class="prod-origin" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px; transform: translateY(${productOriginYOffset}px);">${productOrigin}</p>
@@ -290,7 +331,7 @@ export async function GET() {
       } else {
         // CLASSIC & PRICE-TOP LAYOUTS
         productPagesHtml += `
-        <div class="prod-page" style="${pageBg}">
+        <div class="prod-page">
           <div class="prod-top" style="transform: translate(${productNameXOffset}px, ${productNameYOffset}px);">
             <h2 class="prod-name" style="color:${productNameColor}; font-size:${productNameFontSize}px;">${productName}</h2>
             <p class="prod-origin" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px; transform: translateY(${productOriginYOffset}px);">${productOrigin}</p>
@@ -395,6 +436,7 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
 /* ── PRODUCT PAGE (Flexible A4 layout with Presets) ── */
 .prod-page{
   width:210mm;height:297mm;
+  ${productPageBackgroundCSS}
   padding:${productPagePadding}px 45px 38px;
   display:flex;flex-direction:column;
   align-items:center;justify-content:space-between;
@@ -568,14 +610,92 @@ ${productPagesHtml}
 
     // 10. Launch Puppeteer (Vercel serverless or local)
     const isVercel = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
-    const browserWSEndpoint = resolveBrowserlessEndpoint(
+    const browserlessPdfEndpoint = resolveBrowserlessPdfEndpoint(
       process.env.BROWSERLESS_CONNECT_URL
     );
 
-    if (browserWSEndpoint) {
-      // Remote Browserless.io connection
-      browser = await puppeteerCore.connect({ browserWSEndpoint });
-    } else if (isVercel) {
+    if (browserlessPdfEndpoint) {
+      const abortController = new AbortController();
+      const abortTimeout = setTimeout(() => abortController.abort(), 50_000);
+      const requestBody = JSON.stringify({
+        html: fullHtml,
+        options: {
+          format: "A4",
+          printBackground: true,
+          margin: { top: "0", bottom: "0", left: "0", right: "0" },
+        },
+      });
+      const requestSize = Buffer.byteLength(requestBody);
+
+      if (requestSize > 10 * 1024 * 1024) {
+        console.error(
+          `Catálogo otimizado ainda excede o limite do Browserless: ${requestSize} bytes.`
+        );
+        return NextResponse.json(
+          { error: "As imagens do catálogo excedem o limite para geração do PDF." },
+          { status: 413 }
+        );
+      }
+
+      console.info(`Payload do PDF otimizado: ${requestSize} bytes.`);
+
+      try {
+        const response = await fetch(browserlessPdfEndpoint, {
+          method: "POST",
+          headers: {
+            "Cache-Control": "no-cache",
+            "Content-Type": "application/json",
+          },
+          body: requestBody,
+          cache: "no-store",
+          signal: abortController.signal,
+        });
+
+        if (!response.ok) {
+          const details = (await response.text()).slice(0, 500);
+          console.error(
+            `Browserless PDF API respondeu ${response.status}: ${details}`
+          );
+          return NextResponse.json(
+            { error: "O serviço de geração de PDF não respondeu corretamente." },
+            { status: 502 }
+          );
+        }
+
+        const contentType = response.headers.get("content-type") || "";
+        if (!contentType.toLowerCase().includes("application/pdf")) {
+          console.error(
+            `Browserless PDF API retornou conteúdo inesperado: ${contentType}`
+          );
+          return NextResponse.json(
+            { error: "O serviço de geração retornou um arquivo inválido." },
+            { status: 502 }
+          );
+        }
+
+        const pdfBuffer = await response.arrayBuffer();
+        return new NextResponse(pdfBuffer, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": 'attachment; filename="catalogo-allvino.pdf"',
+          },
+        });
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          console.error("Browserless PDF API excedeu o limite de 50 segundos.");
+          return NextResponse.json(
+            { error: "O serviço de geração de PDF excedeu o tempo limite." },
+            { status: 504 }
+          );
+        }
+        throw error;
+      } finally {
+        clearTimeout(abortTimeout);
+      }
+    }
+
+    if (isVercel) {
       // Vercel serverless: use @sparticuz/chromium
       chromium.setGraphicsMode = false;
       browser = await puppeteerCore.launch({
