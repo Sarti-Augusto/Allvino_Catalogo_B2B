@@ -3,15 +3,15 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "Allvino Catálogo B2B",
-    short_name: "Allvino",
+    name: "Allvino B2B",
+    short_name: "Allvino B2B",
     description:
       "Catálogo digital B2B de vinhos importados da Allvino.",
     start_url: "/",
     scope: "/",
     display: "standalone",
-    background_color: "#fcf9f8",
-    theme_color: "#390009",
+    background_color: "#ab162a",
+    theme_color: "#ab162a",
     lang: "pt-BR",
     categories: ["business", "shopping", "food"],
     icons: [
