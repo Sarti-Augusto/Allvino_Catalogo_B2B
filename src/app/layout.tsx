@@ -3,7 +3,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 
 export const metadata: Metadata = {
-  applicationName: "Allvino",
+  applicationName: "Allvino B2B",
   title: "Catálogo B2B Allvino | Vinhos Importados",
   description:
     "Catálogo digital de vinhos importados Allvino. Acesse e exporte em formato PDF.",
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Allvino",
+    title: "Allvino B2B",
   },
   formatDetection: {
     telephone: false,
@@ -25,7 +25,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#390009",
+  themeColor: "#ab162a",
 };
 
 export default function RootLayout({
