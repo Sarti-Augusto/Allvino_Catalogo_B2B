@@ -4,6 +4,7 @@ import puppeteerCore from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 import fs from "fs";
 import path from "path";
+import { resolveBrowserlessEndpoint } from "@/lib/browserless";
 
 const clamp = (val: any, min: number = -350, max: number = 350): number => {
   const num = typeof val === "number" ? val : parseFloat(val);
@@ -567,7 +568,9 @@ ${productPagesHtml}
 
     // 10. Launch Puppeteer (Vercel serverless or local)
     const isVercel = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
-    const browserWSEndpoint = process.env.BROWSERLESS_CONNECT_URL;
+    const browserWSEndpoint = resolveBrowserlessEndpoint(
+      process.env.BROWSERLESS_CONNECT_URL
+    );
 
     if (browserWSEndpoint) {
       // Remote Browserless.io connection
