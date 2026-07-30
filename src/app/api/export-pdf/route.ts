@@ -4,7 +4,7 @@ import puppeteerCore from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 import fs from "fs";
 import path from "path";
-import { resolveBrowserlessEndpoint } from "@/lib/browserless";
+import { resolveBrowserlessPdfEndpoint } from "@/lib/browserless";
 
 const clamp = (val: any, min: number = -350, max: number = 350): number => {
   const num = typeof val === "number" ? val : parseFloat(val);
@@ -568,14 +568,78 @@ ${productPagesHtml}
 
     // 10. Launch Puppeteer (Vercel serverless or local)
     const isVercel = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
-    const browserWSEndpoint = resolveBrowserlessEndpoint(
+    const browserlessPdfEndpoint = resolveBrowserlessPdfEndpoint(
       process.env.BROWSERLESS_CONNECT_URL
     );
 
-    if (browserWSEndpoint) {
-      // Remote Browserless.io connection
-      browser = await puppeteerCore.connect({ browserWSEndpoint });
-    } else if (isVercel) {
+    if (browserlessPdfEndpoint) {
+      const abortController = new AbortController();
+      const abortTimeout = setTimeout(() => abortController.abort(), 50_000);
+
+      try {
+        const response = await fetch(browserlessPdfEndpoint, {
+          method: "POST",
+          headers: {
+            "Cache-Control": "no-cache",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            html: fullHtml,
+            options: {
+              format: "A4",
+              printBackground: true,
+              margin: { top: "0", bottom: "0", left: "0", right: "0" },
+            },
+          }),
+          cache: "no-store",
+          signal: abortController.signal,
+        });
+
+        if (!response.ok) {
+          const details = (await response.text()).slice(0, 500);
+          console.error(
+            `Browserless PDF API respondeu ${response.status}: ${details}`
+          );
+          return NextResponse.json(
+            { error: "O serviço de geração de PDF não respondeu corretamente." },
+            { status: 502 }
+          );
+        }
+
+        const contentType = response.headers.get("content-type") || "";
+        if (!contentType.toLowerCase().includes("application/pdf")) {
+          console.error(
+            `Browserless PDF API retornou conteúdo inesperado: ${contentType}`
+          );
+          return NextResponse.json(
+            { error: "O serviço de geração retornou um arquivo inválido." },
+            { status: 502 }
+          );
+        }
+
+        const pdfBuffer = await response.arrayBuffer();
+        return new NextResponse(pdfBuffer, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": 'attachment; filename="catalogo-allvino.pdf"',
+          },
+        });
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          console.error("Browserless PDF API excedeu o limite de 50 segundos.");
+          return NextResponse.json(
+            { error: "O serviço de geração de PDF excedeu o tempo limite." },
+            { status: 504 }
+          );
+        }
+        throw error;
+      } finally {
+        clearTimeout(abortTimeout);
+      }
+    }
+
+    if (isVercel) {
       // Vercel serverless: use @sparticuz/chromium
       chromium.setGraphicsMode = false;
       browser = await puppeteerCore.launch({

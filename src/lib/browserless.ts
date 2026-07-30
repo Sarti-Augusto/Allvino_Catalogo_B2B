@@ -27,3 +27,18 @@ export function resolveBrowserlessEndpoint(
 
   return `${DEFAULT_BROWSERLESS_ENDPOINT}?token=${encodeURIComponent(value)}`;
 }
+
+export function resolveBrowserlessPdfEndpoint(
+  configuredValue: string | undefined
+): string | undefined {
+  const browserEndpoint = resolveBrowserlessEndpoint(configuredValue);
+
+  if (!browserEndpoint) return undefined;
+
+  const url = new URL(browserEndpoint);
+  url.protocol = url.protocol === "wss:" ? "https:" : "http:";
+  url.pathname = "/pdf";
+  url.hash = "";
+
+  return url.toString();
+}
