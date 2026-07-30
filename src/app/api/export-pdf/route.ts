@@ -11,6 +11,35 @@ const clamp = (val: any, min: number = -350, max: number = 350): number => {
   return Math.max(min, Math.min(max, num));
 };
 
+const escapeHtml = (value: unknown): string =>
+  String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const safeImageSource = (value: unknown): string => {
+  if (typeof value !== "string" || !value.trim()) return "";
+  const source = value.trim();
+
+  if (!/^data:image\/(?:png|jpe?g|webp);base64,[A-Za-z0-9+/=\s]+$/i.test(source)) {
+    try {
+      if (new URL(source).protocol !== "https:") return "";
+    } catch {
+      return "";
+    }
+  }
+
+  return source.replace(/'/g, "%27");
+};
+
+const safeCssValue = (value: unknown, fallback: string): string => {
+  if (typeof value !== "string") return fallback;
+  const normalized = value.trim();
+  return /^[#a-z0-9(),.%\s-]+$/i.test(normalized) ? normalized : fallback;
+};
+
 // Vercel serverless config: extend timeout for PDF generation
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -47,7 +76,7 @@ export async function GET() {
     let styles: any;
     try {
       styles = JSON.parse(activeTemplate.cssStyles);
-    } catch (e) {
+    } catch {
       return NextResponse.json(
         { error: "Erro nas definições de estilo do template." },
         { status: 500 }
@@ -65,7 +94,7 @@ export async function GET() {
         const defaultPath = path.join(process.cwd(), "public", "logo.png");
         logoBlackBase64 = `data:image/png;base64,${fs.readFileSync(defaultPath).toString("base64")}`;
       }
-    } catch (e) {
+    } catch {
       console.warn("Logo preta não encontrada em /public/logo-black.png");
     }
 
@@ -74,50 +103,54 @@ export async function GET() {
       if (fs.existsSync(whitePath)) {
         logoWhiteBase64 = `data:image/png;base64,${fs.readFileSync(whitePath).toString("base64")}`;
       }
-    } catch (e) {
+    } catch {
       console.warn("Logo branca não encontrada em /public/logo-white.png");
     }
 
     // 5. Extract style variables with defaults
-    const primaryColor = styles.primaryColor || "#80282d";
-    const secondaryColor = styles.secondaryColor || "#c5a880";
-    const backgroundColor = styles.backgroundColor || "#ffffff";
-    const textColor = styles.textColor || "#1f2937";
+    const primaryColor = safeCssValue(styles.primaryColor, "#80282d");
+    const secondaryColor = safeCssValue(styles.secondaryColor, "#c5a880");
+    const backgroundColor = safeCssValue(styles.backgroundColor, "#ffffff");
+    const textColor = safeCssValue(styles.textColor, "#1f2937");
     const fontFamily = styles.fontFamily || "Playfair Display";
-    const headerTitle = styles.headerTitle || "ALLVINO";
-    const footerText = styles.footerText || "Allvino Importadora de Vinhos B2B";
-    const coverImageUrl = styles.coverImageUrl || "";
-    const backgroundImageUrl = styles.backgroundImageUrl || "";
+    const headerTitle = escapeHtml(styles.headerTitle || "ALLVINO");
+    const footerText = escapeHtml(styles.footerText || "Allvino Importadora de Vinhos B2B");
+    const coverImageUrl = safeImageSource(styles.coverImageUrl);
+    const backgroundImageUrl = safeImageSource(styles.backgroundImageUrl);
 
     // ── COVER DYNAMIC TUNING ────────────────────────
-    const coverSubtitle = styles.coverSubtitle || "Catálogo Exclusivo B2B";
+    const coverSubtitle = escapeHtml(styles.coverSubtitle || "Catálogo Exclusivo B2B");
     const coverLogoHeight = typeof styles.coverLogoHeight === "number" ? styles.coverLogoHeight : 110;
     const coverLogoAngle = typeof styles.coverLogoAngle === "number" ? styles.coverLogoAngle : 0;
     const coverLogoXOffset = clamp(styles.coverLogoXOffset);
     const coverLogoYOffset = clamp(styles.coverLogoYOffset);
     const coverLogoVariant = styles.coverLogoVariant || "auto";
     
-    const coverTitleColorCustom = styles.coverTitleColor || "";
+    const coverTitleColorCustom = safeCssValue(styles.coverTitleColor, "");
     const coverTitleFontSize = typeof styles.coverTitleFontSize === "number" ? styles.coverTitleFontSize : 30;
     const coverTitleAngle = typeof styles.coverTitleAngle === "number" ? styles.coverTitleAngle : 0;
     const coverTitleXOffset = clamp(styles.coverTitleXOffset);
     const coverTitleYOffset = clamp(styles.coverTitleYOffset);
     
-    const coverSubtitleColorCustom = styles.coverSubtitleColor || "";
+    const coverSubtitleColorCustom = safeCssValue(styles.coverSubtitleColor, "");
     const coverSubtitleFontSize = typeof styles.coverSubtitleFontSize === "number" ? styles.coverSubtitleFontSize : 11;
     const coverSubtitleAngle = typeof styles.coverSubtitleAngle === "number" ? styles.coverSubtitleAngle : 0;
     const coverSubtitleXOffset = clamp(styles.coverSubtitleXOffset);
     const coverSubtitleYOffset = clamp(styles.coverSubtitleYOffset);
 
-    const coverFooterColorCustom = styles.coverFooterColor || "";
+    const coverFooterColorCustom = safeCssValue(styles.coverFooterColor, "");
     const coverFooterFontSize = typeof styles.coverFooterFontSize === "number" ? styles.coverFooterFontSize : 9;
     const coverFooterYOffset = clamp(styles.coverFooterYOffset);
     const coverVerticalOffset = clamp(styles.coverVerticalOffset);
 
     // ── LAYOUT PRESET & ALIGNMENTS ──
-    const productLayoutPreset = styles.productLayoutPreset || "classic";
+    const productLayoutPreset = ["classic", "side-right", "side-left", "price-top"].includes(styles.productLayoutPreset)
+      ? styles.productLayoutPreset
+      : "classic";
     const productDescAngle = typeof styles.productDescAngle === "number" ? styles.productDescAngle : 0;
-    const productDescAlign = styles.productDescAlign || "center";
+    const productDescAlign = ["left", "center", "right", "justify"].includes(styles.productDescAlign)
+      ? styles.productDescAlign
+      : "center";
     const productPriceAngle = typeof styles.productPriceAngle === "number" ? styles.productPriceAngle : 0;
 
     // ── PRODUCT PAGE BOTTLE & LAYOUT DYNAMIC TUNING ──
@@ -136,13 +169,15 @@ export async function GET() {
     const productOriginYOffset = clamp(styles.productOriginYOffset);
 
     // Product Colors & Price Block Tuning (Unrestricted full-canvas X & Y positioning)
-    const productNameColor = styles.productNameColor || primaryColor;
-    const productSpecsColor = styles.productSpecsColor || secondaryColor;
-    const productDescColor = styles.productDescColor || textColor;
-    const productPriceColor = styles.productPriceColor || primaryColor;
-    const productPriceLabelColor = styles.productPriceLabelColor || "#777777";
-    const productPriceInfoColor = styles.productPriceInfoColor || secondaryColor;
-    const productPriceSide = styles.productPriceSide || "right"; // "right" | "left" | "center"
+    const productNameColor = safeCssValue(styles.productNameColor, primaryColor);
+    const productSpecsColor = safeCssValue(styles.productSpecsColor, secondaryColor);
+    const productDescColor = safeCssValue(styles.productDescColor, textColor);
+    const productPriceColor = safeCssValue(styles.productPriceColor, primaryColor);
+    const productPriceLabelColor = safeCssValue(styles.productPriceLabelColor, "#777777");
+    const productPriceInfoColor = safeCssValue(styles.productPriceInfoColor, secondaryColor);
+    const productPriceSide = ["right", "left", "center"].includes(styles.productPriceSide)
+      ? styles.productPriceSide
+      : "right"; // "right" | "left" | "center"
     const productPriceXOffset = clamp(styles.productPriceXOffset, -350, 350);
     const productPriceYOffset = clamp(styles.productPriceYOffset, -450, 450);
 
@@ -186,6 +221,12 @@ export async function GET() {
     // 8. Generate product pages HTML
     let productPagesHtml = "";
     products.forEach((product, idx) => {
+      const productName = escapeHtml(product.name);
+      const productOrigin = escapeHtml(`${product.paisOrigem} · ${product.regiao}`);
+      const productSpecs = escapeHtml(
+        `${product.vinicola} · ${product.uva} · Safra ${product.safra} · ${product.teorAlcoolico}% vol`,
+      );
+      const productImageUrl = safeImageSource(product.imagemUrl);
       let priceHtml: string;
       if (product.precoPromocional) {
         priceHtml = `
@@ -199,7 +240,9 @@ export async function GET() {
         ? `background-image:url('${backgroundImageUrl}');background-size:cover;background-position:center;`
         : `background-color:${backgroundColor};`;
 
-      const notasText = product.notasDegustacao || "Vinho de excelente estrutura, aromas harmoniosos e notas marcantes.";
+      const notasText = escapeHtml(
+        product.notasDegustacao || "Vinho de excelente estrutura, aromas harmoniosos e notas marcantes.",
+      );
 
       const priceAlignCSS = productPriceSide === "left" ? "right" : productPriceSide === "center" ? "center" : "left";
 
@@ -216,20 +259,20 @@ export async function GET() {
         productPagesHtml += `
         <div class="prod-page" style="${pageBg}">
           <div class="prod-top" style="transform: translate(${productNameXOffset}px, ${productNameYOffset}px);">
-            <h2 class="prod-name" style="color:${productNameColor}; font-size:${productNameFontSize}px;">${product.name}</h2>
-            <p class="prod-origin" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px; transform: translateY(${productOriginYOffset}px);">${product.paisOrigem} · ${product.regiao}</p>
+            <h2 class="prod-name" style="color:${productNameColor}; font-size:${productNameFontSize}px;">${productName}</h2>
+            <p class="prod-origin" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px; transform: translateY(${productOriginYOffset}px);">${productOrigin}</p>
             <div class="prod-line" style="background:${productSpecsColor};"></div>
           </div>
 
           <div class="prod-body-side ${isReverse ? 'side-reverse' : ''}">
             <div class="side-col-bottle" style="transform: translate(${productImgXOffset}px, ${productImgYOffset}px) rotate(${productImgAngle}deg);">
-              <img src="${product.imagemUrl}" class="prod-img-side" style="max-height: min(${productImgHeight}px, 100%);" />
+              <img src="${escapeHtml(productImageUrl)}" class="prod-img-side" style="max-height: min(${productImgHeight}px, 100%);" />
             </div>
 
             <div class="side-col-content">
               <!-- Specs & Tasting Notes in side column -->
               <div class="prod-desc-block" style="transform: translate(${productDescXOffset}px, ${productDescYOffset}px) rotate(${productDescAngle}deg); text-align: ${productDescAlign}; max-width:${productTextMaxWidth}px;">
-                <p class="prod-specs" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px; margin-bottom: 8px;">${product.vinicola} · ${product.uva} · Safra ${product.safra} · ${product.teorAlcoolico}% vol</p>
+                <p class="prod-specs" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px; margin-bottom: 8px;">${productSpecs}</p>
                 <p class="prod-desc" style="color:${productDescColor}; font-size:${productDescFontSize}px;">${notasText}</p>
               </div>
             </div>
@@ -248,19 +291,19 @@ export async function GET() {
         productPagesHtml += `
         <div class="prod-page" style="${pageBg}">
           <div class="prod-top" style="transform: translate(${productNameXOffset}px, ${productNameYOffset}px);">
-            <h2 class="prod-name" style="color:${productNameColor}; font-size:${productNameFontSize}px;">${product.name}</h2>
-            <p class="prod-origin" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px; transform: translateY(${productOriginYOffset}px);">${product.paisOrigem} · ${product.regiao}</p>
+            <h2 class="prod-name" style="color:${productNameColor}; font-size:${productNameFontSize}px;">${productName}</h2>
+            <p class="prod-origin" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px; transform: translateY(${productOriginYOffset}px);">${productOrigin}</p>
             <div class="prod-line" style="background:${productSpecsColor};"></div>
           </div>
 
           <div class="prod-middle">
             <div class="prod-img-area" style="transform: translate(${productImgXOffset}px, ${productImgYOffset}px) rotate(${productImgAngle}deg);">
-              <img src="${product.imagemUrl}" class="prod-img" style="max-height: min(${productImgHeight}px, 100%); max-width:${productImgMaxWidth}px;" />
+              <img src="${escapeHtml(productImageUrl)}" class="prod-img" style="max-height: min(${productImgHeight}px, 100%); max-width:${productImgMaxWidth}px;" />
             </div>
           </div>
 
           <div class="prod-bottom" style="transform: translate(${productDescXOffset}px, ${productDescYOffset}px) rotate(${productDescAngle}deg); text-align: ${productDescAlign};">
-            <p class="prod-specs" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px;">${product.vinicola} · ${product.uva} · Safra ${product.safra} · ${product.teorAlcoolico}% vol</p>
+            <p class="prod-specs" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px;">${productSpecs}</p>
             <p class="prod-desc" style="color:${productDescColor}; font-size:${productDescFontSize}px;">${notasText}</p>
           </div>
 

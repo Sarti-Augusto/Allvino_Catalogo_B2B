@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSession, signOut } from "next-auth/react";
+import { signOut } from "next-auth/react";
 import Link from "next/link";
 
 interface TemplateStyles {
@@ -128,7 +128,6 @@ const clamp = (val: any, min: number = -350, max: number = 350): number => {
 };
 
 export default function TemplatesPage() {
-  const { data: session } = useSession();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   
@@ -861,7 +860,7 @@ export default function TemplatesPage() {
                       </p>
                       <div className="grid grid-cols-3 gap-2">
                         <div>
-                          <label className="block text-[9px] text-allvino-on-surface-variant mb-1 font-medium">"Preço B2B"</label>
+                          <label className="block text-[9px] text-allvino-on-surface-variant mb-1 font-medium">Preço B2B</label>
                           <input
                             type="number"
                             step="0.5"
@@ -871,7 +870,7 @@ export default function TemplatesPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-[9px] text-allvino-on-surface-variant mb-1 font-medium">"Caixa c/ 6"</label>
+                          <label className="block text-[9px] text-allvino-on-surface-variant mb-1 font-medium">Caixa c/ 6</label>
                           <input
                             type="number"
                             step="0.5"
@@ -1686,9 +1685,9 @@ export default function TemplatesPage() {
                             className="font-extrabold"
                             style={{ color: resolvedProductPriceColor, fontSize: `${Math.round(productPriceValueFontSize * 0.65)}px` }}
                           >
-                            R$ {(previewWine.precoPromocional || previewWine.precoOriginal).toFixed(2)}
+                            R$ {(previewWine.precoPromocional ?? previewWine.precoOriginal).toFixed(2)}
                           </span>
-                          {previewWine.precoPromocional && (
+                          {previewWine.precoPromocional !== null && previewWine.precoPromocional !== undefined && (
                             <span className="text-gray-400 line-through text-[9px]">
                               R$ {previewWine.precoOriginal.toFixed(2)}
                             </span>

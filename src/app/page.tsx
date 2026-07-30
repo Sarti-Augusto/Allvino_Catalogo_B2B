@@ -414,7 +414,7 @@ export default function Home() {
                         <span className="text-[9px] text-allvino-secondary block font-semibold mb-0.5">
                           (Caixa c/ 6 garrafas)
                         </span>
-                        {wine.precoPromocional ? (
+                        {wine.precoPromocional !== null && wine.precoPromocional !== undefined ? (
                           <div className="flex items-baseline gap-2">
                             <span className="text-lg font-black text-allvino-primary">
                               R$ {wine.precoPromocional.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}

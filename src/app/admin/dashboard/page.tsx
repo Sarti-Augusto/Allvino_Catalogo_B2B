@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 interface Product {
@@ -34,7 +33,6 @@ const DEFAULT_CATEGORIES = ["Tinto", "Branco", "Rosé", "Espumante", "Fortificad
 
 export default function DashboardPage() {
   const { data: session } = useSession();
-  const router = useRouter();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,7 +81,7 @@ export default function DashboardPage() {
       } else {
         showToast("Erro ao buscar vinhos do servidor.", "error");
       }
-    } catch (err) {
+    } catch {
       showToast("Falha de conexão com a API.", "error");
     } finally {
       setLoading(false);
@@ -127,7 +125,11 @@ export default function DashboardPage() {
     setRegiao(product.regiao);
     setNotasDegustacao(product.notasDegustacao);
     setPrecoOriginal(String(product.precoOriginal));
-    setPrecoPromocional(product.precoPromocional ? String(product.precoPromocional) : "");
+    setPrecoPromocional(
+      product.precoPromocional !== null && product.precoPromocional !== undefined
+        ? String(product.precoPromocional)
+        : "",
+    );
     setStatus(String(product.status));
     setImagemUrl(product.imagemUrl);
     setCategoria(product.categoria || "Tinto");
@@ -158,7 +160,7 @@ export default function DashboardPage() {
       regiao,
       notasDegustacao,
       precoOriginal,
-      precoPromocional: precoPromocional || null,
+      precoPromocional: precoPromocional.trim() || null,
       status: status === "true",
       imagemUrl,
       categoria,
@@ -209,7 +211,7 @@ export default function DashboardPage() {
       } else {
         showToast("Falha ao excluir o vinho.", "error");
       }
-    } catch (err) {
+    } catch {
       showToast("Erro ao processar exclusão.", "error");
     }
   };
@@ -407,7 +409,7 @@ export default function DashboardPage() {
                         <p className="text-xs text-allvino-on-surface-variant mt-0.5">{product.teorAlcoolico}% vol</p>
                       </td>
                       <td className="py-4 px-6">
-                        {product.precoPromocional ? (
+                        {product.precoPromocional !== null && product.precoPromocional !== undefined ? (
                           <div className="space-y-0.5">
                             <span className="text-allvino-primary font-bold block">
                               R$ {product.precoPromocional.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}

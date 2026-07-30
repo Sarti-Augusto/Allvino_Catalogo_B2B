@@ -1,0 +1,16 @@
+export const publicProductSelect = {
+  id: true,
+  name: true,
+  vinicola: true,
+  uva: true,
+  teorAlcoolico: true,
+  safra: true,
+  paisOrigem: true,
+  regiao: true,
+  notasDegustacao: true,
+  precoOriginal: true,
+  precoPromocional: true,
+  status: true,
+  imagemUrl: true,
+  categoria: true,
+} as const;
