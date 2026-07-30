@@ -7,13 +7,21 @@ async function main() {
   console.log("Iniciando semeadura do banco de dados...");
 
   // 1. Criar Usuário Administrador
-  const adminEmail = "admin@allvino.com";
+  const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  const adminPassword = process.env.ADMIN_PASSWORD;
+
+  if (!adminEmail || !adminPassword || adminPassword.length < 12) {
+    throw new Error(
+      "ADMIN_EMAIL e ADMIN_PASSWORD devem ser definidos; a senha deve possuir pelo menos 12 caracteres.",
+    );
+  }
+
   const existingUser = await prisma.user.findUnique({
     where: { email: adminEmail },
   });
 
   if (!existingUser) {
-    const hashedPassword = await bcrypt.hash("admin123", 10);
+    const hashedPassword = await bcrypt.hash(adminPassword, 12);
     await prisma.user.create({
       data: {
         email: adminEmail,
@@ -22,7 +30,7 @@ async function main() {
         role: "ADMIN",
       },
     });
-    console.log("✓ Usuário admin criado: admin@allvino.com / admin123");
+    console.log(`✓ Usuário admin criado: ${adminEmail}`);
   } else {
     console.log("✓ Usuário admin já existente.");
   }

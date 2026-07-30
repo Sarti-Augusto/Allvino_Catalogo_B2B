@@ -216,7 +216,7 @@ export default function ProductDetailPage() {
                 <span className="text-[9px] text-allvino-secondary block font-semibold mb-1">
                   (Caixa c/ 6 garrafas)
                 </span>
-                {product.precoPromocional ? (
+                {product.precoPromocional !== null && product.precoPromocional !== undefined ? (
                   <div className="flex items-baseline gap-3">
                     <span className="text-3xl font-black text-allvino-primary">
                       R$ {product.precoPromocional.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}

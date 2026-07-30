@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -30,7 +31,7 @@ export default function LoginPage() {
         router.push("/admin/dashboard");
         router.refresh();
       }
-    } catch (err) {
+    } catch {
       setError("Ocorreu um erro no servidor. Tente novamente.");
       setLoading(false);
     }
@@ -107,12 +108,12 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-8 text-center">
-          <a
+          <Link
             href="/"
             className="text-xs text-allvino-on-surface-variant hover:text-allvino-primary transition"
           >
             ← Voltar para a vitrine pública
-          </a>
+          </Link>
         </div>
       </div>
     </div>

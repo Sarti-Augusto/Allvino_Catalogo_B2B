@@ -2,127 +2,108 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { isAdminSession, requireAdmin } from "@/lib/api-auth";
+import { publicProductSelect } from "@/lib/product-select";
+import {
+  DEFAULT_PRODUCT_IMAGE,
+  isSafeImageSource,
+  optionalText,
+  parseBoolean,
+  parseNonNegativeInteger,
+  parseNonNegativeNumber,
+  requiredText,
+} from "@/lib/validation";
 
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+
+    if (isAdminSession(session)) {
+      const products = await prisma.product.findMany({
+        orderBy: { createdAt: "desc" },
+      });
+      return NextResponse.json(products);
+    }
+
     const products = await prisma.product.findMany({
+      where: { status: true },
+      select: publicProductSelect,
       orderBy: { createdAt: "desc" },
     });
+
     return NextResponse.json(products);
-  } catch (error: any) {
+  } catch (error) {
     console.error("Erro ao buscar vinhos:", error);
-    return NextResponse.json(
-      { error: "Erro ao buscar os vinhos." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Erro ao buscar os vinhos." }, { status: 500 });
   }
 }
 
-const parseNumber = (val: any): number => {
-  if (val === null || val === undefined || val === "") return NaN;
-  if (typeof val === "number") return val;
-  const sanitized = String(val).replace(",", ".").trim();
-  return parseFloat(sanitized);
-};
-
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-
-  if (!session) {
-    return NextResponse.json(
-      { error: "Não autorizado. Faça login novamente." },
-      { status: 401 }
-    );
-  }
+  const auth = await requireAdmin();
+  if (auth.response) return auth.response;
 
   try {
-    const body = await request.json();
-    const {
-      name,
-      vinicola,
-      uva,
-      teorAlcoolico,
-      safra,
-      paisOrigem,
-      regiao,
-      notasDegustacao,
-      precoOriginal,
-      precoPromocional,
-      status,
-      imagemUrl,
-      categoria,
-      estoque,
-    } = body;
+    const body = (await request.json()) as Record<string, unknown>;
+    const name = requiredText(body.name);
+    const vinicola = requiredText(body.vinicola);
+    const uva = requiredText(body.uva);
+    const safra = requiredText(body.safra);
+    const paisOrigem = requiredText(body.paisOrigem);
+    const regiao = requiredText(body.regiao);
+    const teorAlcoolico = parseNonNegativeNumber(body.teorAlcoolico);
+    const precoOriginal = parseNonNegativeNumber(body.precoOriginal);
+    const precoPromocional =
+      body.precoPromocional === null || body.precoPromocional === "" || body.precoPromocional === undefined
+        ? null
+        : parseNonNegativeNumber(body.precoPromocional);
+    const estoque = body.estoque === undefined || body.estoque === "" ? 0 : parseNonNegativeInteger(body.estoque);
+    const status = body.status === undefined ? true : parseBoolean(body.status);
+    const imagemUrl = body.imagemUrl ? String(body.imagemUrl).trim() : DEFAULT_PRODUCT_IMAGE;
+    const categoria = body.categoria ? requiredText(body.categoria) : "Tinto";
+    const notasDegustacao = body.notasDegustacao === undefined ? "" : optionalText(body.notasDegustacao);
 
     if (
       !name ||
       !vinicola ||
       !uva ||
-      teorAlcoolico === undefined ||
-      teorAlcoolico === "" ||
       !safra ||
       !paisOrigem ||
       !regiao ||
-      precoOriginal === undefined ||
-      precoOriginal === ""
+      teorAlcoolico === null ||
+      teorAlcoolico > 100 ||
+      precoOriginal === null ||
+      precoPromocional === undefined ||
+      estoque === null ||
+      status === null ||
+      !categoria ||
+      notasDegustacao === null ||
+      !isSafeImageSource(imagemUrl)
     ) {
-      return NextResponse.json(
-        { error: "Preencha todos os campos obrigatórios." },
-        { status: 400 }
-      );
-    }
-
-    const parsedTeor = parseNumber(teorAlcoolico);
-    const parsedPrecoOrig = parseNumber(precoOriginal);
-    const parsedPrecoPromo =
-      precoPromocional !== null &&
-      precoPromocional !== undefined &&
-      precoPromocional !== ""
-        ? parseNumber(precoPromocional)
-        : null;
-    const parsedEstoque =
-      estoque !== undefined && estoque !== ""
-        ? parseInt(String(estoque).trim(), 10)
-        : 0;
-
-    if (
-      isNaN(parsedTeor) ||
-      isNaN(parsedPrecoOrig) ||
-      (parsedPrecoPromo !== null && isNaN(parsedPrecoPromo))
-    ) {
-      return NextResponse.json(
-        { error: "Valores numéricos inválidos para preço ou teor alcoólico." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Dados inválidos para cadastro do vinho." }, { status: 400 });
     }
 
     const product = await prisma.product.create({
       data: {
-        name: String(name).trim(),
-        vinicola: String(vinicola).trim(),
-        uva: String(uva).trim(),
-        teorAlcoolico: parsedTeor,
-        safra: String(safra).trim(),
-        paisOrigem: String(paisOrigem).trim(),
-        regiao: String(regiao).trim(),
-        notasDegustacao: notasDegustacao ? String(notasDegustacao).trim() : "",
-        precoOriginal: parsedPrecoOrig,
-        precoPromocional: parsedPrecoPromo,
-        status: status !== undefined ? Boolean(status) : true,
-        imagemUrl:
-          imagemUrl ||
-          "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?q=80&w=300&auto=format&fit=crop",
-        categoria: categoria ? String(categoria).trim() : "Tinto",
-        estoque: isNaN(parsedEstoque) ? 0 : parsedEstoque,
+        name,
+        vinicola,
+        uva,
+        teorAlcoolico,
+        safra,
+        paisOrigem,
+        regiao,
+        notasDegustacao,
+        precoOriginal,
+        precoPromocional,
+        status,
+        imagemUrl,
+        categoria,
+        estoque,
       },
     });
 
     return NextResponse.json(product, { status: 201 });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Erro ao criar produto:", error);
-    return NextResponse.json(
-      { error: error?.message || "Erro ao criar o vinho no banco de dados." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Erro ao criar o vinho no banco de dados." }, { status: 500 });
   }
 }

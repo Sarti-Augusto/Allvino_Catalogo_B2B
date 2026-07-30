@@ -2,170 +2,139 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { isAdminSession, requireAdmin } from "@/lib/api-auth";
+import { publicProductSelect } from "@/lib/product-select";
+import {
+  isSafeImageSource,
+  optionalText,
+  parseBoolean,
+  parseNonNegativeInteger,
+  parseNonNegativeNumber,
+  requiredText,
+} from "@/lib/validation";
 
-const parseNumber = (val: any): number => {
-  if (val === null || val === undefined || val === "") return NaN;
-  if (typeof val === "number") return val;
-  const sanitized = String(val).replace(",", ".").trim();
-  return parseFloat(sanitized);
-};
+type RouteContext = { params: Promise<{ id: string }> };
 
-export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await getServerSession(authOptions);
-
-  if (!session) {
-    return NextResponse.json(
-      { error: "Não autorizado." },
-      { status: 401 }
-    );
-  }
+export async function PUT(request: Request, { params }: RouteContext) {
+  const auth = await requireAdmin();
+  if (auth.response) return auth.response;
 
   const { id } = await params;
 
   try {
-    const body = await request.json();
-    const {
-      name,
-      vinicola,
-      uva,
-      teorAlcoolico,
-      safra,
-      paisOrigem,
-      regiao,
-      notasDegustacao,
-      precoOriginal,
-      precoPromocional,
-      status,
-      imagemUrl,
-      categoria,
-      estoque,
-    } = body;
-
-    const existingProduct = await prisma.product.findUnique({
-      where: { id },
-    });
+    const body = (await request.json()) as Record<string, unknown>;
+    const existingProduct = await prisma.product.findUnique({ where: { id } });
 
     if (!existingProduct) {
-      return NextResponse.json(
-        { error: "Vinho não encontrado." },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Vinho não encontrado." }, { status: 404 });
     }
 
-    const parsedTeor = teorAlcoolico !== undefined ? parseNumber(teorAlcoolico) : existingProduct.teorAlcoolico;
-    const parsedPrecoOrig = precoOriginal !== undefined ? parseNumber(precoOriginal) : existingProduct.precoOriginal;
-    const parsedPrecoPromo = precoPromocional !== undefined
-      ? (precoPromocional !== null && precoPromocional !== "" ? parseNumber(precoPromocional) : null)
-      : existingProduct.precoPromocional;
-    const parsedEstoque = estoque !== undefined ? parseInt(String(estoque).trim(), 10) : existingProduct.estoque;
+    const textFields = ["name", "vinicola", "uva", "safra", "paisOrigem", "regiao", "categoria"] as const;
+    for (const field of textFields) {
+      if (body[field] !== undefined && !requiredText(body[field])) {
+        return NextResponse.json({ error: `Campo inválido: ${field}.` }, { status: 400 });
+      }
+    }
+
+    if (body.notasDegustacao !== undefined && optionalText(body.notasDegustacao) === null) {
+      return NextResponse.json({ error: "Campo inválido: notasDegustacao." }, { status: 400 });
+    }
+
+    const teorAlcoolico =
+      body.teorAlcoolico === undefined
+        ? existingProduct.teorAlcoolico
+        : parseNonNegativeNumber(body.teorAlcoolico);
+    const precoOriginal =
+      body.precoOriginal === undefined ? existingProduct.precoOriginal : parseNonNegativeNumber(body.precoOriginal);
+    const precoPromocional =
+      body.precoPromocional === undefined
+        ? existingProduct.precoPromocional
+        : body.precoPromocional === null || body.precoPromocional === ""
+          ? null
+          : parseNonNegativeNumber(body.precoPromocional);
+    const estoque =
+      body.estoque === undefined ? existingProduct.estoque : parseNonNegativeInteger(body.estoque);
+    const status = body.status === undefined ? existingProduct.status : parseBoolean(body.status);
+    const imagemUrl = body.imagemUrl === undefined ? existingProduct.imagemUrl : body.imagemUrl;
 
     if (
-      (teorAlcoolico !== undefined && isNaN(parsedTeor)) ||
-      (precoOriginal !== undefined && isNaN(parsedPrecoOrig)) ||
-      (parsedPrecoPromo !== null && isNaN(parsedPrecoPromo))
+      teorAlcoolico === null ||
+      teorAlcoolico > 100 ||
+      precoOriginal === null ||
+      precoPromocional === undefined ||
+      estoque === null ||
+      status === null ||
+      typeof imagemUrl !== "string" ||
+      !isSafeImageSource(imagemUrl)
     ) {
-      return NextResponse.json(
-        { error: "Valores numéricos inválidos para preço ou teor alcoólico." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Valores inválidos para atualização do vinho." }, { status: 400 });
     }
 
     const updatedProduct = await prisma.product.update({
       where: { id },
       data: {
-        name: name !== undefined ? String(name).trim() : existingProduct.name,
-        vinicola: vinicola !== undefined ? String(vinicola).trim() : existingProduct.vinicola,
-        uva: uva !== undefined ? String(uva).trim() : existingProduct.uva,
-        teorAlcoolico: parsedTeor,
-        safra: safra !== undefined ? String(safra).trim() : existingProduct.safra,
-        paisOrigem: paisOrigem !== undefined ? String(paisOrigem).trim() : existingProduct.paisOrigem,
-        regiao: regiao !== undefined ? String(regiao).trim() : existingProduct.regiao,
-        notasDegustacao: notasDegustacao !== undefined ? String(notasDegustacao).trim() : existingProduct.notasDegustacao,
-        precoOriginal: parsedPrecoOrig,
-        precoPromocional: parsedPrecoPromo,
-        status: status !== undefined ? Boolean(status) : existingProduct.status,
-        imagemUrl: imagemUrl !== undefined ? imagemUrl : existingProduct.imagemUrl,
-        categoria: categoria !== undefined ? String(categoria).trim() : existingProduct.categoria,
-        estoque: isNaN(parsedEstoque) ? existingProduct.estoque : parsedEstoque,
+        name: body.name === undefined ? existingProduct.name : requiredText(body.name)!,
+        vinicola: body.vinicola === undefined ? existingProduct.vinicola : requiredText(body.vinicola)!,
+        uva: body.uva === undefined ? existingProduct.uva : requiredText(body.uva)!,
+        teorAlcoolico,
+        safra: body.safra === undefined ? existingProduct.safra : requiredText(body.safra)!,
+        paisOrigem: body.paisOrigem === undefined ? existingProduct.paisOrigem : requiredText(body.paisOrigem)!,
+        regiao: body.regiao === undefined ? existingProduct.regiao : requiredText(body.regiao)!,
+        notasDegustacao:
+          body.notasDegustacao === undefined ? existingProduct.notasDegustacao : optionalText(body.notasDegustacao)!,
+        precoOriginal,
+        precoPromocional,
+        status,
+        imagemUrl,
+        categoria: body.categoria === undefined ? existingProduct.categoria : requiredText(body.categoria)!,
+        estoque,
       },
     });
 
     return NextResponse.json(updatedProduct);
-  } catch (error: any) {
+  } catch (error) {
     console.error("Erro ao atualizar produto:", error);
-    return NextResponse.json(
-      { error: error?.message || "Erro ao atualizar o vinho." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Erro ao atualizar o vinho." }, { status: 500 });
   }
 }
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await getServerSession(authOptions);
-
-  if (!session) {
-    return NextResponse.json(
-      { error: "Não autorizado." },
-      { status: 401 }
-    );
-  }
+export async function DELETE(request: Request, { params }: RouteContext) {
+  const auth = await requireAdmin();
+  if (auth.response) return auth.response;
 
   const { id } = await params;
 
   try {
-    const existingProduct = await prisma.product.findUnique({
-      where: { id },
-    });
+    const existingProduct = await prisma.product.findUnique({ where: { id } });
 
     if (!existingProduct) {
-      return NextResponse.json(
-        { error: "Vinho não encontrado." },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Vinho não encontrado." }, { status: 404 });
     }
 
-    await prisma.product.delete({
-      where: { id },
-    });
-
+    await prisma.product.delete({ where: { id } });
     return NextResponse.json({ message: "Vinho excluído com sucesso." });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Erro ao excluir produto:", error);
-    return NextResponse.json(
-      { error: error?.message || "Erro ao excluir o vinho." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Erro ao excluir o vinho." }, { status: 500 });
   }
 }
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: Request, { params }: RouteContext) {
   const { id } = await params;
+
   try {
-    const product = await prisma.product.findUnique({
-      where: { id },
-    });
+    const session = await getServerSession(authOptions);
+    const product = isAdminSession(session)
+      ? await prisma.product.findUnique({ where: { id } })
+      : await prisma.product.findFirst({ where: { id, status: true }, select: publicProductSelect });
 
     if (!product) {
-      return NextResponse.json(
-        { error: "Vinho não encontrado." },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Vinho não encontrado." }, { status: 404 });
     }
 
     return NextResponse.json(product);
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: "Erro ao buscar o vinho." },
-      { status: 500 }
-    );
+  } catch (error) {
+    console.error("Erro ao buscar produto:", error);
+    return NextResponse.json({ error: "Erro ao buscar o vinho." }, { status: 500 });
   }
 }
