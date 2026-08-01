@@ -2,6 +2,16 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import {
+  ExportCatalogModal,
+  FloatingCatalogFilters,
+} from "@/components/catalog-controls";
+import {
+  CatalogSort,
+  filterCatalogProducts,
+  MAX_PDF_PRODUCTS,
+  sortCatalogProducts,
+} from "@/lib/catalog-export";
 import { getCountryFlagUrl } from "@/lib/utils";
 
 interface Product {
@@ -32,7 +42,11 @@ export default function Home() {
   const [selectedPais, setSelectedPais] = useState("");
   const [selectedVinicola, setSelectedVinicola] = useState("");
   const [selectedCategoria, setSelectedCategoria] = useState("");
-  const [sortBy, setSortBy] = useState("name-asc");
+  const [sortBy, setSortBy] = useState<CatalogSort>("name-asc");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const [exportQuantity, setExportQuantity] = useState(1);
+  const [exportSort, setExportSort] = useState<CatalogSort>("name-asc");
 
   // Dynamic filter options
   const [uvaOptions, setUvaOptions] = useState<string[]>([]);
@@ -71,30 +85,48 @@ export default function Home() {
     }
   };
 
-  // Filter & Sort
-  const filteredWines = wines
-    .filter((wine) => {
-      const matchesSearch =
-        wine.name.toLowerCase().includes(search.toLowerCase()) ||
-        wine.vinicola.toLowerCase().includes(search.toLowerCase()) ||
-        wine.regiao.toLowerCase().includes(search.toLowerCase());
+  const activeFilters = {
+    search,
+    grape: selectedUva,
+    country: selectedPais,
+    winery: selectedVinicola,
+    category: selectedCategoria,
+  };
+  const filteredWines = sortCatalogProducts(
+    filterCatalogProducts(wines, activeFilters),
+    sortBy,
+  );
+  const activeFilterCount = Object.values(activeFilters).filter(Boolean).length;
 
-      const matchesUva = selectedUva ? wine.uva.toLowerCase().includes(selectedUva.toLowerCase()) : true;
-      const matchesPais = selectedPais ? wine.paisOrigem === selectedPais : true;
-      const matchesVinicola = selectedVinicola ? wine.vinicola === selectedVinicola : true;
-      const matchesCategoria = selectedCategoria ? (wine.categoria || "Tinto") === selectedCategoria : true;
+  const clearFilters = () => {
+    setSearch("");
+    setSelectedUva("");
+    setSelectedPais("");
+    setSelectedVinicola("");
+    setSelectedCategoria("");
+  };
 
-      return matchesSearch && matchesUva && matchesPais && matchesVinicola && matchesCategoria;
-    })
-    .sort((a, b) => {
-      const priceA = a.precoPromocional ?? a.precoOriginal;
-      const priceB = b.precoPromocional ?? b.precoOriginal;
+  const openExportModal = () => {
+    setExportQuantity(Math.min(filteredWines.length, MAX_PDF_PRODUCTS));
+    setExportSort(sortBy);
+    setIsExportOpen(true);
+  };
 
-      if (sortBy === "price-asc") return priceA - priceB;
-      if (sortBy === "price-desc") return priceB - priceA;
-      if (sortBy === "name-desc") return b.name.localeCompare(a.name);
-      return a.name.localeCompare(b.name);
+  const exportCatalog = () => {
+    const params = new URLSearchParams({
+      limit: String(exportQuantity),
+      sort: exportSort,
     });
+
+    if (search.trim()) params.set("search", search.trim());
+    if (selectedUva) params.set("grape", selectedUva);
+    if (selectedPais) params.set("country", selectedPais);
+    if (selectedVinicola) params.set("winery", selectedVinicola);
+    if (selectedCategoria) params.set("category", selectedCategoria);
+
+    setIsExportOpen(false);
+    window.location.assign(`/api/export-pdf?${params.toString()}`);
+  };
 
   // Global sharing URLs
   const shareText = "Confira o catálogo de vinhos corporativo B2B da Allvino!";
@@ -174,12 +206,14 @@ export default function Home() {
           </p>
           
           <div className="flex gap-4 justify-center pt-2">
-            <a
-              href="/api/export-pdf"
-              className="px-6 py-3 font-semibold rounded bg-allvino-primary text-white hover:bg-allvino-primary-container transition duration-300 text-sm shadow-md flex items-center gap-2 border border-allvino-primary"
+            <button
+              type="button"
+              onClick={openExportModal}
+              disabled={loading || filteredWines.length === 0}
+              className="px-6 py-3 font-semibold rounded bg-allvino-primary text-white hover:bg-allvino-primary-container transition duration-300 text-sm shadow-md flex items-center gap-2 border border-allvino-primary disabled:cursor-not-allowed disabled:opacity-50"
             >
               📥 Baixar Catálogo PDF
-            </a>
+            </button>
           </div>
         </div>
       </header>
@@ -187,143 +221,34 @@ export default function Home() {
       {/* Main Content Workspace */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-10">
         
-        {/* Filter and Wine Grid Workspace */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          {/* Filtering Sidebar */}
-          <aside className="lg:col-span-3 space-y-6">
-            <div className="glass-panel p-6 rounded-xl border border-allvino-outline-variant/30 space-y-5">
-              <h2 className="font-serif font-bold text-lg text-allvino-primary border-b border-allvino-outline-variant/20 pb-2">
-                Filtros e Busca
-              </h2>
+        <FloatingCatalogFilters
+          isOpen={isFilterOpen}
+          onToggle={() => setIsFilterOpen((current) => !current)}
+          onClose={() => setIsFilterOpen(false)}
+          onClear={clearFilters}
+          activeFilterCount={activeFilterCount}
+          resultCount={filteredWines.length}
+          totalCount={wines.length}
+          search={search}
+          onSearchChange={setSearch}
+          selectedCategory={selectedCategoria}
+          onCategoryChange={setSelectedCategoria}
+          categoryOptions={categoriaOptions}
+          selectedGrape={selectedUva}
+          onGrapeChange={setSelectedUva}
+          grapeOptions={uvaOptions}
+          selectedCountry={selectedPais}
+          onCountryChange={setSelectedPais}
+          countryOptions={paisOptions}
+          selectedWinery={selectedVinicola}
+          onWineryChange={setSelectedVinicola}
+          wineryOptions={vinicolaOptions}
+          sort={sortBy}
+          onSortChange={setSortBy}
+        />
 
-              {/* Text Search */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1.5">
-                  Buscar Vinho
-                </label>
-                <input
-                  type="text"
-                  placeholder="Nome, vinícola ou região..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full px-3 py-2 rounded-md bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text placeholder-allvino-on-surface-variant/50 focus:outline-none focus:border-allvino-primary text-xs"
-                />
-              </div>
-
-              {/* Category Selector */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1.5">
-                  Categoria
-                </label>
-                <select
-                  value={selectedCategoria}
-                  onChange={(e) => setSelectedCategoria(e.target.value)}
-                  className="w-full text-xs p-2.5 bg-allvino-surface-container-low border border-allvino-outline-variant rounded-md focus:outline-none focus:border-allvino-primary"
-                >
-                  <option value="">Todas as Categorias</option>
-                  {categoriaOptions.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Grape selector */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1.5">
-                  Variedade de Uva
-                </label>
-                <select
-                  value={selectedUva}
-                  onChange={(e) => setSelectedUva(e.target.value)}
-                  className="w-full text-xs p-2.5 bg-allvino-surface-container-low border border-allvino-outline-variant rounded-md focus:outline-none focus:border-allvino-primary"
-                >
-                  <option value="">Todas as Uvas</option>
-                  {uvaOptions.map((uva) => (
-                    <option key={uva} value={uva}>
-                      {uva}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Country Selector */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1.5">
-                  País de Origem
-                </label>
-                <select
-                  value={selectedPais}
-                  onChange={(e) => setSelectedPais(e.target.value)}
-                  className="w-full text-xs p-2.5 bg-allvino-surface-container-low border border-allvino-outline-variant rounded-md focus:outline-none focus:border-allvino-primary"
-                >
-                  <option value="">Todos os Países</option>
-                  {paisOptions.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Winery Selector */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1.5">
-                  Vinícola
-                </label>
-                <select
-                  value={selectedVinicola}
-                  onChange={(e) => setSelectedVinicola(e.target.value)}
-                  className="w-full text-xs p-2.5 bg-allvino-surface-container-low border border-allvino-outline-variant rounded-md focus:outline-none focus:border-allvino-primary"
-                >
-                  <option value="">Todas as Vinícolas</option>
-                  {vinicolaOptions.map((v) => (
-                    <option key={v} value={v}>
-                      {v}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Sorting Options */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1.5">
-                  Ordenar por
-                </label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="w-full text-xs p-2.5 bg-allvino-surface-container-low border border-allvino-outline-variant rounded-md focus:outline-none focus:border-allvino-primary"
-                >
-                  <option value="name-asc">Nome (A - Z)</option>
-                  <option value="name-desc">Nome (Z - A)</option>
-                  <option value="price-asc">Menor Preço B2B</option>
-                  <option value="price-desc">Maior Preço B2B</option>
-                </select>
-              </div>
-
-              {/* Clean filters */}
-              {(search || selectedUva || selectedPais || selectedVinicola || selectedCategoria) && (
-                <button
-                  onClick={() => {
-                    setSearch("");
-                    setSelectedUva("");
-                    setSelectedPais("");
-                    setSelectedVinicola("");
-                    setSelectedCategoria("");
-                  }}
-                  className="w-full py-2 bg-allvino-surface-container-high hover:bg-allvino-primary hover:text-white rounded border border-allvino-outline-variant transition text-xs font-bold text-center"
-                >
-                  Limpar Filtros
-                </button>
-              )}
-            </div>
-          </aside>
-
-          {/* Wine Cards Grid Area */}
-          <div className="lg:col-span-9">
+        {/* Wine Cards Grid Area */}
+        <div>
             {loading ? (
               <div className="py-24 text-center text-allvino-on-surface-variant space-y-4">
                 <div className="w-12 h-12 border-4 border-allvino-primary border-t-allvino-secondary rounded-full animate-spin mx-auto"></div>
@@ -333,20 +258,14 @@ export default function Home() {
               <div className="py-24 text-center text-allvino-on-surface-variant glass-panel rounded-xl border border-allvino-outline-variant/30">
                 <p className="text-base font-light">Nenhum rótulo atende aos filtros aplicados.</p>
                 <button
-                  onClick={() => {
-                    setSearch("");
-                    setSelectedUva("");
-                    setSelectedPais("");
-                    setSelectedVinicola("");
-                    setSelectedCategoria("");
-                  }}
+                  onClick={clearFilters}
                   className="mt-4 px-4 py-2 bg-allvino-primary text-white rounded text-xs font-semibold"
                 >
                   Ver Todos os Vinhos
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {filteredWines.map((wine) => (
                   <Link
                     href={`/product/${wine.id}`}
@@ -440,11 +359,19 @@ export default function Home() {
                 ))}
               </div>
             )}
-          </div>
-
         </div>
-
       </main>
+
+      <ExportCatalogModal
+        isOpen={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+        availableCount={filteredWines.length}
+        quantity={exportQuantity}
+        onQuantityChange={setExportQuantity}
+        sort={exportSort}
+        onSortChange={setExportSort}
+        onExport={exportCatalog}
+      />
     </div>
   );
 }

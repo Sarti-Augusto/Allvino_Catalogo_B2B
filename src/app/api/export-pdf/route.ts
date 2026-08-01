@@ -6,6 +6,12 @@ import fs from "fs";
 import path from "path";
 import sharp from "sharp";
 import { resolveBrowserlessPdfEndpoint } from "@/lib/browserless";
+import {
+  filterCatalogProducts,
+  normalizeCatalogSort,
+  parseCatalogLimit,
+  sortCatalogProducts,
+} from "@/lib/catalog-export";
 
 const clamp = (val: any, min: number = -350, max: number = 350): number => {
   const num = typeof val === "number" ? val : parseFloat(val);
@@ -79,9 +85,20 @@ const safeCssValue = (value: unknown, fallback: string): string => {
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
   let browser;
   try {
+    const { searchParams } = new URL(request.url);
+    const sort = normalizeCatalogSort(searchParams.get("sort"));
+    const productLimit = parseCatalogLimit(searchParams.get("limit"));
+    const filters = {
+      search: searchParams.get("search") || "",
+      grape: searchParams.get("grape") || "",
+      country: searchParams.get("country") || "",
+      winery: searchParams.get("winery") || "",
+      category: searchParams.get("category") || "",
+    };
+
     // 1. Fetch active template
     const activeTemplate = await prisma.template.findFirst({
       where: { isActive: true },
@@ -95,14 +112,18 @@ export async function GET() {
     }
 
     // 2. Fetch active wines
-    const products = await prisma.product.findMany({
+    const activeProducts = await prisma.product.findMany({
       where: { status: true },
-      orderBy: { name: "asc" },
     });
+    const matchingProducts = filterCatalogProducts(activeProducts, filters);
+    const products = sortCatalogProducts(matchingProducts, sort).slice(
+      0,
+      productLimit ?? undefined,
+    );
 
     if (products.length === 0) {
       return NextResponse.json(
-        { error: "Não há vinhos ativos no catálogo para exportar." },
+        { error: "Não há vinhos ativos que correspondam aos filtros para exportar." },
         { status: 400 }
       );
     }
