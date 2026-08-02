@@ -131,7 +131,10 @@ export function parseCatalogProductIds(value: unknown): string[] {
       values
         .filter((item): item is string => typeof item === "string")
         .map((item) => item.trim())
-        .filter((item) => /^[0-9a-f-]{36}$/i.test(item)),
+        // The catalog contains both UUIDs and legacy slugs such as `vinho-05`.
+        // Keep the accepted alphabet intentionally narrow before using the IDs
+        // in the database filter.
+        .filter((item) => /^[A-Za-z0-9_-]{1,64}$/.test(item)),
     ),
   ).slice(0, MAX_PDF_PRODUCTS);
 }
