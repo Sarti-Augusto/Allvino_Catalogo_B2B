@@ -7,7 +7,9 @@ import {
   FloatingCatalogFilters,
 } from "@/components/catalog-controls";
 import {
+  catalogSortToRule,
   CatalogSort,
+  CatalogSortRule,
   filterCatalogProducts,
   MAX_PDF_PRODUCTS,
   sortCatalogProducts,
@@ -45,8 +47,12 @@ export default function Home() {
   const [sortBy, setSortBy] = useState<CatalogSort>("name-asc");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
-  const [exportQuantity, setExportQuantity] = useState(1);
-  const [exportSort, setExportSort] = useState<CatalogSort>("name-asc");
+  const [selectedExportProductIds, setSelectedExportProductIds] = useState<string[]>([]);
+  const [exportSortRules, setExportSortRules] = useState<CatalogSortRule[]>([
+    { field: "name", direction: "asc" },
+  ]);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
 
   // Dynamic filter options
   const [uvaOptions, setUvaOptions] = useState<string[]>([]);
@@ -107,25 +113,57 @@ export default function Home() {
   };
 
   const openExportModal = () => {
-    setExportQuantity(Math.min(filteredWines.length, MAX_PDF_PRODUCTS));
-    setExportSort(sortBy);
+    setSelectedExportProductIds(
+      filteredWines.slice(0, MAX_PDF_PRODUCTS).map((wine) => wine.id),
+    );
+    setExportSortRules([catalogSortToRule(sortBy)]);
+    setExportError("");
     setIsExportOpen(true);
   };
 
-  const exportCatalog = () => {
-    const params = new URLSearchParams({
-      limit: String(exportQuantity),
-      sort: exportSort,
-    });
+  const exportCatalog = async () => {
+    if (selectedExportProductIds.length === 0 || isExporting) return;
 
-    if (search.trim()) params.set("search", search.trim());
-    if (selectedUva) params.set("grape", selectedUva);
-    if (selectedPais) params.set("country", selectedPais);
-    if (selectedVinicola) params.set("winery", selectedVinicola);
-    if (selectedCategoria) params.set("category", selectedCategoria);
+    setIsExporting(true);
+    setExportError("");
 
-    setIsExportOpen(false);
-    window.location.assign(`/api/export-pdf?${params.toString()}`);
+    try {
+      const response = await fetch("/api/export-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          selectedProductIds: selectedExportProductIds,
+          sortRules: exportSortRules,
+          filters: activeFilters,
+        }),
+      });
+
+      if (!response.ok) {
+        const details = await response.json().catch(() => null);
+        throw new Error(
+          details?.error || "Não foi possível gerar o catálogo PDF.",
+        );
+      }
+
+      const pdfBlob = await response.blob();
+      const downloadUrl = URL.createObjectURL(pdfBlob);
+      const downloadLink = document.createElement("a");
+      downloadLink.href = downloadUrl;
+      downloadLink.download = "catalogo-allvino-personalizado.pdf";
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      downloadLink.remove();
+      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+      setIsExportOpen(false);
+    } catch (error) {
+      setExportError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível gerar o catálogo PDF.",
+      );
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // Global sharing URLs
@@ -364,13 +402,17 @@ export default function Home() {
 
       <ExportCatalogModal
         isOpen={isExportOpen}
-        onClose={() => setIsExportOpen(false)}
-        availableCount={filteredWines.length}
-        quantity={exportQuantity}
-        onQuantityChange={setExportQuantity}
-        sort={exportSort}
-        onSortChange={setExportSort}
+        onClose={() => {
+          if (!isExporting) setIsExportOpen(false);
+        }}
+        products={filteredWines}
+        selectedProductIds={selectedExportProductIds}
+        onProductSelectionChange={setSelectedExportProductIds}
+        sortRules={exportSortRules}
+        onSortRulesChange={setExportSortRules}
         onExport={exportCatalog}
+        isExporting={isExporting}
+        error={exportError}
       />
     </div>
   );

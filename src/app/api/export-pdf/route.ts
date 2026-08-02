@@ -7,10 +7,14 @@ import path from "path";
 import sharp from "sharp";
 import { resolveBrowserlessPdfEndpoint } from "@/lib/browserless";
 import {
+  catalogSortToRule,
   filterCatalogProducts,
   normalizeCatalogSort,
+  normalizeCatalogSortRules,
   parseCatalogLimit,
-  sortCatalogProducts,
+  parseCatalogProductIds,
+  serializeCatalogSortRules,
+  sortCatalogProductsByRules,
 } from "@/lib/catalog-export";
 
 const clamp = (val: any, min: number = -350, max: number = 350): number => {
@@ -90,7 +94,12 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const sort = normalizeCatalogSort(searchParams.get("sort"));
+    const sortRules = searchParams.has("sorts")
+      ? normalizeCatalogSortRules(searchParams.get("sorts"))
+      : [catalogSortToRule(sort)];
     const productLimit = parseCatalogLimit(searchParams.get("limit"));
+    const rawProductIds = searchParams.get("ids");
+    const selectedProductIds = parseCatalogProductIds(rawProductIds);
     const filters = {
       search: searchParams.get("search") || "",
       grape: searchParams.get("grape") || "",
@@ -116,7 +125,11 @@ export async function GET(request: Request) {
       where: { status: true },
     });
     const matchingProducts = filterCatalogProducts(activeProducts, filters);
-    const products = sortCatalogProducts(matchingProducts, sort).slice(
+    const selectedProductIdSet = new Set(selectedProductIds);
+    const selectedProducts = rawProductIds === null
+      ? matchingProducts
+      : matchingProducts.filter((product) => selectedProductIdSet.has(product.id));
+    const products = sortCatalogProductsByRules(selectedProducts, sortRules).slice(
       0,
       productLimit ?? undefined,
     );
@@ -803,4 +816,51 @@ ${productPagesHtml}
       { status: 500 }
     );
   }
+}
+
+export async function POST(request: Request) {
+  let payload: Record<string, unknown>;
+
+  try {
+    const parsedPayload: unknown = await request.json();
+    if (!parsedPayload || typeof parsedPayload !== "object" || Array.isArray(parsedPayload)) {
+      throw new Error("Invalid payload");
+    }
+    payload = parsedPayload as Record<string, unknown>;
+  } catch {
+    return NextResponse.json(
+      { error: "Os dados da exportação são inválidos." },
+      { status: 400 },
+    );
+  }
+
+  const forwardedUrl = new URL(request.url);
+  const searchParams = new URLSearchParams();
+
+  if (Object.prototype.hasOwnProperty.call(payload, "selectedProductIds")) {
+    searchParams.set(
+      "ids",
+      parseCatalogProductIds(payload.selectedProductIds).join(","),
+    );
+  }
+
+  searchParams.set(
+    "sorts",
+    serializeCatalogSortRules(normalizeCatalogSortRules(payload.sortRules)),
+  );
+
+  if (payload.filters && typeof payload.filters === "object" && !Array.isArray(payload.filters)) {
+    const filters = payload.filters as Record<string, unknown>;
+    const allowedFilters = ["search", "grape", "country", "winery", "category"];
+
+    for (const filterName of allowedFilters) {
+      const value = filters[filterName];
+      if (typeof value === "string" && value.trim()) {
+        searchParams.set(filterName, value.trim().slice(0, 160));
+      }
+    }
+  }
+
+  forwardedUrl.search = searchParams.toString();
+  return GET(new Request(forwardedUrl, { headers: request.headers }));
 }
