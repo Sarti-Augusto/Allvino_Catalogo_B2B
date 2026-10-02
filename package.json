@@ -13,9 +13,10 @@
   "dependencies": {
     "@prisma/client": "^5.22.0",
     "@sparticuz/chromium": "^149.0.0",
+    "@supabase/ssr": "0.12.5",
+    "@supabase/supabase-js": "2.115.0",
     "bcrypt": "^5.1.1",
     "next": "^15.1.0",
-    "next-auth": "^4.24.10",
     "puppeteer-core": "^25.4.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

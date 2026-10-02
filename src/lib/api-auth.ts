@@ -1,28 +1,38 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import type { Session } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import type { User } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/server";
 
-export function isAdminSession(session: Session | null): boolean {
-  return (session?.user as { role?: string } | undefined)?.role === "ADMIN";
+export function isAdminUser(user: User | null | undefined): boolean {
+  const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  return Boolean(
+    adminEmail &&
+      user?.email &&
+      user.email.trim().toLowerCase() === adminEmail,
+  );
+}
+
+export async function getAuthenticatedUser() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
+  return { user: error ? null : data.user };
 }
 
 export async function requireAdmin() {
-  const session = await getServerSession(authOptions);
+  const { user } = await getAuthenticatedUser();
 
-  if (!session) {
+  if (!user) {
     return {
-      session: null,
+      user: null,
       response: NextResponse.json({ error: "Não autorizado." }, { status: 401 }),
     };
   }
 
-  if (!isAdminSession(session)) {
+  if (!isAdminUser(user)) {
     return {
-      session: null,
+      user: null,
       response: NextResponse.json({ error: "Acesso restrito ao administrador." }, { status: 403 }),
     };
   }
 
-  return { session, response: null };
+  return { user, response: null };
 }

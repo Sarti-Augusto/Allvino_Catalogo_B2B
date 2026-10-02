@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { isAdminSession, requireAdmin } from "@/lib/api-auth";
+import { getAuthenticatedUser, isAdminUser, requireAdmin } from "@/lib/api-auth";
 import { publicProductSelect } from "@/lib/product-select";
 import {
   DEFAULT_PRODUCT_IMAGE,
@@ -16,9 +14,9 @@ import {
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const { user } = await getAuthenticatedUser();
 
-    if (isAdminSession(session)) {
+    if (isAdminUser(user)) {
       const products = await prisma.product.findMany({
         orderBy: { createdAt: "desc" },
       });

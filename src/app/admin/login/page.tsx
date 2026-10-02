@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -18,17 +18,22 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await signIn("credentials", {
-        email,
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
         password,
-        redirect: false,
       });
 
-      if (res?.error) {
-        setError(res.error || "E-mail ou senha incorretos.");
+      if (error) {
+        setError("E-mail ou senha incorretos.");
         setLoading(false);
       } else {
-        router.push("/admin/dashboard");
+        const requestedPath = new URLSearchParams(window.location.search).get("next");
+        const destination =
+          requestedPath?.startsWith("/") && !requestedPath.startsWith("//")
+            ? requestedPath
+            : "/admin/dashboard";
+        router.push(destination);
         router.refresh();
       }
     } catch {
@@ -106,6 +111,15 @@ export default function LoginPage() {
             {loading ? "Autenticando..." : "Entrar no Painel"}
           </button>
         </form>
+
+        <div className="mt-5 text-center">
+          <Link
+            href="/admin/forgot-password"
+            className="text-xs font-semibold text-allvino-primary hover:text-allvino-primary-container transition"
+          >
+            Esqueci minha senha
+          </Link>
+        </div>
 
         <div className="mt-8 text-center">
           <Link

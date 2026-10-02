@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 interface Product {
   id: string;
@@ -32,7 +33,8 @@ const PRESET_IMAGES = [
 const DEFAULT_CATEGORIES = ["Tinto", "Branco", "Rosé", "Espumante", "Fortificado", "Laranja"];
 
 export default function DashboardPage() {
-  const { data: session } = useSession();
+  const router = useRouter();
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,6 +63,19 @@ export default function DashboardPage() {
   // Notification Toast State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<"success" | "error">("success");
+
+  useEffect(() => {
+    const supabase = createClient();
+    void supabase.auth.getUser().then(({ data }) => {
+      setUserEmail(data.user?.email ?? null);
+    });
+  }, []);
+
+  const handleSignOut = async () => {
+    await createClient().auth.signOut();
+    router.replace("/admin/login");
+    router.refresh();
+  };
 
   useEffect(() => {
     fetchProducts();
@@ -276,7 +291,7 @@ export default function DashboardPage() {
                 Ver Vitrine Pública
               </a>
               <button
-                onClick={() => signOut({ callbackUrl: "/admin/login" })}
+                onClick={handleSignOut}
                 className="px-4 py-1.5 rounded bg-allvino-surface-container-high hover:bg-allvino-primary hover:text-white border border-allvino-outline-variant hover:border-allvino-primary transition text-xs font-semibold"
               >
                 Sair
@@ -307,7 +322,7 @@ export default function DashboardPage() {
               Gerenciamento de Catálogo
             </h1>
             <p className="text-allvino-on-surface-variant text-sm mt-1">
-              Olá, {session?.user?.name || "Administrador"}. Controle os vinhos expostos na vitrine e exportados no PDF.
+              Olá, {userEmail || "Administrador"}. Controle os vinhos expostos na vitrine e exportados no PDF.
             </p>
           </div>
           <button
