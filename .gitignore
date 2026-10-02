@@ -33,3 +33,8 @@ Thumbs.db
 .agents/
 
 .vercel
+.env*
+
+src/lib/test-db.js
+semblante-*.png
+tmp/

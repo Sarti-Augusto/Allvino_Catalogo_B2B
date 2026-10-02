@@ -190,6 +190,11 @@ export async function GET(request: Request) {
     ]);
 
     // ── COVER DYNAMIC TUNING ────────────────────────
+    const showCoverLogo = styles.showCoverLogo !== false;
+    const showCoverDivider = styles.showCoverDivider !== false;
+    const showCoverTitle = styles.showCoverTitle !== false;
+    const showCoverSubtitle = styles.showCoverSubtitle !== false;
+    const showCoverFooter = styles.showCoverFooter !== false;
     const coverSubtitle = escapeHtml(styles.coverSubtitle || "Catálogo Exclusivo B2B");
     const coverLogoHeight = typeof styles.coverLogoHeight === "number" ? styles.coverLogoHeight : 110;
     const coverLogoAngle = typeof styles.coverLogoAngle === "number" ? styles.coverLogoAngle : 0;
@@ -211,10 +216,19 @@ export async function GET(request: Request) {
 
     const coverFooterColorCustom = safeCssValue(styles.coverFooterColor, "");
     const coverFooterFontSize = typeof styles.coverFooterFontSize === "number" ? styles.coverFooterFontSize : 9;
+    const coverFooterXOffset = clamp(styles.coverFooterXOffset);
     const coverFooterYOffset = clamp(styles.coverFooterYOffset);
     const coverVerticalOffset = clamp(styles.coverVerticalOffset);
 
     // ── LAYOUT PRESET & ALIGNMENTS ──
+    const showProductName = styles.showProductName !== false;
+    const showProductOrigin = styles.showProductOrigin !== false;
+    const showProductDivider = styles.showProductDivider !== false;
+    const showProductBottle = styles.showProductBottle !== false;
+    const showProductSpecs = styles.showProductSpecs !== false;
+    const showProductDescription = styles.showProductDescription !== false;
+    const showProductPrice = styles.showProductPrice !== false;
+    const showProductFooter = styles.showProductFooter !== false;
     const productLayoutPreset = ["classic", "side-right", "side-left", "price-top"].includes(styles.productLayoutPreset)
       ? styles.productLayoutPreset
       : "classic";
@@ -321,35 +335,36 @@ export async function GET(request: Request) {
       );
 
       const priceAlignCSS = productPriceSide === "left" ? "right" : productPriceSide === "center" ? "center" : "left";
+      const productPriceBaseTop = productLayoutPreset === "price-top" ? 18 : 45;
 
       // Price block HTML (position absolute full-canvas autonomy)
-      const priceBadgeHtml = `
-      <div class="prod-price-badge-free" style="position:absolute; left:calc(50% + ${productPriceXOffset}px); top:calc(45% + ${productPriceYOffset}px); transform:translate(-50%, -50%) rotate(${productPriceAngle}deg); text-align:${priceAlignCSS}; z-index:20;">
+      const priceBadgeHtml = showProductPrice ? `
+      <div class="prod-price-badge-free" style="position:absolute; left:calc(50% + ${productPriceXOffset}px); top:calc(${productPriceBaseTop}% + ${productPriceYOffset}px); transform:translate(-50%, -50%) rotate(${productPriceAngle}deg); text-align:${priceAlignCSS}; z-index:20;">
         <p class="prod-price-label" style="color:${productPriceLabelColor}; font-size:${productPriceLabelFontSize}px;">Preço Unitário B2B</p>
         <p class="prod-price-info" style="color:${productPriceInfoColor}; font-size:${productPriceInfoFontSize}px;">Caixa c/ 6 garrafas</p>
         <div class="prod-price-row ${priceAlignCSS === 'center' ? 'flex-center' : priceAlignCSS === 'right' ? 'flex-end' : 'flex-start'}">${priceHtml}</div>
-      </div>`;
+      </div>` : "";
 
       if (productLayoutPreset === "side-right" || productLayoutPreset === "side-left") {
         const isReverse = productLayoutPreset === "side-left";
         productPagesHtml += `
         <div class="prod-page">
           <div class="prod-top" style="transform: translate(${productNameXOffset}px, ${productNameYOffset}px);">
-            <h2 class="prod-name" style="color:${productNameColor}; font-size:${productNameFontSize}px;">${productName}</h2>
-            <p class="prod-origin" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px; transform: translateY(${productOriginYOffset}px);">${productOrigin}</p>
-            <div class="prod-line" style="background:${productSpecsColor};"></div>
+            ${showProductName ? `<h2 class="prod-name" style="color:${productNameColor}; font-size:${productNameFontSize}px;">${productName}</h2>` : ""}
+            ${showProductOrigin ? `<p class="prod-origin" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px; transform: translateY(${productOriginYOffset}px);">${productOrigin}</p>` : ""}
+            ${showProductDivider ? `<div class="prod-line" style="background:${productSpecsColor};"></div>` : ""}
           </div>
 
           <div class="prod-body-side ${isReverse ? 'side-reverse' : ''}">
-            <div class="side-col-bottle" style="transform: translate(${productImgXOffset}px, ${productImgYOffset}px) rotate(${productImgAngle}deg);">
+            ${showProductBottle ? `<div class="side-col-bottle" style="transform: translate(${productImgXOffset}px, ${productImgYOffset}px) rotate(${productImgAngle}deg);">
               <img src="${escapeHtml(productImageUrl)}" class="prod-img-side" style="max-height: min(${productImgHeight}px, 100%);" />
-            </div>
+            </div>` : ""}
 
-            <div class="side-col-content">
+            <div class="side-col-content"${showProductBottle ? "" : ' style="flex:1 1 100%;"'}>
               <!-- Specs & Tasting Notes in side column -->
               <div class="prod-desc-block" style="transform: translate(${productDescXOffset}px, ${productDescYOffset}px) rotate(${productDescAngle}deg); text-align: ${productDescAlign}; max-width:${productTextMaxWidth}px;">
-                <p class="prod-specs" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px; margin-bottom: 8px;">${productSpecs}</p>
-                <p class="prod-desc" style="color:${productDescColor}; font-size:${productDescFontSize}px;">${notasText}</p>
+                ${showProductSpecs ? `<p class="prod-specs" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px; margin-bottom: 8px;">${productSpecs}</p>` : ""}
+                ${showProductDescription ? `<p class="prod-desc" style="color:${productDescColor}; font-size:${productDescFontSize}px;">${notasText}</p>` : ""}
               </div>
             </div>
           </div>
@@ -357,39 +372,39 @@ export async function GET(request: Request) {
           <!-- Fully Autonomous Price Element -->
           ${priceBadgeHtml}
 
-          <div class="page-foot">
+          ${showProductFooter ? `<div class="page-foot">
             <span>${footerText}</span>
             <span>Página ${idx + 2}</span>
-          </div>
+          </div>` : ""}
         </div>`;
       } else {
         // CLASSIC & PRICE-TOP LAYOUTS
         productPagesHtml += `
         <div class="prod-page">
           <div class="prod-top" style="transform: translate(${productNameXOffset}px, ${productNameYOffset}px);">
-            <h2 class="prod-name" style="color:${productNameColor}; font-size:${productNameFontSize}px;">${productName}</h2>
-            <p class="prod-origin" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px; transform: translateY(${productOriginYOffset}px);">${productOrigin}</p>
-            <div class="prod-line" style="background:${productSpecsColor};"></div>
+            ${showProductName ? `<h2 class="prod-name" style="color:${productNameColor}; font-size:${productNameFontSize}px;">${productName}</h2>` : ""}
+            ${showProductOrigin ? `<p class="prod-origin" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px; transform: translateY(${productOriginYOffset}px);">${productOrigin}</p>` : ""}
+            ${showProductDivider ? `<div class="prod-line" style="background:${productSpecsColor};"></div>` : ""}
           </div>
 
           <div class="prod-middle">
-            <div class="prod-img-area" style="transform: translate(${productImgXOffset}px, ${productImgYOffset}px) rotate(${productImgAngle}deg);">
+            ${showProductBottle ? `<div class="prod-img-area" style="transform: translate(${productImgXOffset}px, ${productImgYOffset}px) rotate(${productImgAngle}deg);">
               <img src="${escapeHtml(productImageUrl)}" class="prod-img" style="max-height: min(${productImgHeight}px, 100%); max-width:${productImgMaxWidth}px;" />
-            </div>
+            </div>` : ""}
           </div>
 
           <div class="prod-bottom" style="transform: translate(${productDescXOffset}px, ${productDescYOffset}px) rotate(${productDescAngle}deg); text-align: ${productDescAlign};">
-            <p class="prod-specs" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px;">${productSpecs}</p>
-            <p class="prod-desc" style="color:${productDescColor}; font-size:${productDescFontSize}px;">${notasText}</p>
+            ${showProductSpecs ? `<p class="prod-specs" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px;">${productSpecs}</p>` : ""}
+            ${showProductDescription ? `<p class="prod-desc" style="color:${productDescColor}; font-size:${productDescFontSize}px;">${notasText}</p>` : ""}
           </div>
 
           <!-- Fully Autonomous Price Element -->
           ${priceBadgeHtml}
 
-          <div class="page-foot">
+          ${showProductFooter ? `<div class="page-foot">
             <span>${footerText}</span>
             <span>Página ${idx + 2}</span>
-          </div>
+          </div>` : ""}
         </div>`;
       }
     });
@@ -458,7 +473,7 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
   position:absolute;bottom:38px;left:0;right:0;
   text-align:center;z-index:2;
   font-size:${coverFooterFontSize}px;color:${coverFootColor};letter-spacing:1px;
-  transform: translateY(${coverFooterYOffset}px);
+  transform: translate(${coverFooterXOffset}px, ${coverFooterYOffset}px);
 }
 .cover-brd{
   position:absolute;left:35px;right:35px;
@@ -626,14 +641,14 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
 
 <!-- COVER -->
 <div class="cover" style="${coverBgCSS}">
-  ${hasCoverBg ? '<div class="cover-dim"></div>' : '<div class="cover-brd cover-brd-t"></div><div class="cover-brd cover-brd-b"></div>'}
+  ${hasCoverBg ? '<div class="cover-dim"></div>' : showCoverDivider ? '<div class="cover-brd cover-brd-t"></div><div class="cover-brd cover-brd-b"></div>' : ''}
   <div class="cover-inner">
-    ${selectedLogoBase64 ? `<img src="${selectedLogoBase64}" class="cover-logo"/>` : ""}
-    <div class="cover-line"></div>
-    <h1 class="cover-h1">${headerTitle}</h1>
-    <p class="cover-sub">${coverSubtitle}</p>
+    ${showCoverLogo && selectedLogoBase64 ? `<img src="${selectedLogoBase64}" class="cover-logo"/>` : ""}
+    ${showCoverDivider ? '<div class="cover-line"></div>' : ''}
+    ${showCoverTitle ? `<h1 class="cover-h1">${headerTitle}</h1>` : ""}
+    ${showCoverSubtitle ? `<p class="cover-sub">${coverSubtitle}</p>` : ""}
   </div>
-  <div class="cover-foot">${footerText}</div>
+  ${showCoverFooter ? `<div class="cover-foot">${footerText}</div>` : ""}
 </div>
 
 <!-- PRODUCTS -->

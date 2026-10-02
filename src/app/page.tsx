@@ -15,6 +15,7 @@ import {
   sortCatalogProducts,
 } from "@/lib/catalog-export";
 import { getCountryFlagUrl } from "@/lib/utils";
+import { ShareActions } from "@/components/share-actions";
 
 interface Product {
   id: string;
@@ -53,6 +54,17 @@ export default function Home() {
   ]);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const hasRecoveryCode = params.has("code");
+    const hasRecoveryHash = window.location.hash.includes("access_token=");
+    if (hasRecoveryCode || hasRecoveryHash) {
+      const recoveryUrl = `/admin/reset-password${window.location.search}${window.location.hash}`;
+      window.location.replace(recoveryUrl);
+      return;
+    }
+  }, []);
 
   // Dynamic filter options
   const [uvaOptions, setUvaOptions] = useState<string[]>([]);
@@ -168,8 +180,6 @@ export default function Home() {
 
   // Global sharing URLs
   const shareText = "Confira o catálogo de vinhos corporativo B2B da Allvino!";
-  const globalWhatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + " " + (typeof window !== "undefined" ? window.location.href : ""))}`;
-  const instagramUrl = "https://instagram.com/allvinob2b"; // Link placeholder do perfil Allvino
 
   return (
     <div className="min-h-screen bg-allvino-background text-allvino-text font-sans pb-16">
@@ -190,22 +200,7 @@ export default function Home() {
           <div className="flex items-center space-x-4">
             {/* Share Buttons */}
             <span className="hidden sm:inline text-xs text-allvino-on-surface-variant">Compartilhar site:</span>
-            <a
-              href={globalWhatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-1.5 rounded bg-[#25D366] hover:bg-[#20ba5a] text-white text-[10px] font-bold tracking-wide transition shadow"
-            >
-              WhatsApp
-            </a>
-            <a
-              href={instagramUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-1.5 rounded bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] text-white text-[10px] font-bold tracking-wide transition shadow"
-            >
-              Instagram
-            </a>
+            <ShareActions text={shareText} compact />
             <Link
               href="/admin/login"
               className="px-3 py-1.5 rounded bg-allvino-surface-container-high hover:bg-allvino-primary hover:text-white border border-allvino-outline-variant transition text-[10px] font-bold"

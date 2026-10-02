@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getCountryFlagUrl } from "@/lib/utils";
+import { ShareActions } from "@/components/share-actions";
 
 interface Product {
   id: string;
@@ -28,7 +29,6 @@ export default function ProductDetailPage() {
   const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -55,12 +55,6 @@ export default function ProductDetailPage() {
     }
   };
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 3000);
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-allvino-background text-allvino-text flex flex-col items-center justify-center space-y-4">
@@ -73,7 +67,6 @@ export default function ProductDetailPage() {
   if (!product) return null;
 
   const shareText = `Olhe este vinho incrível do catálogo Allvino: *${product.name}* da vinícola *${product.vinicola}*. Veja a ficha técnica completa aqui: `;
-  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + window.location.href)}`;
 
   return (
     <div className="min-h-screen bg-allvino-background text-allvino-text font-sans pb-16">
@@ -133,22 +126,7 @@ export default function ProductDetailPage() {
               <p className="text-[10px] text-center uppercase tracking-widest text-allvino-on-surface-variant font-bold">
                 Compartilhar Vinho
               </p>
-              <div className="flex gap-2">
-                <a
-                  href={whatsappUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 py-2.5 rounded bg-[#25D366] hover:bg-[#20ba5a] text-white text-xs font-bold text-center transition flex items-center justify-center gap-1.5 shadow"
-                >
-                  <span>WhatsApp</span>
-                </a>
-                <button
-                  onClick={handleCopyLink}
-                  className="flex-1 py-2.5 rounded bg-allvino-surface-container-high hover:bg-allvino-primary hover:text-white border border-allvino-outline-variant text-allvino-text text-xs font-bold transition flex items-center justify-center gap-1.5"
-                >
-                  <span>{copied ? "Link Copiado!" : "Copiar Link"}</span>
-                </button>
-              </div>
+              <ShareActions text={shareText} />
             </div>
 
           </div>

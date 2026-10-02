@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { isAdminSession, requireAdmin } from "@/lib/api-auth";
+import { getAuthenticatedUser, isAdminUser, requireAdmin } from "@/lib/api-auth";
 import { publicProductSelect } from "@/lib/product-select";
 import {
   isSafeImageSource,
@@ -123,8 +121,8 @@ export async function GET(request: Request, { params }: RouteContext) {
   const { id } = await params;
 
   try {
-    const session = await getServerSession(authOptions);
-    const product = isAdminSession(session)
+    const { user } = await getAuthenticatedUser();
+    const product = isAdminUser(user)
       ? await prisma.product.findUnique({ where: { id } })
       : await prisma.product.findFirst({ where: { id, status: true }, select: publicProductSelect });
 
