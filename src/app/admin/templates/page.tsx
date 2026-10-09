@@ -247,6 +247,7 @@ export default function TemplatesPage() {
   const [coverFooterXOffset, setCoverFooterXOffset] = useState(0);
   const [coverFooterYOffset, setCoverFooterYOffset] = useState(0);
   const [coverVerticalOffset, setCoverVerticalOffset] = useState(0);
+  const [showSafetyGuides, setShowSafetyGuides] = useState(true);
 
   // Product Page Bottle Fine-Tuning State
   const [productImgHeight, setProductImgHeight] = useState(520);
@@ -1642,11 +1643,28 @@ export default function TemplatesPage() {
                     </div>
 
                     {/* Cover Background */}
-                    <div className="space-y-2 pb-3 border-b border-allvino-outline-variant/20">
-                      <p className="text-[11px] font-bold text-allvino-primary">Imagem de Fundo da Capa</p>
+                    <div className="space-y-2.5 pb-3 border-b border-allvino-outline-variant/20">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] font-bold text-allvino-primary">Imagem de Fundo da Capa</p>
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
+                          Proporção A4 (1:1.414)
+                        </span>
+                      </div>
                       <p className="text-[10px] text-allvino-on-surface-variant">
                         Anexe uma imagem nova ou informe uma URL HTTPS. A imagem será usada como fundo da capa do PDF.
                       </p>
+
+                      {/* Guia visual de dimensões e margens */}
+                      <div className="rounded-lg border border-allvino-outline-variant/50 bg-allvino-surface-container-low p-2.5 space-y-1.5 text-[10px] text-allvino-on-surface-variant">
+                        <div className="flex items-center justify-between font-semibold text-allvino-primary">
+                          <span>📐 Dimensão ideal: <strong>1200 × 1700 px</strong></span>
+                          <span>(JPG / PNG / WebP)</span>
+                        </div>
+                        <p className="text-[9.5px] leading-relaxed">
+                          • <strong>Proporção:</strong> A4 Retrato (210×297 mm). Artes fora desta proporção serão ajustadas automaticamente para preencher a folha.<br />
+                          • <strong>Área de Segurança:</strong> Deixe ao menos <strong>50 a 70 px</strong> de respiro nas bordas para que textos ou ilustrações não sejam sobrepostos por logotipos ou rodapés.
+                        </p>
+                      </div>
                       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                         <input
                           type="file"
@@ -2203,9 +2221,21 @@ export default function TemplatesPage() {
                       </button>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-allvino-on-surface-variant font-medium">
-                        A4 (210 × 297 mm)
+                      <span className="text-[10px] text-allvino-primary font-bold px-2 py-0.5 rounded bg-amber-50 border border-amber-200" title="Proporção 1:1.414 (1200×1700 px recomendado)">
+                        A4 · 1200 × 1700 px
                       </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowSafetyGuides((prev) => !prev)}
+                        className={`rounded border px-2 py-1 text-[9px] font-bold transition ${
+                          showSafetyGuides
+                            ? "bg-allvino-primary text-white border-allvino-primary"
+                            : "bg-white text-allvino-primary border-allvino-outline-variant hover:bg-allvino-surface-container-high"
+                        }`}
+                        title="Ativar/desativar visualização de margens de segurança (respiro de 50px)"
+                      >
+                        {showSafetyGuides ? "Guias de Segurança (Ativas)" : "Mostrar Guias"}
+                      </button>
                       <a
                         href="/api/export-pdf?limit=1"
                         target="_blank"
@@ -2302,6 +2332,15 @@ export default function TemplatesPage() {
                     <div className="pointer-events-none absolute inset-0 z-30">
                       <div className="absolute bottom-0 left-1/2 top-0 border-l border-dashed border-allvino-secondary/70" />
                       <div className="absolute left-0 right-0 top-1/2 border-t border-dashed border-allvino-secondary/70" />
+                    </div>
+                  ) : null}
+
+                  {/* Guias visuais de Margem e Segurança A4 (50px / ~6%) */}
+                  {showSafetyGuides ? (
+                    <div className="pointer-events-none absolute inset-[5.5%] z-20 rounded border border-dashed border-amber-400/60">
+                      <span className="absolute -top-2.5 left-2 px-1 text-[8px] font-bold uppercase tracking-wider text-amber-500 bg-black/40 rounded">
+                        Área de Segurança (Margem 50px)
+                      </span>
                     </div>
                   ) : null}
                   {/* ── COVER PREVIEW ── */}
