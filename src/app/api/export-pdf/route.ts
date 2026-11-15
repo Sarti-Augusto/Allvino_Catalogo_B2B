@@ -6,6 +6,7 @@ import fs from "fs";
 import path from "path";
 import sharp from "sharp";
 import { resolveBrowserlessPdfEndpoint } from "@/lib/browserless";
+import { publicProductSelect } from "@/lib/product-select";
 import {
   catalogSortToRule,
   filterCatalogProducts,
@@ -17,7 +18,7 @@ import {
   sortCatalogProductsByRules,
 } from "@/lib/catalog-export";
 
-const clamp = (val: any, min: number = -350, max: number = 350): number => {
+const clamp = (val: any, min: number = -450, max: number = 450): number => {
   const num = typeof val === "number" ? val : parseFloat(val);
   if (isNaN(num)) return 0;
   return Math.max(min, Math.min(max, num));
@@ -46,6 +47,43 @@ const safeImageSource = (value: unknown): string => {
   return source.replace(/'/g, "%27");
 };
 
+const MAX_IMAGE_CACHE_ENTRIES = 120;
+const optimizedImageCache = new Map<string, string>();
+let cachedLogos: { black: string; white: string } | null = null;
+
+function getCachedLogos(): { black: string; white: string } {
+  if (cachedLogos) return cachedLogos;
+
+  let black = "";
+  let white = "";
+
+  try {
+    const blackPath = path.join(process.cwd(), "public", "logo-black.png");
+    if (fs.existsSync(blackPath)) {
+      black = `data:image/png;base64,${fs.readFileSync(blackPath).toString("base64")}`;
+    } else {
+      const defaultPath = path.join(process.cwd(), "public", "logo.png");
+      if (fs.existsSync(defaultPath)) {
+        black = `data:image/png;base64,${fs.readFileSync(defaultPath).toString("base64")}`;
+      }
+    }
+  } catch {
+    console.warn("Logo preta não encontrada em /public/logo-black.png");
+  }
+
+  try {
+    const whitePath = path.join(process.cwd(), "public", "logo-white.png");
+    if (fs.existsSync(whitePath)) {
+      white = `data:image/png;base64,${fs.readFileSync(whitePath).toString("base64")}`;
+    }
+  } catch {
+    console.warn("Logo branca não encontrada em /public/logo-white.png");
+  }
+
+  cachedLogos = { black, white };
+  return cachedLogos;
+}
+
 const optimizeImageSource = async (
   value: unknown,
   width: number,
@@ -58,6 +96,10 @@ const optimizeImageSource = async (
   );
 
   if (!match) return source;
+
+  const cacheKey = `${width}x${height}q${quality}:${source.length}:${source.slice(0, 64)}:${source.slice(-64)}`;
+  const cached = optimizedImageCache.get(cacheKey);
+  if (cached) return cached;
 
   try {
     const input = Buffer.from(match[1].replace(/\s/g, ""), "base64");
@@ -72,12 +114,37 @@ const optimizeImageSource = async (
       .webp({ quality, alphaQuality: 90, effort: 4 })
       .toBuffer();
 
-    return `data:image/webp;base64,${output.toString("base64")}`;
+    const optimized = `data:image/webp;base64,${output.toString("base64")}`;
+    if (optimizedImageCache.size >= MAX_IMAGE_CACHE_ENTRIES) {
+      const oldestKey = optimizedImageCache.keys().next().value;
+      if (oldestKey) optimizedImageCache.delete(oldestKey);
+    }
+    optimizedImageCache.set(cacheKey, optimized);
+    return optimized;
   } catch (error) {
     console.warn("Não foi possível otimizar uma imagem do catálogo:", error);
     return source;
   }
 };
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (nextIndex < items.length) {
+      const current = nextIndex++;
+      results[current] = await mapper(items[current], current);
+    }
+  });
+
+  await Promise.all(workers);
+  return results;
+}
 
 const safeCssValue = (value: unknown, fallback: string): string => {
   if (typeof value !== "string") return fallback;
@@ -100,6 +167,10 @@ export async function GET(request: Request) {
     const productLimit = parseCatalogLimit(searchParams.get("limit"));
     const rawProductIds = searchParams.get("ids");
     const selectedProductIds = parseCatalogProductIds(rawProductIds);
+    const hidePrices =
+      searchParams.get("hidePrices") === "1" || searchParams.get("hidePrices") === "true";
+    const includeIndex =
+      searchParams.get("includeIndex") === "1" || searchParams.get("includeIndex") === "true";
     const filters = {
       search: searchParams.get("search") || "",
       grape: searchParams.get("grape") || "",
@@ -120,16 +191,16 @@ export async function GET(request: Request) {
       );
     }
 
-    // 2. Fetch active wines
+    // 2. Fetch active wines (push ID filter down to PostgreSQL when specified)
     const activeProducts = await prisma.product.findMany({
-      where: { status: true },
+      where: {
+        status: true,
+        ...(rawProductIds !== null ? { id: { in: selectedProductIds } } : {}),
+      },
+      select: publicProductSelect,
     });
     const matchingProducts = filterCatalogProducts(activeProducts, filters);
-    const selectedProductIdSet = new Set(selectedProductIds);
-    const selectedProducts = rawProductIds === null
-      ? matchingProducts
-      : matchingProducts.filter((product) => selectedProductIdSet.has(product.id));
-    const products = sortCatalogProductsByRules(selectedProducts, sortRules).slice(
+    const products = sortCatalogProductsByRules(matchingProducts, sortRules).slice(
       0,
       productLimit ?? undefined,
     );
@@ -152,29 +223,8 @@ export async function GET(request: Request) {
       );
     }
 
-    // 4. Read logos (black and white variants) and convert to base64
-    let logoBlackBase64 = "";
-    let logoWhiteBase64 = "";
-    try {
-      const blackPath = path.join(process.cwd(), "public", "logo-black.png");
-      if (fs.existsSync(blackPath)) {
-        logoBlackBase64 = `data:image/png;base64,${fs.readFileSync(blackPath).toString("base64")}`;
-      } else {
-        const defaultPath = path.join(process.cwd(), "public", "logo.png");
-        logoBlackBase64 = `data:image/png;base64,${fs.readFileSync(defaultPath).toString("base64")}`;
-      }
-    } catch {
-      console.warn("Logo preta não encontrada em /public/logo-black.png");
-    }
-
-    try {
-      const whitePath = path.join(process.cwd(), "public", "logo-white.png");
-      if (fs.existsSync(whitePath)) {
-        logoWhiteBase64 = `data:image/png;base64,${fs.readFileSync(whitePath).toString("base64")}`;
-      }
-    } catch {
-      console.warn("Logo branca não encontrada em /public/logo-white.png");
-    }
+    // 4. Read logos from in-memory cache
+    const { black: logoBlackBase64, white: logoWhiteBase64 } = getCachedLogos();
 
     // 5. Extract style variables with defaults
     const primaryColor = safeCssValue(styles.primaryColor, "#80282d");
@@ -227,7 +277,7 @@ export async function GET(request: Request) {
     const showProductBottle = styles.showProductBottle !== false;
     const showProductSpecs = styles.showProductSpecs !== false;
     const showProductDescription = styles.showProductDescription !== false;
-    const showProductPrice = styles.showProductPrice !== false;
+    const showProductPrice = !hidePrices && styles.showProductPrice !== false;
     const showProductFooter = styles.showProductFooter !== false;
     const productLayoutPreset = ["classic", "side-right", "side-left", "price-top"].includes(styles.productLayoutPreset)
       ? styles.productLayoutPreset
@@ -303,18 +353,71 @@ export async function GET(request: Request) {
     const coverFootColor = coverFooterColorCustom || (hasCoverBg ? "rgba(255,255,255,0.55)" : "#999999");
     const coverDivColor = coverSubtitleColorCustom || (hasCoverBg ? "rgba(255,255,255,0.35)" : secondaryColor);
 
-    // 8. Generate product pages HTML
+    // 8. Generate optional Index (Sumário) and product pages HTML
+    const ITEMS_PER_INDEX_PAGE = 24;
+    const indexPagesCount = includeIndex
+      ? Math.max(1, Math.ceil(products.length / ITEMS_PER_INDEX_PAGE))
+      : 0;
+
+    let indexPagesHtml = "";
+    if (includeIndex) {
+      for (let pageIdx = 0; pageIdx < indexPagesCount; pageIdx++) {
+        const slice = products.slice(
+          pageIdx * ITEMS_PER_INDEX_PAGE,
+          (pageIdx + 1) * ITEMS_PER_INDEX_PAGE,
+        );
+        const rowsHtml = slice
+          .map((item, itemIdx) => {
+            const globalIdx = pageIdx * ITEMS_PER_INDEX_PAGE + itemIdx;
+            const targetPage = globalIdx + 2 + indexPagesCount;
+            const itemEffectivePrice = item.precoPromocional ?? item.precoOriginal;
+            const priceText = !hidePrices
+              ? `<span style="color:${productPriceColor};font-weight:700;margin-left:8px;">R$ ${itemEffectivePrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>`
+              : "";
+            return `
+            <div style="display:flex;align-items:baseline;justify-content:space-between;padding:6px 0;border-bottom:1px dashed rgba(0,0,0,0.12);font-size:11px;">
+              <div style="min-width:0;padding-right:12px;">
+                <span style="font-family:${fontCSS};font-weight:700;color:${productNameColor};font-size:12.5px;">${escapeHtml(item.name)}</span>
+                <span style="color:${productSpecsColor};font-size:9.5px;text-transform:uppercase;letter-spacing:1px;margin-left:8px;">${escapeHtml(item.paisOrigem)} · ${escapeHtml(item.categoria || "Tinto")} · Safra ${escapeHtml(item.safra)}</span>
+              </div>
+              <div style="white-space:nowrap;flex-shrink:0;font-size:10.5px;color:${textColor};">
+                ${priceText}
+                <span style="display:inline-block;min-width:48px;text-align:right;color:${secondaryColor};font-weight:700;">Pág. ${targetPage}</span>
+              </div>
+            </div>`;
+          })
+          .join("");
+
+        indexPagesHtml += `
+        <div class="prod-page" style="justify-content:flex-start;">
+          <div class="prod-top" style="margin-bottom:18px;">
+            <h2 class="prod-name" style="color:${productNameColor};font-size:24px;">SUMÁRIO DE RÓTULOS</h2>
+            <p class="prod-origin" style="color:${productSpecsColor};font-size:10px;">${products.length} rótulo${products.length === 1 ? "" : "s"} selecionado${products.length === 1 ? "" : "s"}${indexPagesCount > 1 ? ` · Parte ${pageIdx + 1}/${indexPagesCount}` : ""}</p>
+            <div class="prod-line" style="background:${productSpecsColor};"></div>
+          </div>
+          <div style="width:100%;flex:1;">
+            ${rowsHtml}
+          </div>
+          ${showProductFooter ? `<div class="page-foot">
+            <span>${footerText}</span>
+            <span>Página ${pageIdx + 2}</span>
+          </div>` : ""}
+        </div>`;
+      }
+    }
+
     let productPagesHtml = "";
-    const productImageUrls = await Promise.all(
-      products.map((product) =>
-        optimizeImageSource(product.imagemUrl, 800, 1200, 78)
-      )
+    const productImageUrls = await mapWithConcurrency(
+      products,
+      8,
+      (product) => optimizeImageSource(product.imagemUrl, 800, 1200, 78)
     );
     const productPageBackgroundCSS = backgroundImageUrl
       ? `background-image:url('${backgroundImageUrl}');background-size:cover;background-position:center;`
       : `background-color:${backgroundColor};`;
 
     products.forEach((product, idx) => {
+      const pageNumber = idx + 2 + indexPagesCount;
       const productName = escapeHtml(product.name);
       const productOrigin = escapeHtml(`${product.paisOrigem} · ${product.regiao}`);
       const productSpecs = escapeHtml(
@@ -374,7 +477,7 @@ export async function GET(request: Request) {
 
           ${showProductFooter ? `<div class="page-foot">
             <span>${footerText}</span>
-            <span>Página ${idx + 2}</span>
+            <span>Página ${pageNumber}</span>
           </div>` : ""}
         </div>`;
       } else {
@@ -403,7 +506,7 @@ export async function GET(request: Request) {
 
           ${showProductFooter ? `<div class="page-foot">
             <span>${footerText}</span>
-            <span>Página ${idx + 2}</span>
+            <span>Página ${pageNumber}</span>
           </div>` : ""}
         </div>`;
       }
@@ -651,6 +754,9 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
   ${showCoverFooter ? `<div class="cover-foot">${footerText}</div>` : ""}
 </div>
 
+<!-- INDEX / SUMMARY -->
+${indexPagesHtml}
+
 <!-- PRODUCTS -->
 ${productPagesHtml}
 
@@ -863,6 +969,13 @@ export async function POST(request: Request) {
     "sorts",
     serializeCatalogSortRules(normalizeCatalogSortRules(payload.sortRules)),
   );
+
+  if (payload.hidePrices === true) {
+    searchParams.set("hidePrices", "1");
+  }
+  if (payload.includeIndex === true) {
+    searchParams.set("includeIndex", "1");
+  }
 
   if (payload.filters && typeof payload.filters === "object" && !Array.isArray(payload.filters)) {
     const filters = payload.filters as Record<string, unknown>;

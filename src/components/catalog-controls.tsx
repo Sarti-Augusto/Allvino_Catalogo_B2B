@@ -99,6 +99,71 @@ export function FloatingCatalogFilters({
         </p>
       </div>
 
+      {activeFilterCount > 0 && (
+        <div
+          aria-label="Filtros ativos"
+          className="relative z-20 mt-2.5 flex flex-wrap items-center gap-2"
+        >
+          {search.trim() && (
+            <button
+              type="button"
+              onClick={() => onSearchChange("")}
+              className="inline-flex items-center gap-1.5 rounded-full border border-allvino-primary/25 bg-white px-3 py-1 text-xs font-semibold text-allvino-primary shadow-sm transition hover:bg-allvino-primary hover:text-white"
+            >
+              <span>Busca: &ldquo;{search.trim()}&rdquo;</span>
+              <span aria-hidden="true">✕</span>
+            </button>
+          )}
+          {selectedCategory && (
+            <button
+              type="button"
+              onClick={() => onCategoryChange("")}
+              className="inline-flex items-center gap-1.5 rounded-full border border-allvino-primary/25 bg-white px-3 py-1 text-xs font-semibold text-allvino-primary shadow-sm transition hover:bg-allvino-primary hover:text-white"
+            >
+              <span>Tipo: {selectedCategory}</span>
+              <span aria-hidden="true">✕</span>
+            </button>
+          )}
+          {selectedGrape && (
+            <button
+              type="button"
+              onClick={() => onGrapeChange("")}
+              className="inline-flex items-center gap-1.5 rounded-full border border-allvino-primary/25 bg-white px-3 py-1 text-xs font-semibold text-allvino-primary shadow-sm transition hover:bg-allvino-primary hover:text-white"
+            >
+              <span>Uva: {selectedGrape}</span>
+              <span aria-hidden="true">✕</span>
+            </button>
+          )}
+          {selectedCountry && (
+            <button
+              type="button"
+              onClick={() => onCountryChange("")}
+              className="inline-flex items-center gap-1.5 rounded-full border border-allvino-primary/25 bg-white px-3 py-1 text-xs font-semibold text-allvino-primary shadow-sm transition hover:bg-allvino-primary hover:text-white"
+            >
+              <span>País: {selectedCountry}</span>
+              <span aria-hidden="true">✕</span>
+            </button>
+          )}
+          {selectedWinery && (
+            <button
+              type="button"
+              onClick={() => onWineryChange("")}
+              className="inline-flex items-center gap-1.5 rounded-full border border-allvino-primary/25 bg-white px-3 py-1 text-xs font-semibold text-allvino-primary shadow-sm transition hover:bg-allvino-primary hover:text-white"
+            >
+              <span>Vinícola: {selectedWinery}</span>
+              <span aria-hidden="true">✕</span>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onClear}
+            className="text-xs font-bold text-allvino-secondary underline-offset-2 hover:underline px-2 py-1"
+          >
+            Limpar todos
+          </button>
+        </div>
+      )}
+
       {isOpen && (
         <section
           id="catalog-filter-panel"
@@ -262,6 +327,10 @@ interface ExportCatalogModalProps {
   onProductSelectionChange: (ids: string[]) => void;
   sortRules: CatalogSortRule[];
   onSortRulesChange: (rules: CatalogSortRule[]) => void;
+  hidePrices?: boolean;
+  onHidePricesChange?: (hide: boolean) => void;
+  includeIndex?: boolean;
+  onIncludeIndexChange?: (include: boolean) => void;
   onExport: () => void;
   isExporting: boolean;
   error: string;
@@ -275,6 +344,10 @@ export function ExportCatalogModal({
   onProductSelectionChange,
   sortRules,
   onSortRulesChange,
+  hidePrices = false,
+  onHidePricesChange,
+  includeIndex = false,
+  onIncludeIndexChange,
   onExport,
   isExporting,
   error,
@@ -618,6 +691,45 @@ export function ExportCatalogModal({
                   + Adicionar critério de desempate
                 </button>
               )}
+
+              <div className="mt-6 border-t border-allvino-outline-variant/30 pt-4 space-y-2.5">
+                <h4 className="text-xs font-black uppercase tracking-wider text-allvino-primary">
+                  3. Opções de apresentação do PDF
+                </h4>
+                <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-allvino-outline-variant/40 bg-white p-3 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={includeIndex}
+                    onChange={(e) => onIncludeIndexChange?.(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-allvino-primary"
+                  />
+                  <span>
+                    <strong className="block text-allvino-primary">
+                      Incluir página de Sumário / Índice
+                    </strong>
+                    <span className="text-[11px] text-allvino-on-surface-variant">
+                      Adiciona uma página inicial com a listagem de todos os rótulos e número da página correspondente.
+                    </span>
+                  </span>
+                </label>
+
+                <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-allvino-outline-variant/40 bg-white p-3 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={hidePrices}
+                    onChange={(e) => onHidePricesChange?.(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-allvino-primary"
+                  />
+                  <span>
+                    <strong className="block text-allvino-primary">
+                      Modo Carta Sommelier (ocultar preços no PDF)
+                    </strong>
+                    <span className="text-[11px] text-allvino-on-surface-variant">
+                      Exporta apenas as fichas técnicas e fotos das garrafas, ideal para apresentação a clientes finais e restaurantes.
+                    </span>
+                  </span>
+                </label>
+              </div>
             </section>
           </div>
         </div>
@@ -650,5 +762,302 @@ export function ExportCatalogModal({
         </div>
       </div>
     </div>
+  );
+}
+
+export interface QuoteCartItem {
+  id: string;
+  name: string;
+  vinicola: string;
+  safra: string;
+  unitPrice: number;
+  boxes: number;
+}
+
+const QUOTE_STORAGE_KEY = "allvino_b2b_quote_cart_v1";
+
+export function useQuoteCart() {
+  const [items, setItems] = useState<QuoteCartItem[]>([]);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(QUOTE_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) setItems(parsed);
+      }
+    } catch {
+      // Ignore storage access errors
+    }
+  }, []);
+
+  const persist = (next: QuoteCartItem[]) => {
+    setItems(next);
+    try {
+      window.localStorage.setItem(QUOTE_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // Ignore storage access errors
+    }
+  };
+
+  const addOrIncrementBox = (product: {
+    id: string;
+    name: string;
+    vinicola: string;
+    safra: string;
+    precoOriginal: number;
+    precoPromocional: number | null;
+  }) => {
+    const unitPrice = product.precoPromocional ?? product.precoOriginal;
+    const existing = items.find((item) => item.id === product.id);
+    if (existing) {
+      persist(
+        items.map((item) =>
+          item.id === product.id ? { ...item, unitPrice, boxes: item.boxes + 1 } : item,
+        ),
+      );
+    } else {
+      persist([
+        ...items,
+        {
+          id: product.id,
+          name: product.name,
+          vinicola: product.vinicola,
+          safra: product.safra,
+          unitPrice,
+          boxes: 1,
+        },
+      ]);
+    }
+  };
+
+  const updateBoxes = (id: string, boxes: number) => {
+    if (boxes <= 0) {
+      persist(items.filter((item) => item.id !== id));
+    } else {
+      persist(items.map((item) => (item.id === id ? { ...item, boxes } : item)));
+    }
+  };
+
+  const clearCart = () => persist([]);
+
+  return {
+    items,
+    addOrIncrementBox,
+    updateBoxes,
+    clearCart,
+  };
+}
+
+export function QuoteCartBar({
+  items,
+  onUpdateBoxes,
+  onClear,
+}: {
+  items: QuoteCartItem[];
+  onUpdateBoxes: (id: string, boxes: number) => void;
+  onClear: () => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  if (items.length === 0) return null;
+
+  const totalBoxes = items.reduce((sum, item) => sum + item.boxes, 0);
+  const totalBottles = totalBoxes * 6;
+  const totalAmount = items.reduce(
+    (sum, item) => sum + item.unitPrice * 6 * item.boxes,
+    0,
+  );
+
+  const buildQuoteMessage = () => {
+    const lines = [
+      "Olá! Gostaria de solicitar uma cotação B2B do catálogo Allvino:",
+      "",
+      ...items.map((item) => {
+        const boxTotal = item.unitPrice * 6 * item.boxes;
+        return `• *${item.boxes} cx (${item.boxes * 6} un)* — ${item.name} (${item.vinicola}, Safra ${item.safra}) | Unit: R$ ${item.unitPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} | Subtotal: R$ ${boxTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+      }),
+      "",
+      `*Total de Caixas:* ${totalBoxes} (${totalBottles} garrafas)`,
+      `*Valor Total Estimado:* R$ ${totalAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+    ];
+    return lines.join("\n");
+  };
+
+  const handleSendWhatsApp = () => {
+    const text = buildQuoteMessage();
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(text)}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+  };
+
+  const handleCopyQuote = async () => {
+    try {
+      await navigator.clipboard.writeText(buildQuoteMessage());
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // Ignore
+    }
+  };
+
+  return (
+    <>
+      <div className="fixed bottom-4 left-4 right-4 z-40 mx-auto max-w-3xl rounded-2xl border border-allvino-secondary/40 bg-allvino-primary px-4 py-3 text-white shadow-2xl">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-allvino-secondary-container">
+              Lista de Cotação B2B
+            </p>
+            <p className="text-xs sm:text-sm font-semibold">
+              {totalBoxes} caixa{totalBoxes === 1 ? "" : "s"} ({totalBottles} garrafas) ·{" "}
+              <span className="font-extrabold text-allvino-secondary-container">
+                R$ {totalAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              </span>
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsOpen(true)}
+              className="rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-xs font-bold text-white transition hover:bg-white/20"
+            >
+              Revisar ({items.length})
+            </button>
+            <button
+              type="button"
+              onClick={handleSendWhatsApp}
+              className="rounded-lg bg-[#25D366] px-4 py-2 text-xs font-bold text-white shadow transition hover:bg-[#20ba5a]"
+            >
+              Enviar Cotação WhatsApp
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {isOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Revisar lista de cotação B2B"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-allvino-primary/40 p-4 backdrop-blur-sm"
+          onClick={() => setIsOpen(false)}
+        >
+          <div
+            className="flex max-h-[85vh] w-full max-w-xl flex-col rounded-2xl border border-allvino-outline-variant/40 bg-allvino-background p-5 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between border-b border-allvino-outline-variant/30 pb-3">
+              <div>
+                <h3 className="font-serif text-xl font-bold text-allvino-primary">
+                  Sua Lista de Cotação B2B
+                </h3>
+                <p className="text-xs text-allvino-on-surface-variant">
+                  Caixas fechadas com 6 garrafas por rótulo.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="rounded-lg border border-allvino-outline-variant px-3 py-1.5 text-xs font-bold text-allvino-primary"
+              >
+                Fechar
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto pr-1">
+              {items.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-allvino-outline-variant/30 bg-white p-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-allvino-primary">
+                      {item.name}
+                    </p>
+                    <p className="text-[11px] text-allvino-on-surface-variant">
+                      {item.vinicola} · Safra {item.safra} · R${" "}
+                      {item.unitPrice.toLocaleString("pt-BR", {
+                        minimumFractionDigits: 2,
+                      })}{" "}
+                      / un
+                    </p>
+                    <p className="mt-0.5 text-xs font-extrabold text-allvino-secondary">
+                      Subtotal ({item.boxes} cx): R${" "}
+                      {(item.unitPrice * 6 * item.boxes).toLocaleString("pt-BR", {
+                        minimumFractionDigits: 2,
+                      })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => onUpdateBoxes(item.id, item.boxes - 1)}
+                      aria-label={`Diminuir caixas de ${item.name}`}
+                      className="h-7 w-7 rounded border border-allvino-outline-variant text-xs font-bold text-allvino-primary hover:bg-allvino-surface-container-high"
+                    >
+                      −
+                    </button>
+                    <span className="w-8 text-center text-xs font-bold text-allvino-text">
+                      {item.boxes} cx
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onUpdateBoxes(item.id, item.boxes + 1)}
+                      aria-label={`Aumentar caixas de ${item.name}`}
+                      className="h-7 w-7 rounded border border-allvino-outline-variant text-xs font-bold text-allvino-primary hover:bg-allvino-surface-container-high"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 border-t border-allvino-outline-variant/30 pt-4 space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-semibold text-allvino-on-surface-variant">
+                  Total estimado ({totalBoxes} cx / {totalBottles} garrafas):
+                </span>
+                <span className="text-lg font-black text-allvino-primary">
+                  R$ {totalAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="flex flex-wrap justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClear();
+                    setIsOpen(false);
+                  }}
+                  className="rounded-lg border border-allvino-outline-variant px-3 py-2 text-xs font-bold text-allvino-primary hover:bg-allvino-surface-container-high"
+                >
+                  Limpar lista
+                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCopyQuote}
+                    className="rounded-lg border border-allvino-outline-variant bg-white px-3 py-2 text-xs font-bold text-allvino-primary hover:bg-allvino-surface-container-high"
+                  >
+                    {copied ? "Copiado!" : "Copiar resumo"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSendWhatsApp}
+                    className="rounded-lg bg-[#25D366] px-4 py-2 text-xs font-bold text-white shadow hover:bg-[#20ba5a]"
+                  >
+                    Enviar no WhatsApp
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

@@ -15,6 +15,7 @@ export type CatalogSort = (typeof CATALOG_SORT_OPTIONS)[number]["value"];
 export const CATALOG_EXPORT_SORT_FIELDS = [
   { value: "name", label: "Ordem alfabética" },
   { value: "price", label: "Preço" },
+  { value: "category", label: "Tipo de vinho" },
   { value: "country", label: "País" },
   { value: "grape", label: "Tipo de uva" },
   { value: "winery", label: "Vinícola" },
@@ -62,6 +63,7 @@ export function catalogSortToRule(sort: CatalogSort): CatalogSortRule {
   if (sort === "price-asc" || sort === "price-desc") {
     return { field: "price", direction: sort.endsWith("desc") ? "desc" : "asc" };
   }
+  if (sort === "category-asc") return { field: "category", direction: "asc" };
   if (sort === "country-asc") return { field: "country", direction: "asc" };
   if (sort === "grape-asc") return { field: "grape", direction: "asc" };
   if (sort === "name-desc") return { field: "name", direction: "desc" };
@@ -221,6 +223,9 @@ export function sortCatalogProductsByRules<T extends CatalogProductLike>(
 
       if (rule.field === "name") result = compareText(left.name, right.name);
       if (rule.field === "price") result = effectivePrice(left) - effectivePrice(right);
+      if (rule.field === "category") {
+        result = compareText(left.categoria || "Tinto", right.categoria || "Tinto");
+      }
       if (rule.field === "country") {
         result = compareText(left.paisOrigem, right.paisOrigem);
       }

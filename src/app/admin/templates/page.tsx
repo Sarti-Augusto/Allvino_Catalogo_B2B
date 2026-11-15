@@ -137,7 +137,7 @@ const DEFAULT_PREVIEW_WINE: Product = {
   notasDegustacao: "Notas complexas de frutas negras, fumo de corda, cacau e couro. Corpo encorpado, taninos aveludados e final persistente.",
 };
 
-const clamp = (val: any, min: number = -350, max: number = 350): number => {
+const clamp = (val: any, min: number = -450, max: number = 450): number => {
   const num = typeof val === "number" ? val : parseFloat(val);
   if (isNaN(num)) return 0;
   return Math.max(min, Math.min(max, num));
@@ -410,8 +410,12 @@ export default function TemplatesPage() {
     setCoverTitleYOffset(0);
     setCoverSubtitleXOffset(0);
     setCoverSubtitleYOffset(0);
+    setCoverFooterXOffset(0);
     setCoverFooterYOffset(0);
     setCoverVerticalOffset(0);
+    setCoverLogoAngle(0);
+    setCoverTitleAngle(0);
+    setCoverSubtitleAngle(0);
 
     setProductImgXOffset(0);
     setProductImgYOffset(0);
@@ -945,6 +949,20 @@ export default function TemplatesPage() {
                 Sair
               </button>
             </div>
+          </div>
+          <div className="flex md:hidden space-x-2 pb-3 border-t border-allvino-outline-variant/20 pt-2">
+            <Link
+              href="/admin/dashboard"
+              className="flex-1 text-center px-3 py-1.5 rounded-md text-xs font-semibold bg-allvino-surface-container-high text-allvino-on-surface-variant"
+            >
+              Vinhos
+            </Link>
+            <Link
+              href="/admin/templates"
+              className="flex-1 text-center px-3 py-1.5 rounded-md text-xs font-bold bg-allvino-primary text-white"
+            >
+              Editor de Templates
+            </Link>
           </div>
         </div>
       </nav>
@@ -1589,7 +1607,7 @@ export default function TemplatesPage() {
                           <input
                             type="number"
                             value={productDescYOffset}
-                            onChange={(e) => setProductDescYOffset(clamp(e.target.value, -100, 100))}
+                            onChange={(e) => setProductDescYOffset(clamp(e.target.value, -150, 150))}
                             className="w-full text-xs p-1.5 rounded bg-allvino-surface-container-low border text-center font-bold"
                           />
                         </div>
@@ -2653,7 +2671,7 @@ export default function TemplatesPage() {
                                 className="object-contain h-full transition-all duration-150"
                                 style={{
                                   maxHeight: `${Math.round(productImgHeight * previewScale)}px`,
-                                  maxWidth: `${Math.round(productImgHeight * 0.23 * previewScale)}px`,
+                                  maxWidth: `${Math.round(productImgHeight * 0.52 * previewScale)}px`,
                                   filter: "drop-shadow(0 8px 20px rgba(0,0,0,.12))",
                                 }}
                                 />

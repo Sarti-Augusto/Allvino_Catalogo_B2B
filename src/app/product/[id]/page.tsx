@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getCountryFlagUrl } from "@/lib/utils";
 import { ShareActions } from "@/components/share-actions";
+import { QuoteCartBar, useQuoteCart } from "@/components/catalog-controls";
 
 interface Product {
   id: string;
@@ -29,6 +30,7 @@ export default function ProductDetailPage() {
   const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const quoteCart = useQuoteCart();
 
   useEffect(() => {
     if (id) {
@@ -191,9 +193,6 @@ export default function ProductDetailPage() {
                 <span className="text-[10px] uppercase font-bold tracking-widest text-allvino-on-surface-variant block mb-0.5">
                   Preço Unitário B2B
                 </span>
-                <span className="text-[9px] text-allvino-secondary block font-semibold mb-1">
-                  (Caixa c/ 6 garrafas)
-                </span>
                 {product.precoPromocional !== null && product.precoPromocional !== undefined ? (
                   <div className="flex items-baseline gap-3">
                     <span className="text-3xl font-black text-allvino-primary">
@@ -204,24 +203,44 @@ export default function ProductDetailPage() {
                     </span>
                   </div>
                 ) : (
-                  <span className="text-3xl font-bold text-allvino-text">
+                  <span className="text-3xl font-bold text-allvino-text block">
                     R$ {product.precoOriginal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
                 )}
+                <span className="text-xs text-allvino-secondary block font-bold mt-1">
+                  Caixa fechada c/ 6 garrafas: R$ {((product.precoPromocional ?? product.precoOriginal) * 6).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                </span>
               </div>
               
-              <Link
-                href="/"
-                className="px-6 py-3 rounded bg-allvino-primary text-white hover:bg-allvino-primary-container text-xs font-semibold text-center transition shadow"
-              >
-                Voltar ao Catálogo
-              </Link>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => quoteCart.addOrIncrementBox(product)}
+                  className="px-5 py-3 rounded bg-allvino-secondary text-white hover:bg-allvino-primary text-xs font-bold text-center transition shadow"
+                >
+                  {quoteCart.items.some((i) => i.id === product.id)
+                    ? `+ Adicionar Caixa (${quoteCart.items.find((i) => i.id === product.id)?.boxes} cx)`
+                    : "+ Cotar Caixa (6 un)"}
+                </button>
+                <Link
+                  href="/"
+                  className="px-5 py-3 rounded bg-allvino-primary text-white hover:bg-allvino-primary-container text-xs font-semibold text-center transition shadow"
+                >
+                  Voltar ao Catálogo
+                </Link>
+              </div>
             </div>
 
           </div>
 
         </div>
       </main>
+
+      <QuoteCartBar
+        items={quoteCart.items}
+        onUpdateBoxes={quoteCart.updateBoxes}
+        onClear={quoteCart.clearCart}
+      />
     </div>
   );
 }

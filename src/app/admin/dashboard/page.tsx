@@ -59,6 +59,11 @@ export default function DashboardPage() {
   const [status, setStatus] = useState("true");
   const [imagemUrl, setImagemUrl] = useState(PRESET_IMAGES[0].url);
   const [categoria, setCategoria] = useState("Tinto");
+  const [estoque, setEstoque] = useState("50");
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   // Notification Toast State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -126,6 +131,9 @@ export default function DashboardPage() {
     setStatus("true");
     setImagemUrl(PRESET_IMAGES[0].url);
     setCategoria("Tinto");
+    setEstoque("50");
+    setShowNewCategoryInput(false);
+    setNewCategoryName("");
     setShowModal(true);
   };
 
@@ -148,18 +156,21 @@ export default function DashboardPage() {
     setStatus(String(product.status));
     setImagemUrl(product.imagemUrl);
     setCategoria(product.categoria || "Tinto");
+    setEstoque(String(product.estoque ?? 50));
+    setShowNewCategoryInput(false);
+    setNewCategoryName("");
     setShowModal(true);
   };
 
-  const handleAddCategory = () => {
-    const newCat = prompt("Digite o nome da nova categoria de produto (ex: Frisante, Laranja Premium):");
-    if (newCat && newCat.trim()) {
-      const formatted = newCat.trim();
-      if (!categoriesList.includes(formatted)) {
-        setCategoriesList([...categoriesList, formatted]);
-      }
-      setCategoria(formatted);
+  const handleConfirmAddCategory = () => {
+    const formatted = newCategoryName.trim();
+    if (!formatted) return;
+    if (!categoriesList.includes(formatted)) {
+      setCategoriesList([...categoriesList, formatted]);
     }
+    setCategoria(formatted);
+    setNewCategoryName("");
+    setShowNewCategoryInput(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -179,7 +190,7 @@ export default function DashboardPage() {
       status: status === "true",
       imagemUrl,
       categoria,
-      estoque: 50 // Enviar padrão interno para o banco
+      estoque: estoque.trim() ? Number(estoque) : 0,
     };
 
     try {
@@ -215,12 +226,39 @@ export default function DashboardPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este vinho?")) return;
+  const handleToggleStatus = async (product: Product) => {
+    if (togglingId === product.id) return;
+    setTogglingId(product.id);
+    try {
+      const res = await fetch(`/api/wines/${product.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: !product.status }),
+      });
+      if (res.ok) {
+        setProducts((current) =>
+          current.map((p) => (p.id === product.id ? { ...p, status: !p.status } : p)),
+        );
+        showToast(
+          !product.status
+            ? `"${product.name}" ativado na vitrine.`
+            : `"${product.name}" ocultado da vitrine.`,
+        );
+      } else {
+        showToast("Não foi possível alterar o status.", "error");
+      }
+    } catch {
+      showToast("Erro de conexão ao alterar status.", "error");
+    } finally {
+      setTogglingId(null);
+    }
+  };
 
+  const handleDelete = async (id: string) => {
     try {
       const res = await fetch(`/api/wines/${id}`, { method: "DELETE" });
       if (res.ok) {
+        setConfirmDeleteId(null);
         showToast("Vinho excluído do catálogo.");
         fetchProducts();
       } else {
@@ -236,7 +274,7 @@ export default function DashboardPage() {
   const activeWines = products.filter((p) => p.status).length;
   const uniqueCategoriesCount = categoriesList.length;
   const avgPrice = products.length
-    ? products.reduce((acc, curr) => acc + curr.precoOriginal, 0) / products.length
+    ? products.reduce((acc, curr) => acc + (curr.precoPromocional ?? curr.precoOriginal), 0) / products.length
     : 0;
 
   // Filter products by search
@@ -297,6 +335,20 @@ export default function DashboardPage() {
                 Sair
               </button>
             </div>
+          </div>
+          <div className="flex md:hidden space-x-2 pb-3 border-t border-allvino-outline-variant/20 pt-2">
+            <Link
+              href="/admin/dashboard"
+              className="flex-1 text-center px-3 py-1.5 rounded-md text-xs font-bold bg-allvino-primary text-white"
+            >
+              Vinhos
+            </Link>
+            <Link
+              href="/admin/templates"
+              className="flex-1 text-center px-3 py-1.5 rounded-md text-xs font-semibold bg-allvino-surface-container-high text-allvino-on-surface-variant"
+            >
+              Editor de Templates
+            </Link>
           </div>
         </div>
       </nav>
@@ -434,19 +486,28 @@ export default function DashboardPage() {
                             </span>
                           </div>
                         ) : (
-                          <span className="text-allvino-text font-semibold">
+                          <span className="text-allvino-text font-semibold block">
                             R$ {product.precoOriginal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                           </span>
                         )}
+                        <span className="text-[11px] text-allvino-on-surface-variant block mt-0.5">
+                          Estoque: <strong>{product.estoque ?? 0}</strong> un.
+                        </span>
                       </td>
                       <td className="py-4 px-6 text-center">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                          product.status 
-                            ? "bg-emerald-50 border border-emerald-200 text-emerald-800" 
-                            : "bg-allvino-surface-container-high border border-allvino-outline-variant text-allvino-on-surface-variant"
-                        }`}>
-                          {product.status ? "Ativo" : "Inativo"}
-                        </span>
+                        <button
+                          type="button"
+                          disabled={togglingId === product.id}
+                          onClick={() => handleToggleStatus(product)}
+                          title="Clique para alternar entre Ativo e Inativo"
+                          className={`px-3 py-1 rounded-full text-xs font-bold transition cursor-pointer disabled:opacity-50 ${
+                            product.status 
+                              ? "bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100" 
+                              : "bg-allvino-surface-container-high border border-allvino-outline-variant text-allvino-on-surface-variant hover:bg-allvino-surface-container-highest"
+                          }`}
+                        >
+                          {product.status ? "● Ativo" : "○ Inativo"}
+                        </button>
                       </td>
                       <td className="py-4 px-6 text-right space-x-2">
                         <button
@@ -455,12 +516,32 @@ export default function DashboardPage() {
                         >
                           Editar
                         </button>
-                        <button
-                          onClick={() => handleDelete(product.id)}
-                          className="px-3 py-1.5 rounded bg-allvino-surface-container-high hover:bg-allvino-primary border border-allvino-outline-variant hover:border-allvino-primary text-allvino-primary hover:text-white font-medium text-xs transition"
-                        >
-                          Excluir
-                        </button>
+                        {confirmDeleteId === product.id ? (
+                          <span className="inline-flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(product.id)}
+                              className="px-2.5 py-1.5 rounded bg-red-700 text-white font-bold text-xs transition hover:bg-red-800"
+                            >
+                              Confirmar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="px-2 py-1.5 rounded border border-allvino-outline-variant text-allvino-on-surface-variant text-xs"
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteId(product.id)}
+                            className="px-3 py-1.5 rounded bg-allvino-surface-container-high hover:bg-allvino-primary border border-allvino-outline-variant hover:border-allvino-primary text-allvino-primary hover:text-white font-medium text-xs transition"
+                          >
+                            Excluir
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -590,7 +671,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Row 4 */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1">
                     Preço Original (R$) *
@@ -598,6 +679,7 @@ export default function DashboardPage() {
                   <input
                     type="number"
                     step="0.01"
+                    min="0.01"
                     required
                     value={precoOriginal}
                     onChange={(e) => setPrecoOriginal(e.target.value)}
@@ -611,10 +693,24 @@ export default function DashboardPage() {
                   <input
                     type="number"
                     step="0.01"
+                    min="0.01"
                     value={precoPromocional}
                     onChange={(e) => setPrecoPromocional(e.target.value)}
                     className="w-full px-4 py-2.5 rounded-lg bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text focus:outline-none focus:border-allvino-primary/60 transition text-sm"
-                    placeholder="Deixe em branco se não houver"
+                    placeholder="Menor que o preço original"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1">
+                    Estoque Disponível (un.)
+                  </label>
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={estoque}
+                    onChange={(e) => setEstoque(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-lg bg-allvino-surface-container-low border border-allvino-outline-variant text-allvino-text focus:outline-none focus:border-allvino-primary/60 transition text-sm"
                   />
                 </div>
               </div>
@@ -652,13 +748,31 @@ export default function DashboardPage() {
                     </select>
                     <button
                       type="button"
-                      onClick={handleAddCategory}
+                      onClick={() => setShowNewCategoryInput((prev) => !prev)}
                       className="px-2.5 rounded bg-allvino-surface-container-high border border-allvino-outline-variant text-allvino-primary hover:bg-allvino-primary hover:text-white font-bold text-sm transition"
                       title="Nova Categoria"
                     >
                       +
                     </button>
                   </div>
+                  {showNewCategoryInput && (
+                    <div className="mt-2 flex gap-1.5">
+                      <input
+                        type="text"
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        placeholder="Ex: Frisante"
+                        className="w-full rounded border border-allvino-outline-variant bg-white px-2.5 py-1.5 text-xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleConfirmAddCategory}
+                        className="rounded bg-allvino-primary px-2.5 py-1.5 text-xs font-bold text-white"
+                      >
+                        OK
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-1">
@@ -717,7 +831,7 @@ export default function DashboardPage() {
                               const ctx = canvas.getContext("2d");
                               if (ctx) {
                                 ctx.drawImage(img, 0, 0, width, height);
-                                setImagemUrl(canvas.toDataURL("image/png", 0.85));
+                                setImagemUrl(canvas.toDataURL("image/webp", 0.85));
                               } else if (typeof event.target?.result === "string") {
                                 setImagemUrl(event.target.result);
                               }

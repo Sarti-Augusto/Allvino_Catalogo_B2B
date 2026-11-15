@@ -70,7 +70,9 @@ export async function POST(request: Request) {
       teorAlcoolico === null ||
       teorAlcoolico > 100 ||
       precoOriginal === null ||
+      precoOriginal <= 0 ||
       precoPromocional === undefined ||
+      (precoPromocional !== null && (precoPromocional <= 0 || precoPromocional >= precoOriginal)) ||
       estoque === null ||
       status === null ||
       !categoria ||

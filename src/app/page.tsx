@@ -5,6 +5,8 @@ import Link from "next/link";
 import {
   ExportCatalogModal,
   FloatingCatalogFilters,
+  QuoteCartBar,
+  useQuoteCart,
 } from "@/components/catalog-controls";
 import {
   catalogSortToRule,
@@ -12,6 +14,7 @@ import {
   CatalogSortRule,
   filterCatalogProducts,
   MAX_PDF_PRODUCTS,
+  normalizeCatalogSort,
   sortCatalogProducts,
 } from "@/lib/catalog-export";
 import { getCountryFlagUrl } from "@/lib/utils";
@@ -52,8 +55,12 @@ export default function Home() {
   const [exportSortRules, setExportSortRules] = useState<CatalogSortRule[]>([
     { field: "name", direction: "asc" },
   ]);
+  const [exportHidePrices, setExportHidePrices] = useState(false);
+  const [exportIncludeIndex, setExportIncludeIndex] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState("");
+  const [urlInitialized, setUrlInitialized] = useState(false);
+  const quoteCart = useQuoteCart();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -64,7 +71,39 @@ export default function Home() {
       window.location.replace(recoveryUrl);
       return;
     }
+
+    // Initialize filters and sort from URL query params
+    if (params.get("search")) setSearch(params.get("search")!);
+    if (params.get("grape")) setSelectedUva(params.get("grape")!);
+    if (params.get("country")) setSelectedPais(params.get("country")!);
+    if (params.get("winery")) setSelectedVinicola(params.get("winery")!);
+    if (params.get("category")) setSelectedCategoria(params.get("category")!);
+    if (params.get("sort")) setSortBy(normalizeCatalogSort(params.get("sort")));
+    setUrlInitialized(true);
   }, []);
+
+  useEffect(() => {
+    if (!urlInitialized) return;
+    const params = new URLSearchParams();
+    if (search.trim()) params.set("search", search.trim());
+    if (selectedUva) params.set("grape", selectedUva);
+    if (selectedPais) params.set("country", selectedPais);
+    if (selectedVinicola) params.set("winery", selectedVinicola);
+    if (selectedCategoria) params.set("category", selectedCategoria);
+    if (sortBy !== "name-asc") params.set("sort", sortBy);
+
+    const nextQuery = params.toString();
+    const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`;
+    window.history.replaceState(null, "", nextUrl);
+  }, [
+    urlInitialized,
+    search,
+    selectedUva,
+    selectedPais,
+    selectedVinicola,
+    selectedCategoria,
+    sortBy,
+  ]);
 
   // Dynamic filter options
   const [uvaOptions, setUvaOptions] = useState<string[]>([]);
@@ -85,11 +124,22 @@ export default function Home() {
         const activeWines = data.filter((w) => w.status);
         setWines(activeWines);
 
-        // Extract unique options
-        const grapes = Array.from(new Set(activeWines.map((w) => w.uva.split(",")[0].trim()))).sort();
-        const countries = Array.from(new Set(activeWines.map((w) => w.paisOrigem))).sort();
-        const wineries = Array.from(new Set(activeWines.map((w) => w.vinicola))).sort();
-        const categories = Array.from(new Set(activeWines.map((w) => w.categoria || "Tinto"))).sort();
+        // Extract unique options (splitting grape blends so every varietal is filterable)
+        const sortPtBr = (a: string, b: string) =>
+          a.localeCompare(b, "pt-BR", { sensitivity: "base" });
+        const grapes = Array.from(
+          new Set(
+            activeWines.flatMap((w) =>
+              w.uva
+                .split(",")
+                .map((item) => item.trim())
+                .filter(Boolean),
+            ),
+          ),
+        ).sort(sortPtBr);
+        const countries = Array.from(new Set(activeWines.map((w) => w.paisOrigem))).sort(sortPtBr);
+        const wineries = Array.from(new Set(activeWines.map((w) => w.vinicola))).sort(sortPtBr);
+        const categories = Array.from(new Set(activeWines.map((w) => w.categoria || "Tinto"))).sort(sortPtBr);
 
         setUvaOptions(grapes);
         setPaisOptions(countries);
@@ -147,6 +197,8 @@ export default function Home() {
           selectedProductIds: selectedExportProductIds,
           sortRules: exportSortRules,
           filters: activeFilters,
+          hidePrices: exportHidePrices,
+          includeIndex: exportIncludeIndex,
         }),
       });
 
@@ -358,13 +410,10 @@ export default function Home() {
                     </div>
 
                     {/* Pricing and details footer block */}
-                    <div className="px-5 py-4 bg-allvino-surface-container-low/30 border-t border-allvino-outline-variant/20 flex items-center justify-between">
+                    <div className="px-5 py-4 bg-allvino-surface-container-low/30 border-t border-allvino-outline-variant/20 flex items-center justify-between gap-2">
                       <div className="space-y-0.5">
                         <span className="text-[10px] uppercase font-bold tracking-widest text-allvino-on-surface-variant block">
                           Preço Unitário B2B
-                        </span>
-                        <span className="text-[9px] text-allvino-secondary block font-semibold mb-0.5">
-                          (Caixa c/ 6 garrafas)
                         </span>
                         {wine.precoPromocional !== null && wine.precoPromocional !== undefined ? (
                           <div className="flex items-baseline gap-2">
@@ -376,12 +425,28 @@ export default function Home() {
                             </span>
                           </div>
                         ) : (
-                          <span className="text-lg font-bold text-allvino-text">
+                          <span className="text-lg font-bold text-allvino-text block">
                             R$ {wine.precoOriginal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                           </span>
                         )}
+                        <span className="text-[10px] text-allvino-secondary block font-bold">
+                          Caixa c/ 6: R$ {((wine.precoPromocional ?? wine.precoOriginal) * 6).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                        </span>
                       </div>
-                      <div className="text-right">
+                      <div className="flex flex-col items-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            quoteCart.addOrIncrementBox(wine);
+                          }}
+                          className="rounded-md bg-allvino-primary px-2.5 py-1.5 text-[10px] font-bold text-white shadow-sm transition hover:bg-allvino-primary-container"
+                        >
+                          {quoteCart.items.some((i) => i.id === wine.id)
+                            ? `+ Caixa (${quoteCart.items.find((i) => i.id === wine.id)?.boxes} cx)`
+                            : "+ Cotar Caixa"}
+                        </button>
                         <span className="text-[10px] text-allvino-primary font-bold group-hover:text-allvino-secondary transition flex items-center gap-0.5">
                           Ver Detalhes →
                         </span>
@@ -395,6 +460,12 @@ export default function Home() {
         </div>
       </main>
 
+      <QuoteCartBar
+        items={quoteCart.items}
+        onUpdateBoxes={quoteCart.updateBoxes}
+        onClear={quoteCart.clearCart}
+      />
+
       <ExportCatalogModal
         isOpen={isExportOpen}
         onClose={() => {
@@ -405,6 +476,10 @@ export default function Home() {
         onProductSelectionChange={setSelectedExportProductIds}
         sortRules={exportSortRules}
         onSortRulesChange={setExportSortRules}
+        hidePrices={exportHidePrices}
+        onHidePricesChange={setExportHidePrices}
+        includeIndex={exportIncludeIndex}
+        onIncludeIndexChange={setExportIncludeIndex}
         onExport={exportCatalog}
         isExporting={isExporting}
         error={exportError}
