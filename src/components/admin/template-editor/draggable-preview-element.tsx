@@ -28,6 +28,15 @@ interface DraggablePreviewElementProps {
 }
 
 const clampPosition = (value: number) => Math.max(-450, Math.min(450, Math.round(value)));
+const SNAP_THRESHOLD = 6;
+
+const applyMagneticSnap = (value: number, disableSnap: boolean) => {
+  const clamped = clampPosition(value);
+  if (!disableSnap && Math.abs(clamped) <= SNAP_THRESHOLD) {
+    return 0;
+  }
+  return clamped;
+};
 
 export function DraggablePreviewElement({
   axis = "both",
@@ -53,10 +62,10 @@ export function DraggablePreviewElement({
   } | null>(null);
   const [dragging, setDragging] = useState(false);
 
-  const updatePosition = (nextX: number, nextY: number) => {
+  const updatePosition = (nextX: number, nextY: number, disableSnap = false) => {
     onPositionChange(
-      axis === "y" ? x : clampPosition(nextX),
-      axis === "x" ? y : clampPosition(nextY),
+      axis === "y" ? x : applyMagneticSnap(nextX, disableSnap),
+      axis === "x" ? y : applyMagneticSnap(nextY, disableSnap),
     );
   };
 
@@ -83,6 +92,7 @@ export function DraggablePreviewElement({
     updatePosition(
       drag.startX + (event.clientX - drag.startClientX) / safeScale,
       drag.startY + (event.clientY - drag.startClientY) / safeScale,
+      event.altKey,
     );
   };
 
@@ -108,8 +118,11 @@ export function DraggablePreviewElement({
     if (!delta) return;
     event.preventDefault();
     onSelect(elementId);
-    updatePosition(x + delta[0], y + delta[1]);
+    updatePosition(x + delta[0], y + delta[1], true);
   };
+
+  const isCenteredX = Math.round(x) === 0;
+  const isCenteredY = Math.round(y) === 0;
 
   return (
     <div
@@ -135,12 +148,20 @@ export function DraggablePreviewElement({
         transform: `translate(${x * scale}px, ${y * scale}px) rotate(${rotation}deg)`,
         transition: dragging ? "none" : "outline-color 120ms ease",
       }}
-      title={`${label}: X ${Math.round(x)} / Y ${Math.round(y)}`}
+      title={`${label}: X ${Math.round(x)}px / Y ${Math.round(y)}px (Segure Alt ao arrastar para desativar o ímã central)`}
     >
       {children}
       {selected ? (
-        <span className="pointer-events-none absolute -top-6 left-0 z-50 whitespace-nowrap rounded bg-allvino-primary px-1.5 py-0.5 text-[8px] font-bold text-white shadow">
-          {label}
+        <span className="pointer-events-none absolute -top-6 left-0 z-50 flex items-center gap-1.5 whitespace-nowrap rounded bg-allvino-primary px-2 py-0.5 text-[8px] font-bold text-white shadow">
+          <span>{label}</span>
+          <span className="opacity-80">
+            ({Math.round(x)}px, {Math.round(y)}px)
+          </span>
+          {(isCenteredX || isCenteredY) && (
+            <span className="rounded bg-allvino-secondary px-1 py-0.2 text-[7px] uppercase tracking-wider text-white">
+              {isCenteredX && isCenteredY ? "Centro XY" : isCenteredX ? "Eixo X" : "Eixo Y"}
+            </span>
+          )}
         </span>
       ) : null}
     </div>

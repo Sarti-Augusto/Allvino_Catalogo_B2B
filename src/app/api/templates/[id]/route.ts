@@ -58,6 +58,10 @@ const booleanStyleKeys = [
   "showProductDescription",
   "showProductPrice",
   "showProductFooter",
+  "showProductBoxPrice",
+  "showProductCategoryBadge",
+  "showProductDiscountBadge",
+  "showProductCountryFlag",
 ];
 
 function validateTemplateStyles(styles: Record<string, unknown>): string | null {
@@ -76,10 +80,24 @@ function validateTemplateStyles(styles: Record<string, unknown>): string | null 
 
   const allowedEnums: Record<string, string[]> = {
     coverLogoVariant: ["auto", "black", "white"],
-    productLayoutPreset: ["classic", "side-right", "side-left", "price-top"],
+    productLayoutPreset: [
+      "classic",
+      "side-right",
+      "side-left",
+      "price-top",
+      "editorial-duo",
+      "commercial-grid",
+      "executive-table",
+    ],
     productDescAlign: ["left", "center", "right", "justify"],
     productPriceSide: ["left", "center", "right"],
-    fontFamily: ["Playfair Display", "Inter", "Cinzel"],
+    fontFamily: [
+      "Playfair Display",
+      "Inter",
+      "Cinzel",
+      "Cormorant Garamond",
+      "Montserrat",
+    ],
   };
   for (const [key, allowedValues] of Object.entries(allowedEnums)) {
     if (styles[key] !== undefined && (typeof styles[key] !== "string" || !allowedValues.includes(styles[key]))) {
@@ -195,5 +213,36 @@ export async function PUT(request: Request, { params }: RouteContext) {
 
     console.error("Erro ao atualizar template:", error);
     return NextResponse.json({ error: "Erro ao atualizar a configuração do template." }, { status: 500 });
+  }
+}
+
+export async function DELETE(_request: Request, { params }: RouteContext) {
+  const auth = await requireAdmin();
+  if (auth.response) return auth.response;
+
+  const { id } = await params;
+
+  try {
+    const existing = await prisma.template.findUnique({
+      where: { id },
+      select: { id: true, isActive: true },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Template não encontrado." }, { status: 404 });
+    }
+
+    if (existing.isActive) {
+      return NextResponse.json(
+        { error: "Não é possível excluir o template ativo. Ative outro template antes de excluir este." },
+        { status: 409 },
+      );
+    }
+
+    await prisma.template.delete({ where: { id } });
+    return NextResponse.json({ message: "Template excluído com sucesso." });
+  } catch (error) {
+    console.error("Erro ao excluir template:", error);
+    return NextResponse.json({ error: "Erro ao excluir o template." }, { status: 500 });
   }
 }

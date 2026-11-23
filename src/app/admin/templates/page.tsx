@@ -4,7 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { getCountryFlagUrl } from "@/lib/utils";
 import { DraggablePreviewElement } from "@/components/admin/template-editor/draggable-preview-element";
+
+type ProductLayoutPreset =
+  | "classic"
+  | "side-right"
+  | "side-left"
+  | "price-top"
+  | "editorial-duo"
+  | "commercial-grid"
+  | "executive-table";
 
 interface TemplateStyles {
   primaryColor: string;
@@ -49,7 +59,7 @@ interface TemplateStyles {
   coverVerticalOffset?: number;
 
   // Layout Presets & Angles:
-  productLayoutPreset?: "classic" | "side-right" | "side-left" | "price-top";
+  productLayoutPreset?: ProductLayoutPreset;
   productDescAngle?: number;
   productDescAlign?: "left" | "center" | "right" | "justify";
   productPriceAngle?: number;
@@ -63,6 +73,10 @@ interface TemplateStyles {
   showProductDescription?: boolean;
   showProductPrice?: boolean;
   showProductFooter?: boolean;
+  showProductBoxPrice?: boolean;
+  showProductCategoryBadge?: boolean;
+  showProductDiscountBadge?: boolean;
+  showProductCountryFlag?: boolean;
   productImgHeight?: number;
   productImgXOffset?: number;
   productImgYOffset?: number;
@@ -118,6 +132,7 @@ interface Product {
   precoOriginal: number;
   precoPromocional?: number | null;
   imagemUrl: string;
+  categoria?: string;
   notasDegustacao?: string | null;
 }
 
@@ -132,10 +147,42 @@ const DEFAULT_PREVIEW_WINE: Product = {
   teorAlcoolico: 14.5,
   precoOriginal: 5200.0,
   precoPromocional: 4800.0,
+  categoria: "Tinto",
   imagemUrl:
     "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?q=80&w=300&auto=format&fit=crop",
   notasDegustacao: "Notas complexas de frutas negras, fumo de corda, cacau e couro. Corpo encorpado, taninos aveludados e final persistente.",
 };
+
+const SOMMELIER_COLOR_PALETTES = [
+  {
+    name: "Vinous Elegance (Design System)",
+    primary: "#390009",
+    secondary: "#735c00",
+    background: "#fcf9f8",
+    text: "#1c1b1b",
+  },
+  {
+    name: "Clássico Allvino Bordeaux",
+    primary: "#80282d",
+    secondary: "#c5a880",
+    background: "#ffffff",
+    text: "#1f2937",
+  },
+  {
+    name: "Reserva Noturna (Dark Gold)",
+    primary: "#e9c349",
+    secondary: "#c5a880",
+    background: "#161314",
+    text: "#f3f0ef",
+  },
+  {
+    name: "Terroir Oliva & Ouro",
+    primary: "#2d3a2e",
+    secondary: "#b48d56",
+    background: "#faf9f5",
+    text: "#1f2421",
+  },
+];
 
 const clamp = (val: any, min: number = -450, max: number = 450): number => {
   const num = typeof val === "number" ? val : parseFloat(val);
@@ -180,6 +227,8 @@ export default function TemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [testingPdf, setTestingPdf] = useState(false);
 
   const handleSignOut = async () => {
     await createClient().auth.signOut();
@@ -212,7 +261,11 @@ export default function TemplatesPage() {
   const [showProductDescription, setShowProductDescription] = useState(true);
   const [showProductPrice, setShowProductPrice] = useState(true);
   const [showProductFooter, setShowProductFooter] = useState(true);
-  const [productLayoutPreset, setProductLayoutPreset] = useState<"classic" | "side-right" | "side-left" | "price-top">("classic");
+  const [showProductBoxPrice, setShowProductBoxPrice] = useState(true);
+  const [showProductCategoryBadge, setShowProductCategoryBadge] = useState(true);
+  const [showProductDiscountBadge, setShowProductDiscountBadge] = useState(true);
+  const [showProductCountryFlag, setShowProductCountryFlag] = useState(true);
+  const [productLayoutPreset, setProductLayoutPreset] = useState<ProductLayoutPreset>("classic");
   const [productDescAngle, setProductDescAngle] = useState(0);
   const [productDescAlign, setProductDescAlign] = useState<"left" | "center" | "right" | "justify">("center");
   const [productPriceAngle, setProductPriceAngle] = useState(0);
@@ -286,16 +339,37 @@ export default function TemplatesPage() {
   const [productDescXOffset, setProductDescXOffset] = useState(0);
   const [productDescYOffset, setProductDescYOffset] = useState(0);
 
-  // Preview tab
-  const [previewTab, setPreviewTab] = useState<"cover" | "product">("product");
+  // Preview tab ("cover" | "index" | "product")
+  const [previewTab, setPreviewTab] = useState<"cover" | "index" | "product">("product");
   const previewRef = useRef<HTMLDivElement>(null);
   const [previewScale, setPreviewScale] = useState(0.72);
   const [selectedPreviewElement, setSelectedPreviewElement] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
 
+  // Undo / Redo History Stack
+  const [historyStack, setHistoryStack] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+  const isApplyingHistoryRef = useRef(false);
+
   // Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<"success" | "error">("success");
+
+  // Select preview element AND auto-sync the left sidebar tab
+  const handleSelectPreviewElement = (elementId: string | null) => {
+    setSelectedPreviewElement(elementId);
+    if (!elementId) return;
+    if (elementId.startsWith("cover-")) {
+      setActiveTab("cover");
+      setPreviewTab("cover");
+    } else if (elementId === "product-bottle") {
+      setActiveTab("bottle");
+    } else if (elementId === "product-price") {
+      setActiveTab("price");
+    } else if (elementId === "product-header" || elementId === "product-description") {
+      setActiveTab("text");
+    }
+  };
 
   useEffect(() => {
     fetchTemplates();
@@ -436,103 +510,117 @@ export default function TemplatesPage() {
     showToast("Posições e ângulos centralizados. Salve para aplicar.");
   };
 
+  const applyStylesObject = (s: TemplateStyles) => {
+    setPrimaryColor(s.primaryColor || "#80282d");
+    setSecondaryColor(s.secondaryColor || "#c5a880");
+    setBackgroundColor(s.backgroundColor || "#ffffff");
+    setTextColor(s.textColor || "#1f2937");
+    setFontFamily(s.fontFamily || "Playfair Display");
+    setHeaderTitle(s.headerTitle || "CATÁLOGO DE VINHOS");
+    setFooterText(s.footerText || "");
+    setBackgroundImageUrl(s.backgroundImageUrl || "");
+    setCoverImageUrl(s.coverImageUrl || "");
+
+    // Presets & Angles
+    setShowProductName(s.showProductName !== false);
+    setShowProductOrigin(s.showProductOrigin !== false);
+    setShowProductDivider(s.showProductDivider !== false);
+    setShowProductBottle(s.showProductBottle !== false);
+    setShowProductSpecs(s.showProductSpecs !== false);
+    setShowProductDescription(s.showProductDescription !== false);
+    setShowProductPrice(s.showProductPrice !== false);
+    setShowProductFooter(s.showProductFooter !== false);
+    setShowProductBoxPrice(s.showProductBoxPrice !== false);
+    setShowProductCategoryBadge(s.showProductCategoryBadge !== false);
+    setShowProductDiscountBadge(s.showProductDiscountBadge !== false);
+    setShowProductCountryFlag(s.showProductCountryFlag !== false);
+    setProductLayoutPreset(s.productLayoutPreset || "classic");
+    setProductDescAngle(typeof s.productDescAngle === "number" ? s.productDescAngle : 0);
+    setProductDescAlign(s.productDescAlign || "center");
+    setProductPriceAngle(typeof s.productPriceAngle === "number" ? s.productPriceAngle : 0);
+
+    // Cover
+    setShowCoverLogo(s.showCoverLogo !== false);
+    setShowCoverDivider(s.showCoverDivider !== false);
+    setShowCoverTitle(s.showCoverTitle !== false);
+    setShowCoverSubtitle(s.showCoverSubtitle !== false);
+    setShowCoverFooter(s.showCoverFooter !== false);
+    setCoverSubtitle(s.coverSubtitle || "CATÁLOGO EXCLUSIVO B2B");
+    setCoverLogoHeight(typeof s.coverLogoHeight === "number" ? s.coverLogoHeight : 110);
+    setCoverLogoAngle(typeof s.coverLogoAngle === "number" ? s.coverLogoAngle : 0);
+    setCoverLogoXOffset(clamp(s.coverLogoXOffset));
+    setCoverLogoYOffset(clamp(s.coverLogoYOffset));
+    setCoverLogoVariant(s.coverLogoVariant || "auto");
+
+    setCoverTitleColor(s.coverTitleColor || "");
+    setCoverTitleFontSize(typeof s.coverTitleFontSize === "number" ? s.coverTitleFontSize : 30);
+    setCoverTitleAngle(typeof s.coverTitleAngle === "number" ? s.coverTitleAngle : 0);
+    setCoverTitleXOffset(clamp(s.coverTitleXOffset));
+    setCoverTitleYOffset(clamp(s.coverTitleYOffset));
+
+    setCoverSubtitleColor(s.coverSubtitleColor || "");
+    setCoverSubtitleFontSize(typeof s.coverSubtitleFontSize === "number" ? s.coverSubtitleFontSize : 11);
+    setCoverSubtitleAngle(typeof s.coverSubtitleAngle === "number" ? s.coverSubtitleAngle : 0);
+    setCoverSubtitleXOffset(clamp(s.coverSubtitleXOffset));
+    setCoverSubtitleYOffset(clamp(s.coverSubtitleYOffset));
+
+    setCoverFooterColor(s.coverFooterColor || "");
+    setCoverFooterFontSize(typeof s.coverFooterFontSize === "number" ? s.coverFooterFontSize : 9);
+    setCoverFooterXOffset(clamp(s.coverFooterXOffset));
+    setCoverFooterYOffset(clamp(s.coverFooterYOffset));
+    setCoverVerticalOffset(clamp(s.coverVerticalOffset));
+
+    // Bottle
+    setProductImgHeight(typeof s.productImgHeight === "number" ? s.productImgHeight : 520);
+    setProductImgXOffset(clamp(s.productImgXOffset));
+    setProductImgYOffset(clamp(s.productImgYOffset));
+    setProductImgAngle(typeof s.productImgAngle === "number" ? s.productImgAngle : 0);
+
+    // Product Header
+    setProductNameFontSize(typeof s.productNameFontSize === "number" ? s.productNameFontSize : 28);
+    setProductNameXOffset(clamp(s.productNameXOffset));
+    setProductNameYOffset(clamp(s.productNameYOffset));
+
+    setProductSpecsFontSize(typeof s.productSpecsFontSize === "number" ? s.productSpecsFontSize : 11);
+    setProductOriginYOffset(clamp(s.productOriginYOffset));
+
+    setProductPagePadding(typeof s.productPagePadding === "number" ? s.productPagePadding : 28);
+    setProductTextMaxWidth(typeof s.productTextMaxWidth === "number" ? s.productTextMaxWidth : 560);
+
+    // Price Block
+    setProductNameColor(s.productNameColor || "");
+    setProductSpecsColor(s.productSpecsColor || "");
+    setProductDescColor(s.productDescColor || "");
+    setProductPriceColor(s.productPriceColor || "");
+    setProductPriceLabelColor(s.productPriceLabelColor || "");
+    setProductPriceInfoColor(s.productPriceInfoColor || "");
+    setProductPriceSide(s.productPriceSide || "right");
+    setProductPriceXOffset(clamp(s.productPriceXOffset, -350, 350));
+    setProductPriceYOffset(clamp(s.productPriceYOffset, -450, 450));
+
+    setProductPriceLabelFontSize(typeof s.productPriceLabelFontSize === "number" ? s.productPriceLabelFontSize : 9.5);
+    setProductPriceInfoFontSize(typeof s.productPriceInfoFontSize === "number" ? s.productPriceInfoFontSize : 10);
+    setProductPriceValueFontSize(typeof s.productPriceValueFontSize === "number" ? s.productPriceValueFontSize : 24);
+
+    // Description Block
+    setProductDescFontSize(typeof s.productDescFontSize === "number" ? s.productDescFontSize : 14.5);
+    setProductDescXOffset(clamp(s.productDescXOffset));
+    setProductDescYOffset(clamp(s.productDescYOffset, -150, 150));
+  };
+
   const applyTemplate = (template: Template) => {
     setSelectedTemplate(template);
     setNome(template.nome);
     setIsActive(template.isActive);
     try {
       const s: TemplateStyles = JSON.parse(template.cssStyles);
-      setPrimaryColor(s.primaryColor || "#80282d");
-      setSecondaryColor(s.secondaryColor || "#c5a880");
-      setBackgroundColor(s.backgroundColor || "#ffffff");
-      setTextColor(s.textColor || "#1f2937");
-      setFontFamily(s.fontFamily || "Playfair Display");
-      setHeaderTitle(s.headerTitle || "CATÁLOGO DE VINHOS");
-      setFooterText(s.footerText || "");
-      setBackgroundImageUrl(s.backgroundImageUrl || "");
-      setCoverImageUrl(s.coverImageUrl || "");
-
-      // Presets & Angles
-      setShowProductName(s.showProductName !== false);
-      setShowProductOrigin(s.showProductOrigin !== false);
-      setShowProductDivider(s.showProductDivider !== false);
-      setShowProductBottle(s.showProductBottle !== false);
-      setShowProductSpecs(s.showProductSpecs !== false);
-      setShowProductDescription(s.showProductDescription !== false);
-      setShowProductPrice(s.showProductPrice !== false);
-      setShowProductFooter(s.showProductFooter !== false);
-      setProductLayoutPreset(s.productLayoutPreset || "classic");
-      setProductDescAngle(typeof s.productDescAngle === "number" ? s.productDescAngle : 0);
-      setProductDescAlign(s.productDescAlign || "center");
-      setProductPriceAngle(typeof s.productPriceAngle === "number" ? s.productPriceAngle : 0);
-
-      // Cover
-      setShowCoverLogo(s.showCoverLogo !== false);
-      setShowCoverDivider(s.showCoverDivider !== false);
-      setShowCoverTitle(s.showCoverTitle !== false);
-      setShowCoverSubtitle(s.showCoverSubtitle !== false);
-      setShowCoverFooter(s.showCoverFooter !== false);
-      setCoverSubtitle(s.coverSubtitle || "CATÁLOGO EXCLUSIVO B2B");
-      setCoverLogoHeight(typeof s.coverLogoHeight === "number" ? s.coverLogoHeight : 110);
-      setCoverLogoAngle(typeof s.coverLogoAngle === "number" ? s.coverLogoAngle : 0);
-      setCoverLogoXOffset(clamp(s.coverLogoXOffset));
-      setCoverLogoYOffset(clamp(s.coverLogoYOffset));
-      setCoverLogoVariant(s.coverLogoVariant || "auto");
-
-      setCoverTitleColor(s.coverTitleColor || "");
-      setCoverTitleFontSize(typeof s.coverTitleFontSize === "number" ? s.coverTitleFontSize : 30);
-      setCoverTitleAngle(typeof s.coverTitleAngle === "number" ? s.coverTitleAngle : 0);
-      setCoverTitleXOffset(clamp(s.coverTitleXOffset));
-      setCoverTitleYOffset(clamp(s.coverTitleYOffset));
-
-      setCoverSubtitleColor(s.coverSubtitleColor || "");
-      setCoverSubtitleFontSize(typeof s.coverSubtitleFontSize === "number" ? s.coverSubtitleFontSize : 11);
-      setCoverSubtitleAngle(typeof s.coverSubtitleAngle === "number" ? s.coverSubtitleAngle : 0);
-      setCoverSubtitleXOffset(clamp(s.coverSubtitleXOffset));
-      setCoverSubtitleYOffset(clamp(s.coverSubtitleYOffset));
-
-      setCoverFooterColor(s.coverFooterColor || "");
-      setCoverFooterFontSize(typeof s.coverFooterFontSize === "number" ? s.coverFooterFontSize : 9);
-      setCoverFooterXOffset(clamp(s.coverFooterXOffset));
-      setCoverFooterYOffset(clamp(s.coverFooterYOffset));
-      setCoverVerticalOffset(clamp(s.coverVerticalOffset));
-
-      // Bottle
-      setProductImgHeight(typeof s.productImgHeight === "number" ? s.productImgHeight : 520);
-      setProductImgXOffset(clamp(s.productImgXOffset));
-      setProductImgYOffset(clamp(s.productImgYOffset));
-      setProductImgAngle(typeof s.productImgAngle === "number" ? s.productImgAngle : 0);
-
-      // Product Header
-      setProductNameFontSize(typeof s.productNameFontSize === "number" ? s.productNameFontSize : 28);
-      setProductNameXOffset(clamp(s.productNameXOffset));
-      setProductNameYOffset(clamp(s.productNameYOffset));
-
-      setProductSpecsFontSize(typeof s.productSpecsFontSize === "number" ? s.productSpecsFontSize : 11);
-      setProductOriginYOffset(clamp(s.productOriginYOffset));
-
-      setProductPagePadding(typeof s.productPagePadding === "number" ? s.productPagePadding : 28);
-      setProductTextMaxWidth(typeof s.productTextMaxWidth === "number" ? s.productTextMaxWidth : 560);
-
-      // Price Block
-      setProductNameColor(s.productNameColor || "");
-      setProductSpecsColor(s.productSpecsColor || "");
-      setProductDescColor(s.productDescColor || "");
-      setProductPriceColor(s.productPriceColor || "");
-      setProductPriceLabelColor(s.productPriceLabelColor || "");
-      setProductPriceInfoColor(s.productPriceInfoColor || "");
-      setProductPriceSide(s.productPriceSide || "right");
-      setProductPriceXOffset(clamp(s.productPriceXOffset, -350, 350));
-      setProductPriceYOffset(clamp(s.productPriceYOffset, -450, 450));
-
-      setProductPriceLabelFontSize(typeof s.productPriceLabelFontSize === "number" ? s.productPriceLabelFontSize : 9.5);
-      setProductPriceInfoFontSize(typeof s.productPriceInfoFontSize === "number" ? s.productPriceInfoFontSize : 10);
-      setProductPriceValueFontSize(typeof s.productPriceValueFontSize === "number" ? s.productPriceValueFontSize : 24);
-
-      // Description Block
-      setProductDescFontSize(typeof s.productDescFontSize === "number" ? s.productDescFontSize : 14.5);
-      setProductDescXOffset(clamp(s.productDescXOffset));
-      setProductDescYOffset(clamp(s.productDescYOffset, -150, 150));
+      isApplyingHistoryRef.current = true;
+      applyStylesObject(s);
+      setHistoryStack([JSON.stringify(s)]);
+      setHistoryIndex(0);
+      setTimeout(() => {
+        isApplyingHistoryRef.current = false;
+      }, 50);
     } catch {
       console.error("Erro ao interpretar estilos do template.");
     }
@@ -575,6 +663,10 @@ export default function TemplatesPage() {
     showProductDescription,
     showProductPrice,
     showProductFooter,
+    showProductBoxPrice,
+    showProductCategoryBadge,
+    showProductDiscountBadge,
+    showProductCountryFlag,
     productLayoutPreset,
     productDescAngle,
     productDescAlign,
@@ -632,6 +724,144 @@ export default function TemplatesPage() {
     productDescXOffset: clamp(productDescXOffset),
     productDescYOffset: clamp(productDescYOffset, -150, 150),
   });
+
+  // Track changes in history stack for Undo/Redo (debounced)
+  const serializedCurrentStyles = JSON.stringify(getCurrentStyles());
+  useEffect(() => {
+    if (loading || !selectedTemplate || isApplyingHistoryRef.current) return;
+    const timer = window.setTimeout(() => {
+      setHistoryStack((prev) => {
+        const currentAtIdx = prev[historyIndex];
+        if (currentAtIdx === serializedCurrentStyles) return prev;
+        const next = prev.slice(0, historyIndex + 1);
+        next.push(serializedCurrentStyles);
+        const trimmed = next.length > 35 ? next.slice(next.length - 35) : next;
+        setHistoryIndex(trimmed.length - 1);
+        return trimmed;
+      });
+    }, 280);
+    return () => window.clearTimeout(timer);
+  }, [serializedCurrentStyles, loading, selectedTemplate, historyIndex]);
+
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex >= 0 && historyIndex < historyStack.length - 1;
+
+  const handleUndo = () => {
+    if (!canUndo) return;
+    const targetIdx = historyIndex - 1;
+    try {
+      const snapshot = JSON.parse(historyStack[targetIdx]) as TemplateStyles;
+      isApplyingHistoryRef.current = true;
+      applyStylesObject(snapshot);
+      setHistoryIndex(targetIdx);
+      setIsDirty(true);
+      window.setTimeout(() => {
+        isApplyingHistoryRef.current = false;
+      }, 60);
+    } catch {
+      // ignore invalid snapshot
+    }
+  };
+
+  const handleRedo = () => {
+    if (!canRedo) return;
+    const targetIdx = historyIndex + 1;
+    try {
+      const snapshot = JSON.parse(historyStack[targetIdx]) as TemplateStyles;
+      isApplyingHistoryRef.current = true;
+      applyStylesObject(snapshot);
+      setHistoryIndex(targetIdx);
+      setIsDirty(true);
+      window.setTimeout(() => {
+        isApplyingHistoryRef.current = false;
+      }, 60);
+    } catch {
+      // ignore invalid snapshot
+    }
+  };
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
+        if (event.shiftKey) {
+          event.preventDefault();
+          handleRedo();
+        } else {
+          event.preventDefault();
+          handleUndo();
+        }
+      } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "y") {
+        event.preventDefault();
+        handleRedo();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
+
+  const handleDeleteTemplate = async () => {
+    if (!selectedTemplate || selectedTemplate.isActive || deleting) return;
+    if (!window.confirm(`Tem certeza que deseja excluir permanentemente o template "${selectedTemplate.nome}"?`)) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/templates/${selectedTemplate.id}`, {
+        method: "DELETE",
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        showToast(body?.error || "Não foi possível excluir o template.", "error");
+        return;
+      }
+      showToast("Template excluído com sucesso.");
+      setIsDirty(false);
+      await fetchTemplates();
+    } catch {
+      showToast("Erro de conexão ao excluir o template.", "error");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleTestDraftPdf = async () => {
+    if (testingPdf) return;
+    setTestingPdf(true);
+    try {
+      const limitCount =
+        productLayoutPreset === "executive-table"
+          ? 12
+          : productLayoutPreset === "commercial-grid"
+          ? 4
+          : productLayoutPreset === "editorial-duo"
+          ? 2
+          : 2;
+      const res = await fetch("/api/export-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          limit: limitCount,
+          includeIndex: true,
+          previewStyles: getCurrentStyles(),
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        showToast(body?.error || "Não foi possível gerar o PDF de teste.", "error");
+        return;
+      }
+      const pdfBlob = await res.blob();
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      window.open(blobUrl, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+      showToast("PDF de teste gerado com os ajustes atuais da tela!");
+    } catch {
+      showToast("Falha ao gerar o PDF de teste.", "error");
+    } finally {
+      setTestingPdf(false);
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -788,10 +1018,14 @@ export default function TemplatesPage() {
 
   const previewFont =
     fontFamily === "Inter"
-      ? "Inter, sans-serif"
+      ? "'Inter', sans-serif"
       : fontFamily === "Cinzel"
-      ? "Georgia, serif"
-      : "Georgia, serif";
+      ? "'Cinzel', Georgia, serif"
+      : fontFamily === "Cormorant Garamond"
+      ? "'Cormorant Garamond', Georgia, serif"
+      : fontFamily === "Montserrat"
+      ? "'Montserrat', sans-serif"
+      : "'Playfair Display', Georgia, serif";
 
   const resolvedCoverTitleColor = coverTitleColor || (hasCoverBg ? "#ffffff" : primaryColor);
   const resolvedCoverSubColor = coverSubtitleColor || (hasCoverBg ? "rgba(255,255,255,0.78)" : secondaryColor);
@@ -1019,20 +1253,40 @@ export default function TemplatesPage() {
               Editor Dinâmico de Templates PDF
             </h1>
             <p className="text-allvino-on-surface-variant text-sm mt-1">
-              Posicionamento 100% autônomo e livre para o Preço (qualquer coordenada X/Y e ângulo na folha A4).
+              Layouts editoriais de 1, 2, 4 ou 12 produtos por página, com posicionamento livre e ímã de alinhamento.
             </p>
             <p className="text-allvino-on-surface-variant/80 text-[11px] mt-2">
-              As medidas de posição, altura e fonte são em pixels do PDF A4. A prévia é redimensionada proporcionalmente para manter a mesma escala da exportação.
+              Clique em qualquer elemento na folha A4 para abrir seus controles automaticamente. Use Ctrl+Z / Ctrl+Y para desfazer ou refazer.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={resetAllPositions}
-            className="px-4 py-2 bg-allvino-surface-container-high hover:bg-allvino-secondary hover:text-white border border-allvino-outline-variant text-allvino-primary rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1.5 self-start md:self-auto"
-          >
-            <span>🔄</span>
-            <span>Resetar Posições (Centralizar)</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
+            <button
+              type="button"
+              disabled={!canUndo}
+              onClick={handleUndo}
+              title="Desfazer última alteração (Ctrl+Z)"
+              className="px-3 py-2 bg-white hover:bg-allvino-surface-container-high border border-allvino-outline-variant text-allvino-primary rounded-lg text-xs font-bold transition shadow-sm disabled:opacity-40"
+            >
+              ↩ Desfazer
+            </button>
+            <button
+              type="button"
+              disabled={!canRedo}
+              onClick={handleRedo}
+              title="Refazer alteração (Ctrl+Y)"
+              className="px-3 py-2 bg-white hover:bg-allvino-surface-container-high border border-allvino-outline-variant text-allvino-primary rounded-lg text-xs font-bold transition shadow-sm disabled:opacity-40"
+            >
+              ↪ Refazer
+            </button>
+            <button
+              type="button"
+              onClick={resetAllPositions}
+              className="px-4 py-2 bg-allvino-surface-container-high hover:bg-allvino-secondary hover:text-white border border-allvino-outline-variant text-allvino-primary rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1.5"
+            >
+              <span>🔄</span>
+              <span>Centralizar Elementos</span>
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -1051,7 +1305,7 @@ export default function TemplatesPage() {
                 <label className="block text-xs font-semibold uppercase tracking-wider text-allvino-primary mb-2.5">
                   Estilo Base do Catálogo
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {templates.map((t) => (
                     <button
                       key={t.id}
@@ -1062,7 +1316,7 @@ export default function TemplatesPage() {
                           : "bg-allvino-surface-container-high border-allvino-outline-variant text-allvino-text hover:bg-allvino-surface-container-highest"
                       }`}
                     >
-                      <span>{t.nome}</span>
+                      <span className="truncate max-w-full">{t.nome}</span>
                       {t.isActive && (
                         <span className="px-1.5 py-0.5 rounded-full text-[8.5px] bg-allvino-secondary text-white font-extrabold tracking-wide">
                           ATIVO
@@ -1071,44 +1325,60 @@ export default function TemplatesPage() {
                     </button>
                   ))}
                 </div>
-                <div className="mt-3 flex items-center justify-between gap-3 border-t border-allvino-outline-variant/20 pt-3">
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-allvino-outline-variant/20 pt-3">
                   <span className="text-[10px] text-allvino-on-surface-variant">
-                    {isDirty ? "Salve as alterações antes de duplicar." : "A cópia é criada como template inativo."}
+                    {isDirty ? "Salve antes de duplicar." : "Gerencie cópias e variações de campanha."}
                   </span>
-                  <button
-                    type="button"
-                    onClick={handleDuplicateTemplate}
-                    disabled={!selectedTemplate || isDirty || duplicating}
-                    className="shrink-0 rounded border border-allvino-outline-variant px-3 py-1.5 text-[10px] font-bold text-allvino-primary transition hover:bg-allvino-surface-container-high disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    {duplicating ? "Duplicando..." : "Duplicar template"}
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    {selectedTemplate && !selectedTemplate.isActive && (
+                      <button
+                        type="button"
+                        onClick={handleDeleteTemplate}
+                        disabled={deleting}
+                        className="shrink-0 rounded border border-red-200 bg-red-50 px-2.5 py-1.5 text-[10px] font-bold text-red-700 transition hover:bg-red-100 disabled:opacity-40"
+                      >
+                        {deleting ? "Excluindo..." : "Excluir"}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleDuplicateTemplate}
+                      disabled={!selectedTemplate || isDirty || duplicating}
+                      className="shrink-0 rounded border border-allvino-outline-variant px-3 py-1.5 text-[10px] font-bold text-allvino-primary transition hover:bg-allvino-surface-container-high disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {duplicating ? "Duplicando..." : "Duplicar template"}
+                    </button>
+                  </div>
                 </div>
               </div>
 
               {/* LAYOUT PRESETS SELECTION */}
               <div className="glass-panel p-5 rounded-xl border border-allvino-outline-variant/30 space-y-3">
                 <label className="block text-xs font-bold uppercase tracking-wider text-allvino-primary">
-                  📰 Estrutura / Preset do Layout do Produto
+                  📰 Estrutura & Densidade do Catálogo PDF
                 </label>
                 <p className="text-[10px] text-allvino-on-surface-variant leading-relaxed">
-                  Escolha se o texto fica ao lado da garrafa, no topo ou embaixo.
+                  Escolha entre layouts de destaque (1 vinho por folha A4) ou layouts comerciais multi-produto (2, 4 ou 12 vinhos por folha).
+                </p>
+                <p className="text-[9.5px] font-bold uppercase tracking-wider text-allvino-secondary">
+                  Destaque Sommelier (1 produto por página)
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { id: "side-right", title: "📰 Lado a Lado (Revista)", desc: "Garrafa na Esquerda, Texto na Direita" },
-                    { id: "side-left", title: "📰 Lado a Lado Inverso", desc: "Garrafa na Direita, Texto na Esquerda" },
+                    { id: "side-right", title: "📰 Lado a Lado (Revista)", desc: "Garrafa à Esquerda, Texto à Direita" },
+                    { id: "side-left", title: "📰 Lado a Lado Inverso", desc: "Garrafa à Direita, Texto à Esquerda" },
                     { id: "classic", title: "🍾 Clássico Vertical", desc: "Garrafa no Centro, Texto em Baixo" },
-                    { id: "price-top", title: "🔝 Preço no Topo", desc: "Layout com Preço no Topo" },
+                    { id: "price-top", title: "🔝 Preço no Topo", desc: "Layout com Preço em Destaque no Topo" },
                   ].map((p) => (
                     <button
                       key={p.id}
                       type="button"
                       onClick={() => {
-                        setProductLayoutPreset(p.id as any);
+                        setProductLayoutPreset(p.id as ProductLayoutPreset);
+                        setPreviewTab("product");
                         setIsDirty(true);
                       }}
-                      className={`p-3 rounded-lg text-left transition border flex flex-col gap-1 ${
+                      className={`p-2.5 rounded-lg text-left transition border flex flex-col gap-0.5 ${
                         productLayoutPreset === p.id
                           ? "bg-allvino-primary text-white border-allvino-primary shadow-md"
                           : "bg-allvino-surface-container-low border-allvino-outline-variant hover:bg-allvino-surface-container-high"
@@ -1116,6 +1386,38 @@ export default function TemplatesPage() {
                     >
                       <span className="text-xs font-bold">{p.title}</span>
                       <span className={`text-[9.5px] ${productLayoutPreset === p.id ? "text-white/80" : "text-allvino-on-surface-variant/70"}`}>
+                        {p.desc}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <p className="text-[9.5px] font-bold uppercase tracking-wider text-allvino-secondary pt-1">
+                  Alta Densidade Comercial B2B (Multi-Produto)
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: "editorial-duo", title: "📑 Duplo Editorial", desc: "2 vinhos / pág." },
+                    { id: "commercial-grid", title: "🍱 Grade B2B 2×2", desc: "4 vinhos / pág." },
+                    { id: "executive-table", title: "📊 Tabela Executiva", desc: "12 vinhos / pág." },
+                  ].map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        setProductLayoutPreset(p.id as ProductLayoutPreset);
+                        setPreviewTab("product");
+                        setSelectedPreviewElement(null);
+                        setIsDirty(true);
+                      }}
+                      className={`p-2.5 rounded-lg text-left transition border flex flex-col gap-0.5 ${
+                        productLayoutPreset === p.id
+                          ? "bg-allvino-primary text-white border-allvino-primary shadow-md"
+                          : "bg-allvino-surface-container-low border-allvino-outline-variant hover:bg-allvino-surface-container-high"
+                      }`}
+                    >
+                      <span className="text-[11px] font-bold">{p.title}</span>
+                      <span className={`text-[9px] ${productLayoutPreset === p.id ? "text-white/80" : "text-allvino-on-surface-variant/70"}`}>
                         {p.desc}
                       </span>
                     </button>
@@ -1182,11 +1484,13 @@ export default function TemplatesPage() {
                 {activeTab === "price" && (
                   <div className="space-y-4">
                     <p className="text-[11px] text-allvino-on-surface-variant leading-relaxed">
-                      O Preço B2B pode ser ocultado e posicionado por deslocamento em pixels. Valores positivos movem para direita/baixo; negativos para esquerda/cima.
+                      Configure a exibição do preço unitário, cálculo automático da caixa com 6 garrafas, selo de desconto e posição livre na folha A4.
                     </p>
 
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <VisibilityToggle label="Exibir preço B2B" checked={showProductPrice} onChange={setShowProductPrice} />
+                      <VisibilityToggle label="Calcular Caixa c/ 6 (R$)" checked={showProductBoxPrice} onChange={setShowProductBoxPrice} />
+                      <VisibilityToggle label="Selo de desconto (% OFF)" checked={showProductDiscountBadge} onChange={setShowProductDiscountBadge} />
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
@@ -1493,6 +1797,8 @@ export default function TemplatesPage() {
                     <div className="grid grid-cols-2 gap-2">
                       <VisibilityToggle label="Exibir nome do vinho" checked={showProductName} onChange={setShowProductName} />
                       <VisibilityToggle label="Exibir origem/região" checked={showProductOrigin} onChange={setShowProductOrigin} />
+                      <VisibilityToggle label="Exibir bandeira do país" checked={showProductCountryFlag} onChange={setShowProductCountryFlag} />
+                      <VisibilityToggle label="Exibir selo de categoria" checked={showProductCategoryBadge} onChange={setShowProductCategoryBadge} />
                       <VisibilityToggle label="Exibir linha divisória" checked={showProductDivider} onChange={setShowProductDivider} />
                       <VisibilityToggle label="Exibir ficha técnica" checked={showProductSpecs} onChange={setShowProductSpecs} />
                       <VisibilityToggle label="Exibir notas de degustação" checked={showProductDescription} onChange={setShowProductDescription} />
@@ -2055,9 +2361,11 @@ export default function TemplatesPage() {
                             onChange={(e) => setFontFamily(e.target.value)}
                             className="w-full rounded border bg-allvino-surface-container-low p-2 text-xs"
                           >
-                            <option value="Playfair Display">Playfair Display</option>
-                            <option value="Inter">Inter</option>
-                            <option value="Cinzel">Cinzel</option>
+                            <option value="Playfair Display">Playfair Display (Editorial Clássica)</option>
+                            <option value="Cormorant Garamond">Cormorant Garamond (Alta Gastronomia)</option>
+                            <option value="Cinzel">Cinzel (Reserva Imperial)</option>
+                            <option value="Inter">Inter (Moderna & Limpa)</option>
+                            <option value="Montserrat">Montserrat (Geométrica Contemporânea)</option>
                           </select>
                         </div>
                       </div>
@@ -2078,6 +2386,39 @@ export default function TemplatesPage() {
                             onChange={(e) => handleImportConfiguration(e.target.files?.[0])}
                           />
                         </label>
+                      </div>
+                    </div>
+
+                    {/* Curated Sommelier Color Palettes */}
+                    <div className="space-y-2 pb-3 border-b border-allvino-outline-variant/20">
+                      <p className="text-[11px] font-bold text-allvino-primary">Paletas Sommelier Curadas (1 Clique)</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {SOMMELIER_COLOR_PALETTES.map((palette) => (
+                          <button
+                            key={palette.name}
+                            type="button"
+                            onClick={() => {
+                              setPrimaryColor(palette.primary);
+                              setSecondaryColor(palette.secondary);
+                              setBackgroundColor(palette.background);
+                              setTextColor(palette.text);
+                              setProductNameColor("");
+                              setProductSpecsColor("");
+                              setProductDescColor("");
+                              setProductPriceColor("");
+                              setIsDirty(true);
+                              showToast(`Paleta "${palette.name}" aplicada.`);
+                            }}
+                            className="flex items-center gap-2 rounded-lg border border-allvino-outline-variant/40 bg-allvino-surface-container-low p-2 text-left transition hover:border-allvino-primary hover:bg-white"
+                          >
+                            <span className="flex shrink-0 -space-x-1">
+                              <span className="h-4 w-4 rounded-full border border-white shadow-sm" style={{ background: palette.primary }} />
+                              <span className="h-4 w-4 rounded-full border border-white shadow-sm" style={{ background: palette.secondary }} />
+                              <span className="h-4 w-4 rounded-full border border-gray-300 shadow-sm" style={{ background: palette.background }} />
+                            </span>
+                            <span className="truncate text-[10px] font-bold text-allvino-text">{palette.name}</span>
+                          </button>
+                        ))}
                       </div>
                     </div>
 
@@ -2210,8 +2551,9 @@ export default function TemplatesPage() {
                 {/* Preview Controls & Real Wine Selector */}
                 <div className="mb-3 space-y-2 px-1">
                   <div className="flex flex-wrap justify-between items-center gap-2">
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-1.5">
                       <button
+                        type="button"
                         onClick={() => {
                           setPreviewTab("cover");
                           setSelectedPreviewElement(null);
@@ -2222,9 +2564,24 @@ export default function TemplatesPage() {
                             : "bg-allvino-surface-container-high border-allvino-outline-variant text-allvino-text hover:border-allvino-primary"
                         }`}
                       >
-                        Capa (Preview)
+                        1. Capa
                       </button>
                       <button
+                        type="button"
+                        onClick={() => {
+                          setPreviewTab("index");
+                          setSelectedPreviewElement(null);
+                        }}
+                        className={`px-3 py-1.5 rounded text-xs font-bold transition border ${
+                          previewTab === "index"
+                            ? "bg-allvino-primary border-allvino-primary text-white"
+                            : "bg-allvino-surface-container-high border-allvino-outline-variant text-allvino-text hover:border-allvino-primary"
+                        }`}
+                      >
+                        2. Sumário
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => {
                           setPreviewTab("product");
                           setSelectedPreviewElement(null);
@@ -2235,10 +2592,10 @@ export default function TemplatesPage() {
                             : "bg-allvino-surface-container-high border-allvino-outline-variant text-allvino-text hover:border-allvino-primary"
                         }`}
                       >
-                        Página de Produto
+                        3. Página de Produto
                       </button>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <span className="text-[10px] text-allvino-primary font-bold px-2 py-0.5 rounded bg-amber-50 border border-amber-200" title="Proporção 1:1.414 (1200×1700 px recomendado)">
                         A4 · 1200 × 1700 px
                       </span>
@@ -2252,16 +2609,17 @@ export default function TemplatesPage() {
                         }`}
                         title="Ativar/desativar visualização de margens de segurança (respiro de 50px)"
                       >
-                        {showSafetyGuides ? "Guias de Segurança (Ativas)" : "Mostrar Guias"}
+                        {showSafetyGuides ? "Guias (Ativas)" : "Mostrar Guias"}
                       </button>
-                      <a
-                        href="/api/export-pdf?limit=1"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="rounded border border-allvino-outline-variant bg-white px-2.5 py-1.5 text-[9px] font-bold text-allvino-primary hover:bg-allvino-surface-container-high"
+                      <button
+                        type="button"
+                        onClick={handleTestDraftPdf}
+                        disabled={testingPdf}
+                        className="rounded border border-allvino-primary bg-allvino-primary/10 px-2.5 py-1 text-[9px] font-extrabold text-allvino-primary transition hover:bg-allvino-primary hover:text-white disabled:opacity-50"
+                        title="Gerar um PDF real agora usando as configurações atuais da tela (mesmo sem publicar)"
                       >
-                        Testar PDF publicado
-                      </a>
+                        {testingPdf ? "Gerando PDF..." : "🧪 Testar PDF (Rascunho Atual)"}
+                      </button>
                     </div>
                   </div>
 
@@ -2269,7 +2627,7 @@ export default function TemplatesPage() {
                   {previewTab === "product" && dbWines.length > 0 && (
                     <div className="flex items-center gap-2 bg-allvino-surface-container-low p-2 rounded-lg border border-allvino-outline-variant/30">
                       <span className="text-[10px] font-bold text-allvino-primary uppercase tracking-wider whitespace-nowrap">
-                        🍷 Vinho em Exibição:
+                        🍷 Vinho Principal:
                       </span>
                       <select
                         value={selectedWineId}
@@ -2290,10 +2648,10 @@ export default function TemplatesPage() {
                       <p className="text-[10px] font-bold text-allvino-primary">
                         {selectedPreviewElement
                           ? `Selecionado: ${previewElementLabels[selectedPreviewElement]}`
-                          : "Clique em um elemento da prévia para selecioná-lo"}
+                          : "Clique em um elemento da prévia para abrir sua aba e posicioná-lo"}
                       </p>
                       <p className="text-[9px] text-allvino-on-surface-variant">
-                        Arraste livremente ou use as setas. Segure Shift para mover 10 px.
+                        Arraste com ímã central automático (segure Alt para livre) ou use as setas (Shift = 10 px).
                       </p>
                     </div>
                     <div className="flex items-center gap-1">
@@ -2338,7 +2696,7 @@ export default function TemplatesPage() {
                     backgroundImage:
                       previewTab === "cover" && hasCoverBg
                         ? `url(${coverImageUrl})`
-                        : previewTab === "product" && backgroundImageUrl
+                        : (previewTab === "product" || previewTab === "index") && backgroundImageUrl
                         ? `url(${backgroundImageUrl})`
                         : "none",
                     backgroundSize: "cover",
@@ -2361,6 +2719,7 @@ export default function TemplatesPage() {
                       </span>
                     </div>
                   ) : null}
+
                   {/* ── COVER PREVIEW ── */}
                   {previewTab === "cover" && (
                     <div className="h-full flex flex-col items-center justify-center relative">
@@ -2401,7 +2760,7 @@ export default function TemplatesPage() {
                               setCoverLogoYOffset(y);
                               setIsDirty(true);
                             }}
-                            onSelect={setSelectedPreviewElement}
+                            onSelect={handleSelectPreviewElement}
                             rotation={coverLogoAngle}
                             scale={previewScale}
                             selected={selectedPreviewElement === "cover-logo"}
@@ -2438,7 +2797,7 @@ export default function TemplatesPage() {
                               setCoverTitleYOffset(y);
                               setIsDirty(true);
                             }}
-                            onSelect={setSelectedPreviewElement}
+                            onSelect={handleSelectPreviewElement}
                             rotation={coverTitleAngle}
                             scale={previewScale}
                             selected={selectedPreviewElement === "cover-title"}
@@ -2469,7 +2828,7 @@ export default function TemplatesPage() {
                               setCoverSubtitleYOffset(y);
                               setIsDirty(true);
                             }}
-                            onSelect={setSelectedPreviewElement}
+                            onSelect={handleSelectPreviewElement}
                             rotation={coverSubtitleAngle}
                             scale={previewScale}
                             selected={selectedPreviewElement === "cover-subtitle"}
@@ -2498,7 +2857,7 @@ export default function TemplatesPage() {
                             setCoverFooterYOffset(y);
                             setIsDirty(true);
                           }}
-                          onSelect={setSelectedPreviewElement}
+                          onSelect={handleSelectPreviewElement}
                           scale={previewScale}
                           selected={selectedPreviewElement === "cover-footer"}
                           style={{
@@ -2514,142 +2873,634 @@ export default function TemplatesPage() {
                     </div>
                   )}
 
+                  {/* ── INDEX / SUMMARY PREVIEW ── */}
+                  {previewTab === "index" && (
+                    <div
+                      className="h-full flex flex-col justify-between px-8 relative overflow-hidden"
+                      style={{
+                        paddingTop: `${productPagePadding * previewScale}px`,
+                        paddingBottom: `${productPagePadding * previewScale}px`,
+                      }}
+                    >
+                      <div>
+                        <div className="text-center mb-4">
+                          <h2
+                            className="font-bold tracking-wider"
+                            style={{
+                              fontFamily: previewFont,
+                              color: resolvedProductNameColor,
+                              fontSize: `${Math.max(12, Math.round(24 * previewScale))}px`,
+                            }}
+                          >
+                            SUMÁRIO DE RÓTULOS
+                          </h2>
+                          <p
+                            className="uppercase tracking-[2px] font-semibold mt-0.5"
+                            style={{
+                              color: resolvedProductSpecsColor,
+                              fontSize: `${Math.max(7, Math.round(10 * previewScale))}px`,
+                            }}
+                          >
+                            {(dbWines.length || 1)} rótulos ativos · Índice interativo clicável no PDF
+                          </p>
+                          <div
+                            className="w-10 h-px mx-auto mt-2"
+                            style={{ background: resolvedProductSpecsColor }}
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          {(dbWines.length > 0 ? dbWines.slice(0, 12) : [DEFAULT_PREVIEW_WINE]).map((item, idx) => {
+                            const itemsPerPage =
+                              productLayoutPreset === "editorial-duo"
+                                ? 2
+                                : productLayoutPreset === "commercial-grid"
+                                ? 4
+                                : productLayoutPreset === "executive-table"
+                                ? 12
+                                : 1;
+                            const targetPage = Math.floor(idx / itemsPerPage) + 3;
+                            const unitVal = item.precoPromocional ?? item.precoOriginal;
+                            return (
+                              <div
+                                key={item.id}
+                                className="flex items-baseline justify-between border-b border-dashed border-black/15 py-1"
+                                style={{ fontSize: `${Math.max(7, Math.round(10.5 * previewScale))}px` }}
+                              >
+                                <div className="truncate pr-2">
+                                  <span
+                                    className="font-bold"
+                                    style={{ fontFamily: previewFont, color: resolvedProductNameColor }}
+                                  >
+                                    {item.name}
+                                  </span>
+                                  {showProductCategoryBadge && (
+                                    <span
+                                      className="ml-1.5 rounded px-1 py-0.5 font-extrabold uppercase"
+                                      style={{
+                                        background: "rgba(128,40,45,0.08)",
+                                        color: resolvedProductNameColor,
+                                        fontSize: `${Math.max(6, Math.round(7.5 * previewScale))}px`,
+                                      }}
+                                    >
+                                      {item.categoria || "Tinto"}
+                                    </span>
+                                  )}
+                                  <span
+                                    className="ml-1.5 uppercase tracking-wider"
+                                    style={{
+                                      color: resolvedProductSpecsColor,
+                                      fontSize: `${Math.max(6, Math.round(8.5 * previewScale))}px`,
+                                    }}
+                                  >
+                                    {item.vinicola} · {item.paisOrigem} · Safra {item.safra}
+                                  </span>
+                                </div>
+                                <div className="shrink-0 whitespace-nowrap">
+                                  {showProductPrice && (
+                                    <span className="font-bold mr-2" style={{ color: resolvedProductPriceColor }}>
+                                      R$ {unitVal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                    </span>
+                                  )}
+                                  <span className="font-bold" style={{ color: secondaryColor }}>
+                                    Pág. {targetPage}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {showProductFooter && (
+                        <div
+                          className="w-full border-t pt-2 pb-1 flex justify-between text-[6.5px] text-gray-400 flex-shrink-0"
+                          style={{ borderColor: "#eee" }}
+                        >
+                          <span>{footerText || "Allvino Importadora de Vinhos B2B"}</span>
+                          <span>Página 2</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* ── PRODUCT PREVIEW ACCORDING TO PRESET ── */}
                   {previewTab === "product" && (
                     <div
                       className="h-full flex flex-col items-center justify-between px-8 relative overflow-hidden"
                       style={{ paddingTop: `${productPagePadding * previewScale}px`, paddingBottom: `${productPagePadding * previewScale}px` }}
                     >
-                      {/* Product Header */}
-                      <DraggablePreviewElement
-                        className="relative w-full flex-shrink-0 pt-2 text-center"
-                        elementId="product-header"
-                        label="Cabeçalho do produto"
-                        onPositionChange={(x, y) => {
-                          setProductNameXOffset(x);
-                          setProductNameYOffset(y);
-                          setIsDirty(true);
-                        }}
-                        onSelect={setSelectedPreviewElement}
-                        scale={previewScale}
-                        selected={selectedPreviewElement === "product-header"}
-                        x={productNameXOffset}
-                        y={productNameYOffset}
-                      >
-                        {showProductName && (<h2
-                          className="font-bold mb-1 transition-all leading-tight"
-                          style={{
-                            color: resolvedProductNameColor,
-                            fontFamily: previewFont,
-                            fontSize: `${Math.max(1, Math.round(productNameFontSize * previewScale))}px`,
-                          }}
-                        >
-                          {previewWine.name}
-                        </h2>)}
-                        {showProductOrigin && (<p
-                          className="uppercase tracking-[3px] font-semibold transition-all"
-                          style={{
-                            color: resolvedProductSpecsColor,
-                            fontSize: `${Math.max(1, Math.round(productSpecsFontSize * previewScale))}px`,
-                            transform: `translateY(${clamp(productOriginYOffset) * previewScale}px)`,
-                          }}
-                        >
-                          {previewWine.paisOrigem} · {previewWine.regiao}
-                        </p>)}
-                        {showProductDivider && (<div
-                          className="w-10 h-px mx-auto my-2"
-                          style={{ background: resolvedProductSpecsColor }}
-                        />)}
-                      </DraggablePreviewElement>
-
-                      {/* ── SIDE-BY-SIDE MAGAZINE LAYOUT ── */}
-                      {(productLayoutPreset === "side-right" || productLayoutPreset === "side-left") ? (
-                        <div
-                          className={`flex-1 w-full flex items-center justify-between gap-4 py-2 relative min-h-0 overflow-visible ${
-                            productLayoutPreset === "side-left" ? "flex-row-reverse" : "flex-row"
-                          }`}
-                        >
-                          {/* Bottle Column */}
-                          {showProductBottle && (<DraggablePreviewElement
-                            className="relative flex h-full w-1/2 items-center justify-center"
-                            elementId="product-bottle"
-                            label="Garrafa"
-                            onPositionChange={(x, y) => {
-                              setProductImgXOffset(x);
-                              setProductImgYOffset(y);
-                              setIsDirty(true);
-                            }}
-                            onSelect={setSelectedPreviewElement}
-                            rotation={productImgAngle}
-                            scale={previewScale}
-                            selected={selectedPreviewElement === "product-bottle"}
-                            x={productImgXOffset}
-                            y={productImgYOffset}
+                      {productLayoutPreset === "editorial-duo" ? (
+                        /* ── PREVIEW: 2 PRODUCTS PER PAGE (EDITORIAL DUO) ── */
+                        <>
+                          <div
+                            className="w-full flex items-baseline justify-between border-b pb-1.5 mb-2 shrink-0"
+                            style={{ borderColor: secondaryColor }}
                           >
-                            <img
-                              src={previewWine.imagemUrl}
-                              alt={previewWine.name}
-                              draggable={false}
-                              className="object-contain h-full transition-all duration-150"
+                            <span
+                              className="font-bold tracking-widest uppercase"
                               style={{
-                                maxHeight: `${Math.round(productImgHeight * previewScale)}px`,
-                                maxWidth: "100%",
-                                filter: "drop-shadow(0 8px 20px rgba(0,0,0,.12))",
+                                fontFamily: previewFont,
+                                color: resolvedProductNameColor,
+                                fontSize: `${Math.max(8, Math.round(12 * previewScale))}px`,
                               }}
-                            />
-                          </DraggablePreviewElement>)}
-
-                          {/* Content Column (Specs + Tasting Notes) */}
-                          <div className={`${showProductBottle ? "w-1/2" : "w-full"} flex flex-col justify-center gap-3`}>
-                            {/* Tasting Notes & Specs */}
-                            <DraggablePreviewElement
-                              className="relative"
-                              elementId="product-description"
-                              label="Textos do produto"
-                              onPositionChange={(x, y) => {
-                                setProductDescXOffset(x);
-                                setProductDescYOffset(clamp(y, -150, 150));
-                                setIsDirty(true);
-                              }}
-                              onSelect={setSelectedPreviewElement}
-                              rotation={productDescAngle}
-                              scale={previewScale}
-                              selected={selectedPreviewElement === "product-description"}
-                              style={{
-                                textAlign: productDescAlign,
-                              }}
-                              x={productDescXOffset}
-                              y={productDescYOffset}
                             >
-                              {showProductSpecs && (<p
-                                className="uppercase tracking-wider mb-1 font-semibold"
-                                style={{
-                                  color: resolvedProductSpecsColor,
-                                  fontSize: `${Math.max(1, Math.round(productSpecsFontSize * previewScale))}px`,
-                                }}
-                              >
-                                {previewWine.vinicola} · {previewWine.uva} · Safra {previewWine.safra} · {previewWine.teorAlcoolico}% vol
-                              </p>)}
-                              {showProductDescription && (<p
-                                className="leading-relaxed transition-all"
-                                style={{
-                                  color: resolvedProductDescColor,
-                                  fontWeight: 400,
-                                  fontSize: `${Math.max(1, Math.round(productDescFontSize * previewScale))}px`,
-                                }}
-                              >
-                                {previewWineDesc}
-                              </p>)}
-                            </DraggablePreviewElement>
+                              {headerTitle}
+                            </span>
+                            <span
+                              className="uppercase tracking-widest"
+                              style={{
+                                color: resolvedProductSpecsColor,
+                                fontSize: `${Math.max(6, Math.round(8.5 * previewScale))}px`,
+                              }}
+                            >
+                              {coverSubtitle}
+                            </span>
+                          </div>
+                          <div className="flex-1 w-full flex flex-col justify-between gap-3 py-1 min-h-0">
+                            {[
+                              previewWine,
+                              dbWines.find((w) => w.id !== previewWine.id) || DEFAULT_PREVIEW_WINE,
+                            ].map((wineItem, idx) => {
+                              const unitPrice = wineItem.precoPromocional ?? wineItem.precoOriginal;
+                              const boxTotal = unitPrice * 6;
+                              return (
+                                <div
+                                  key={`${wineItem.id}-${idx}`}
+                                  className="flex-1 flex items-center gap-3 rounded-lg border bg-white/90 p-3 shadow-sm min-h-0"
+                                  style={{ borderColor: "rgba(197,168,128,0.45)" }}
+                                >
+                                  {showProductBottle && (
+                                    <div className="w-1/4 h-full flex items-center justify-center shrink-0">
+                                      <img
+                                        src={wineItem.imagemUrl}
+                                        alt={wineItem.name}
+                                        className="max-h-full max-w-full object-contain"
+                                        style={{ filter: "drop-shadow(0 6px 12px rgba(0,0,0,.12))" }}
+                                      />
+                                    </div>
+                                  )}
+                                  <div className="flex-1 min-w-0 flex flex-col justify-between h-full">
+                                    <div>
+                                      <div className="flex flex-wrap items-center gap-1 mb-1">
+                                        {showProductCountryFlag && (
+                                          <span className="inline-flex items-center gap-1 rounded-full border border-amber-300/60 bg-white px-1.5 py-0.5 text-[7px] font-bold uppercase">
+                                            <img
+                                              src={getCountryFlagUrl(wineItem.paisOrigem)}
+                                              alt=""
+                                              className="w-2.5 h-2 object-cover rounded-xs"
+                                            />
+                                            {wineItem.paisOrigem}
+                                          </span>
+                                        )}
+                                        {showProductCategoryBadge && (
+                                          <span
+                                            className="rounded-full border px-1.5 py-0.5 text-[7px] font-bold uppercase"
+                                            style={{ borderColor: secondaryColor, color: resolvedProductNameColor }}
+                                          >
+                                            {wineItem.categoria || "Tinto"}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {showProductName && (
+                                        <h3
+                                          className="font-bold leading-tight truncate"
+                                          style={{
+                                            fontFamily: previewFont,
+                                            color: resolvedProductNameColor,
+                                            fontSize: `${Math.max(10, Math.round(17 * previewScale))}px`,
+                                          }}
+                                        >
+                                          {wineItem.name}
+                                        </h3>
+                                      )}
+                                      {showProductOrigin && (
+                                        <p
+                                          className="uppercase tracking-wider font-semibold"
+                                          style={{
+                                            color: resolvedProductSpecsColor,
+                                            fontSize: `${Math.max(6, Math.round(8.5 * previewScale))}px`,
+                                          }}
+                                        >
+                                          {wineItem.vinicola} · {wineItem.regiao}
+                                        </p>
+                                      )}
+                                      {showProductSpecs && (
+                                        <div className="grid grid-cols-3 gap-1 my-1.5 rounded bg-stone-100/80 p-1.5 border border-amber-200/40">
+                                          <div>
+                                            <span className="block text-[6px] font-bold uppercase text-stone-500">UVA</span>
+                                            <span className="block truncate font-semibold text-[7.5px]">{wineItem.uva}</span>
+                                          </div>
+                                          <div>
+                                            <span className="block text-[6px] font-bold uppercase text-stone-500">SAFRA</span>
+                                            <span className="block font-semibold text-[7.5px]">{wineItem.safra}</span>
+                                          </div>
+                                          <div>
+                                            <span className="block text-[6px] font-bold uppercase text-stone-500">TEOR ALC.</span>
+                                            <span className="block font-semibold text-[7.5px]">{wineItem.teorAlcoolico}% vol</span>
+                                          </div>
+                                        </div>
+                                      )}
+                                      {showProductDescription && (
+                                        <p
+                                          className="line-clamp-2 leading-snug"
+                                          style={{
+                                            color: resolvedProductDescColor,
+                                            fontSize: `${Math.max(7, Math.round(10 * previewScale))}px`,
+                                          }}
+                                        >
+                                          {wineItem.notasDegustacao || previewWineDesc}
+                                        </p>
+                                      )}
+                                    </div>
+                                    {showProductPrice && (
+                                      <div className="flex items-end justify-between border-t border-amber-200/50 pt-1.5 mt-1">
+                                        <div>
+                                          <span
+                                            className="block uppercase font-bold tracking-wider"
+                                            style={{
+                                              color: resolvedProductPriceLabelColor,
+                                              fontSize: `${Math.max(6, Math.round(7.5 * previewScale))}px`,
+                                            }}
+                                          >
+                                            Preço Unitário B2B
+                                          </span>
+                                          <span
+                                            className="font-extrabold"
+                                            style={{
+                                              color: resolvedProductPriceColor,
+                                              fontSize: `${Math.max(9, Math.round(15 * previewScale))}px`,
+                                            }}
+                                          >
+                                            R$ {unitPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                          </span>
+                                        </div>
+                                        <div className="text-right">
+                                          <span
+                                            className="block uppercase font-bold"
+                                            style={{
+                                              color: resolvedProductPriceInfoColor,
+                                              fontSize: `${Math.max(6, Math.round(7.5 * previewScale))}px`,
+                                            }}
+                                          >
+                                            Caixa c/ 6
+                                          </span>
+                                          <span
+                                            className="font-extrabold"
+                                            style={{
+                                              color: secondaryColor,
+                                              fontSize: `${Math.max(7, Math.round(10.5 * previewScale))}px`,
+                                            }}
+                                          >
+                                            {showProductBoxPrice
+                                              ? `R$ ${boxTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+                                              : "6 un."}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </>
+                      ) : productLayoutPreset === "commercial-grid" ? (
+                        /* ── PREVIEW: 4 PRODUCTS PER PAGE (2x2 COMMERCIAL B2B GRID) ── */
+                        <>
+                          <div
+                            className="w-full flex items-baseline justify-between border-b pb-1.5 mb-2 shrink-0"
+                            style={{ borderColor: secondaryColor }}
+                          >
+                            <span
+                              className="font-bold tracking-widest uppercase"
+                              style={{
+                                fontFamily: previewFont,
+                                color: resolvedProductNameColor,
+                                fontSize: `${Math.max(8, Math.round(12 * previewScale))}px`,
+                              }}
+                            >
+                              {headerTitle}
+                            </span>
+                            <span
+                              className="uppercase tracking-widest"
+                              style={{
+                                color: resolvedProductSpecsColor,
+                                fontSize: `${Math.max(6, Math.round(8.5 * previewScale))}px`,
+                              }}
+                            >
+                              {coverSubtitle}
+                            </span>
+                          </div>
+                          <div className="flex-1 w-full grid grid-cols-2 grid-rows-2 gap-2.5 py-1 min-h-0">
+                            {Array.from({ length: 4 }, (_, idx) => {
+                              const sourceList = dbWines.length > 0 ? dbWines : [DEFAULT_PREVIEW_WINE];
+                              const wineItem = idx === 0 ? previewWine : sourceList[idx % sourceList.length];
+                              const unitPrice = wineItem.precoPromocional ?? wineItem.precoOriginal;
+                              const boxTotal = unitPrice * 6;
+                              return (
+                                <div
+                                  key={`${wineItem.id}-${idx}`}
+                                  className="flex flex-col justify-between rounded-lg border bg-white/95 p-2.5 shadow-sm min-h-0"
+                                  style={{ borderColor: "rgba(197,168,128,0.45)" }}
+                                >
+                                  <div
+                                    className="flex flex-col items-center border-b pb-1.5 mb-1.5"
+                                    style={{ borderColor: secondaryColor }}
+                                  >
+                                    <div className="flex items-center gap-1 mb-1">
+                                      {showProductCountryFlag && (
+                                        <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-white px-1.5 py-0.2 text-[6.5px] font-bold uppercase">
+                                          <img
+                                            src={getCountryFlagUrl(wineItem.paisOrigem)}
+                                            alt=""
+                                            className="w-2.5 h-1.5 object-cover"
+                                          />
+                                          {wineItem.paisOrigem}
+                                        </span>
+                                      )}
+                                      {showProductCategoryBadge && (
+                                        <span
+                                          className="rounded-full border px-1.5 py-0.2 text-[6.5px] font-bold uppercase"
+                                          style={{ borderColor: secondaryColor, color: resolvedProductNameColor }}
+                                        >
+                                          {wineItem.categoria || "Tinto"}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {showProductBottle && (
+                                      <div className="h-20 w-full flex items-center justify-center">
+                                        <img
+                                          src={wineItem.imagemUrl}
+                                          alt={wineItem.name}
+                                          className="max-h-full max-w-full object-contain"
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-h-0">
+                                    {showProductOrigin && (
+                                      <p
+                                        className="uppercase tracking-wider font-bold truncate"
+                                        style={{
+                                          color: resolvedProductSpecsColor,
+                                          fontSize: `${Math.max(6, Math.round(7.5 * previewScale))}px`,
+                                        }}
+                                      >
+                                        {wineItem.vinicola} · {wineItem.paisOrigem}
+                                      </p>
+                                    )}
+                                    {showProductName && (
+                                      <h4
+                                        className="font-bold leading-tight truncate"
+                                        style={{
+                                          fontFamily: previewFont,
+                                          color: resolvedProductNameColor,
+                                          fontSize: `${Math.max(8, Math.round(12.5 * previewScale))}px`,
+                                        }}
+                                      >
+                                        {wineItem.name}
+                                      </h4>
+                                    )}
+                                    {showProductSpecs && (
+                                      <p
+                                        className="truncate font-semibold"
+                                        style={{
+                                          color: resolvedProductSpecsColor,
+                                          fontSize: `${Math.max(6, Math.round(8 * previewScale))}px`,
+                                        }}
+                                      >
+                                        {wineItem.uva} · Safra {wineItem.safra}
+                                      </p>
+                                    )}
+                                    {showProductDescription && (
+                                      <p
+                                        className="line-clamp-2 mt-0.5 leading-snug"
+                                        style={{
+                                          color: resolvedProductDescColor,
+                                          fontSize: `${Math.max(6, Math.round(8.5 * previewScale))}px`,
+                                        }}
+                                      >
+                                        {wineItem.notasDegustacao || previewWineDesc}
+                                      </p>
+                                    )}
+                                  </div>
+                                  {showProductPrice && (
+                                    <div className="flex items-end justify-between border-t border-amber-200/50 pt-1 mt-1">
+                                      <div>
+                                        <span className="block text-[6px] uppercase font-bold text-stone-500">
+                                          Unitário B2B
+                                        </span>
+                                        <span
+                                          className="font-extrabold"
+                                          style={{
+                                            color: resolvedProductPriceColor,
+                                            fontSize: `${Math.max(8, Math.round(12 * previewScale))}px`,
+                                          }}
+                                        >
+                                          R$ {unitPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                        </span>
+                                      </div>
+                                      <div className="text-right">
+                                        <span className="block text-[6px] uppercase font-bold text-stone-500">
+                                          Caixa c/ 6
+                                        </span>
+                                        <span
+                                          className="font-bold"
+                                          style={{
+                                            color: secondaryColor,
+                                            fontSize: `${Math.max(7, Math.round(9.5 * previewScale))}px`,
+                                          }}
+                                        >
+                                          {showProductBoxPrice
+                                            ? `R$ ${boxTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+                                            : "6 un."}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </>
+                      ) : productLayoutPreset === "executive-table" ? (
+                        /* ── PREVIEW: 12 PRODUCTS PER PAGE (EXECUTIVE B2B TABLE) ── */
+                        <div className="w-full flex-1 flex flex-col justify-start">
+                          <div
+                            className="w-full flex items-baseline justify-between border-b pb-1.5 mb-2"
+                            style={{ borderColor: secondaryColor }}
+                          >
+                            <span
+                              className="font-bold tracking-widest uppercase"
+                              style={{
+                                fontFamily: previewFont,
+                                color: resolvedProductNameColor,
+                                fontSize: `${Math.max(8, Math.round(12 * previewScale))}px`,
+                              }}
+                            >
+                              {headerTitle} — TABELA EXECUTIVA B2B
+                            </span>
+                            <span
+                              className="uppercase tracking-widest"
+                              style={{
+                                color: resolvedProductSpecsColor,
+                                fontSize: `${Math.max(6, Math.round(8 * previewScale))}px`,
+                              }}
+                            >
+                              12 rótulos / página
+                            </span>
+                          </div>
+                          <div className="w-full rounded bg-white/95 p-2 shadow-sm border border-amber-200/40 overflow-hidden">
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr
+                                  className="border-b uppercase text-[7px] font-extrabold"
+                                  style={{ borderColor: secondaryColor, color: resolvedProductNameColor }}
+                                >
+                                  <th className="py-1 px-1">Rótulo & Vinícola</th>
+                                  <th className="py-1 px-1">Tipo</th>
+                                  <th className="py-1 px-1">País</th>
+                                  <th className="py-1 px-1 text-center">Safra</th>
+                                  {showProductPrice && (
+                                    <>
+                                      <th className="py-1 px-1 text-right">Unitário</th>
+                                      <th className="py-1 px-1 text-right">Caixa c/ 6</th>
+                                    </>
+                                  )}
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-amber-200/30 text-[7.5px]">
+                                {(dbWines.length > 0 ? dbWines.slice(0, 10) : [DEFAULT_PREVIEW_WINE]).map((w) => {
+                                  const unit = w.precoPromocional ?? w.precoOriginal;
+                                  return (
+                                    <tr key={w.id}>
+                                      <td className="py-1 px-1">
+                                        <div
+                                          className="font-bold truncate max-w-[140px]"
+                                          style={{ fontFamily: previewFont, color: resolvedProductNameColor }}
+                                        >
+                                          {w.name}
+                                        </div>
+                                        <div className="text-[6.5px]" style={{ color: resolvedProductSpecsColor }}>
+                                          {w.vinicola}
+                                        </div>
+                                      </td>
+                                      <td className="py-1 px-1">{w.categoria || "Tinto"}</td>
+                                      <td className="py-1 px-1">{w.paisOrigem}</td>
+                                      <td className="py-1 px-1 text-center font-semibold">{w.safra}</td>
+                                      {showProductPrice && (
+                                        <>
+                                          <td
+                                            className="py-1 px-1 text-right font-extrabold"
+                                            style={{ color: resolvedProductPriceColor }}
+                                          >
+                                            R$ {unit.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                          </td>
+                                          <td
+                                            className="py-1 px-1 text-right font-bold"
+                                            style={{ color: secondaryColor }}
+                                          >
+                                            {showProductBoxPrice
+                                              ? `R$ ${(unit * 6).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+                                              : "6 un."}
+                                          </td>
+                                        </>
+                                      )}
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
                           </div>
                         </div>
                       ) : (
-                        /* ── CLASSIC & PRICE-TOP LAYOUTS ── */
+                        /* ── 1 PRODUCT PER PAGE PREVIEW (CLASSIC, SIDE-RIGHT, SIDE-LEFT, PRICE-TOP) ── */
                         <>
-                          <div className="flex-1 w-full flex items-center justify-center py-1 relative min-h-0 overflow-visible">
-                            {showProductBottle && (
-                              <DraggablePreviewElement
-                                className="relative flex h-full items-center justify-center"
+                          {/* Product Header */}
+                          <DraggablePreviewElement
+                            className="relative w-full flex-shrink-0 pt-2 text-center"
+                            elementId="product-header"
+                            label="Cabeçalho do produto"
+                            onPositionChange={(x, y) => {
+                              setProductNameXOffset(x);
+                              setProductNameYOffset(y);
+                              setIsDirty(true);
+                            }}
+                            onSelect={handleSelectPreviewElement}
+                            scale={previewScale}
+                            selected={selectedPreviewElement === "product-header"}
+                            x={productNameXOffset}
+                            y={productNameYOffset}
+                          >
+                            {(showProductCountryFlag || showProductCategoryBadge || (showProductDiscountBadge && previewWine.precoPromocional)) && (
+                              <div className="flex items-center justify-center gap-1.5 mb-1 flex-wrap">
+                                {showProductCountryFlag && (
+                                  <span className="inline-flex items-center gap-1 rounded-full border border-amber-300/60 bg-white/90 px-2 py-0.5 text-[7.5px] font-bold uppercase tracking-wider">
+                                    <img
+                                      src={getCountryFlagUrl(previewWine.paisOrigem)}
+                                      alt=""
+                                      className="w-3 h-2 object-cover rounded-xs"
+                                    />
+                                    {previewWine.paisOrigem}
+                                  </span>
+                                )}
+                                {showProductCategoryBadge && (
+                                  <span
+                                    className="rounded-full border bg-white/90 px-2 py-0.5 text-[7.5px] font-bold uppercase tracking-wider"
+                                    style={{ borderColor: secondaryColor, color: resolvedProductNameColor }}
+                                  >
+                                    {previewWine.categoria || "Tinto"}
+                                  </span>
+                                )}
+                                {showProductDiscountBadge &&
+                                  previewWine.precoPromocional &&
+                                  previewWine.precoOriginal > previewWine.precoPromocional && (
+                                    <span
+                                      className="rounded-full px-2 py-0.5 text-[7.5px] font-extrabold uppercase text-white"
+                                      style={{ background: primaryColor }}
+                                    >
+                                      -{Math.round((1 - previewWine.precoPromocional / previewWine.precoOriginal) * 100)}% OFF
+                                    </span>
+                                  )}
+                              </div>
+                            )}
+                            {showProductName && (<h2
+                              className="font-bold mb-1 transition-all leading-tight"
+                              style={{
+                                color: resolvedProductNameColor,
+                                fontFamily: previewFont,
+                                fontSize: `${Math.max(1, Math.round(productNameFontSize * previewScale))}px`,
+                              }}
+                            >
+                              {previewWine.name}
+                            </h2>)}
+                            {showProductOrigin && (<p
+                              className="uppercase tracking-[3px] font-semibold transition-all"
+                              style={{
+                                color: resolvedProductSpecsColor,
+                                fontSize: `${Math.max(1, Math.round(productSpecsFontSize * previewScale))}px`,
+                                transform: `translateY(${clamp(productOriginYOffset) * previewScale}px)`,
+                              }}
+                            >
+                              {previewWine.paisOrigem} · {previewWine.regiao}
+                            </p>)}
+                            {showProductDivider && (<div
+                              className="w-10 h-px mx-auto my-2"
+                              style={{ background: resolvedProductSpecsColor }}
+                            />)}
+                          </DraggablePreviewElement>
+
+                          {/* ── SIDE-BY-SIDE MAGAZINE LAYOUT ── */}
+                          {(productLayoutPreset === "side-right" || productLayoutPreset === "side-left") ? (
+                            <div
+                              className={`flex-1 w-full flex items-center justify-between gap-4 py-2 relative min-h-0 overflow-visible ${
+                                productLayoutPreset === "side-left" ? "flex-row-reverse" : "flex-row"
+                              }`}
+                            >
+                              {/* Bottle Column */}
+                              {showProductBottle && (<DraggablePreviewElement
+                                className="relative flex h-full w-1/2 items-center justify-center"
                                 elementId="product-bottle"
                                 label="Garrafa"
                                 onPositionChange={(x, y) => {
@@ -2657,7 +3508,7 @@ export default function TemplatesPage() {
                                   setProductImgYOffset(y);
                                   setIsDirty(true);
                                 }}
-                                onSelect={setSelectedPreviewElement}
+                                onSelect={handleSelectPreviewElement}
                                 rotation={productImgAngle}
                                 scale={previewScale}
                                 selected={selectedPreviewElement === "product-bottle"}
@@ -2666,116 +3517,198 @@ export default function TemplatesPage() {
                               >
                                 <img
                                   src={previewWine.imagemUrl}
-                                alt={previewWine.name}
+                                  alt={previewWine.name}
                                   draggable={false}
-                                className="object-contain h-full transition-all duration-150"
-                                style={{
-                                  maxHeight: `${Math.round(productImgHeight * previewScale)}px`,
-                                  maxWidth: `${Math.round(productImgHeight * 0.52 * previewScale)}px`,
-                                  filter: "drop-shadow(0 8px 20px rgba(0,0,0,.12))",
-                                }}
+                                  className="object-contain h-full transition-all duration-150"
+                                  style={{
+                                    maxHeight: `${Math.round(productImgHeight * previewScale)}px`,
+                                    maxWidth: "100%",
+                                    filter: "drop-shadow(0 8px 20px rgba(0,0,0,.12))",
+                                  }}
                                 />
-                              </DraggablePreviewElement>
-                            )}
-                          </div>
+                              </DraggablePreviewElement>)}
 
-                          {/* Details: Specs & Tasting Description */}
-                          <DraggablePreviewElement
-                            className="relative my-1 w-full flex-shrink-0 text-center"
-                            elementId="product-description"
-                            label="Textos do produto"
-                            onPositionChange={(x, y) => {
-                              setProductDescXOffset(x);
-                              setProductDescYOffset(clamp(y, -150, 150));
-                              setIsDirty(true);
-                            }}
-                            onSelect={setSelectedPreviewElement}
-                            rotation={productDescAngle}
-                            scale={previewScale}
-                            selected={selectedPreviewElement === "product-description"}
+                              {/* Content Column (Specs + Tasting Notes) */}
+                              <div className={`${showProductBottle ? "w-1/2" : "w-full"} flex flex-col justify-center gap-3`}>
+                                {/* Tasting Notes & Specs */}
+                                <DraggablePreviewElement
+                                  className="relative"
+                                  elementId="product-description"
+                                  label="Textos do produto"
+                                  onPositionChange={(x, y) => {
+                                    setProductDescXOffset(x);
+                                    setProductDescYOffset(clamp(y, -150, 150));
+                                    setIsDirty(true);
+                                  }}
+                                  onSelect={handleSelectPreviewElement}
+                                  rotation={productDescAngle}
+                                  scale={previewScale}
+                                  selected={selectedPreviewElement === "product-description"}
+                                  style={{
+                                    textAlign: productDescAlign,
+                                  }}
+                                  x={productDescXOffset}
+                                  y={productDescYOffset}
+                                >
+                                  {showProductSpecs && (<p
+                                    className="uppercase tracking-wider mb-1 font-semibold"
+                                    style={{
+                                      color: resolvedProductSpecsColor,
+                                      fontSize: `${Math.max(1, Math.round(productSpecsFontSize * previewScale))}px`,
+                                    }}
+                                  >
+                                    {previewWine.vinicola} · {previewWine.uva} · Safra {previewWine.safra} · {previewWine.teorAlcoolico}% vol
+                                  </p>)}
+                                  {showProductDescription && (<p
+                                    className="leading-relaxed transition-all"
+                                    style={{
+                                      color: resolvedProductDescColor,
+                                      fontWeight: 400,
+                                      fontSize: `${Math.max(1, Math.round(productDescFontSize * previewScale))}px`,
+                                    }}
+                                  >
+                                    {previewWineDesc}
+                                  </p>)}
+                                </DraggablePreviewElement>
+                              </div>
+                            </div>
+                          ) : (
+                            /* ── CLASSIC & PRICE-TOP LAYOUTS ── */
+                            <>
+                              <div className="flex-1 w-full flex items-center justify-center py-1 relative min-h-0 overflow-visible">
+                                {showProductBottle && (
+                                  <DraggablePreviewElement
+                                    className="relative flex h-full items-center justify-center"
+                                    elementId="product-bottle"
+                                    label="Garrafa"
+                                    onPositionChange={(x, y) => {
+                                      setProductImgXOffset(x);
+                                      setProductImgYOffset(y);
+                                      setIsDirty(true);
+                                    }}
+                                    onSelect={handleSelectPreviewElement}
+                                    rotation={productImgAngle}
+                                    scale={previewScale}
+                                    selected={selectedPreviewElement === "product-bottle"}
+                                    x={productImgXOffset}
+                                    y={productImgYOffset}
+                                  >
+                                    <img
+                                      src={previewWine.imagemUrl}
+                                      alt={previewWine.name}
+                                      draggable={false}
+                                      className="object-contain h-full transition-all duration-150"
+                                      style={{
+                                        maxHeight: `${Math.round(productImgHeight * previewScale)}px`,
+                                        maxWidth: `${Math.round(productImgHeight * 0.52 * previewScale)}px`,
+                                        filter: "drop-shadow(0 8px 20px rgba(0,0,0,.12))",
+                                      }}
+                                    />
+                                  </DraggablePreviewElement>
+                                )}
+                              </div>
+
+                              {/* Details: Specs & Tasting Description */}
+                              <DraggablePreviewElement
+                                className="relative my-1 w-full flex-shrink-0 text-center"
+                                elementId="product-description"
+                                label="Textos do produto"
+                                onPositionChange={(x, y) => {
+                                  setProductDescXOffset(x);
+                                  setProductDescYOffset(clamp(y, -150, 150));
+                                  setIsDirty(true);
+                                }}
+                                onSelect={handleSelectPreviewElement}
+                                rotation={productDescAngle}
+                                scale={previewScale}
+                                selected={selectedPreviewElement === "product-description"}
+                                style={{
+                                  maxWidth: `${Math.round(productTextMaxWidth * previewScale)}px`,
+                                  textAlign: productDescAlign,
+                                }}
+                                x={productDescXOffset}
+                                y={productDescYOffset}
+                              >
+                                {showProductSpecs && (<p
+                                  className="uppercase tracking-wider mb-1 transition-all"
+                                  style={{
+                                    color: resolvedProductSpecsColor,
+                                    fontSize: `${Math.max(1, Math.round(productSpecsFontSize * previewScale))}px`,
+                                  }}
+                                >
+                                  {previewWine.vinicola} · {previewWine.uva} · Safra {previewWine.safra} · {previewWine.teorAlcoolico}% vol
+                                </p>)}
+                                {showProductDescription && (<p
+                                  className="leading-relaxed transition-all"
+                                  style={{
+                                    color: resolvedProductDescColor,
+                                    fontWeight: 400,
+                                    fontSize: `${Math.max(1, Math.round(productDescFontSize * previewScale))}px`,
+                                  }}
+                                >
+                                  {previewWineDesc}
+                                </p>)}
+                              </DraggablePreviewElement>
+                            </>
+                          )}
+
+                          {/* ── 100% AUTONOMOUS FREE PRICE ELEMENT OVERLAY ── */}
+                          {showProductPrice && (<div
+                            className="absolute left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap"
                             style={{
-                              maxWidth: `${Math.round(productTextMaxWidth * previewScale)}px`,
-                              textAlign: productDescAlign,
+                              top: productLayoutPreset === "price-top" ? "18%" : "45%",
                             }}
-                            x={productDescXOffset}
-                            y={productDescYOffset}
                           >
-                            {showProductSpecs && (<p
-                              className="uppercase tracking-wider mb-1 transition-all"
-                              style={{
-                                color: resolvedProductSpecsColor,
-                                fontSize: `${Math.max(1, Math.round(productSpecsFontSize * previewScale))}px`,
+                            <DraggablePreviewElement
+                              className="relative"
+                              elementId="product-price"
+                              label="Preço B2B"
+                              onPositionChange={(x, y) => {
+                                setProductPriceXOffset(clamp(x, -350, 350));
+                                setProductPriceYOffset(clamp(y, -450, 450));
+                                setIsDirty(true);
                               }}
-                            >
-                              {previewWine.vinicola} · {previewWine.uva} · Safra {previewWine.safra} · {previewWine.teorAlcoolico}% vol
-                            </p>)}
-                            {showProductDescription && (<p
-                              className="leading-relaxed transition-all"
+                              onSelect={handleSelectPreviewElement}
+                              rotation={productPriceAngle}
+                              scale={previewScale}
+                              selected={selectedPreviewElement === "product-price"}
                               style={{
-                                color: resolvedProductDescColor,
-                                fontWeight: 400,
-                                fontSize: `${Math.max(1, Math.round(productDescFontSize * previewScale))}px`,
+                                textAlign: productPriceSide === "left" ? "right" : productPriceSide === "center" ? "center" : "left",
                               }}
+                              x={productPriceXOffset}
+                              y={productPriceYOffset}
                             >
-                              {previewWineDesc}
-                            </p>)}
-                          </DraggablePreviewElement>
+                              <p
+                                className="uppercase tracking-[1.5px] font-bold mb-0.5"
+                                style={{ color: resolvedProductPriceLabelColor, fontSize: `${Math.max(1, Math.round(productPriceLabelFontSize * previewScale))}px` }}
+                              >
+                                Preço Unitário B2B
+                              </p>
+                              <p
+                                className="font-semibold mb-1"
+                                style={{ color: resolvedProductPriceInfoColor, fontSize: `${Math.max(1, Math.round(productPriceInfoFontSize * previewScale))}px` }}
+                              >
+                                {showProductBoxPrice
+                                  ? `Caixa c/ 6: R$ ${((previewWine.precoPromocional ?? previewWine.precoOriginal) * 6).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+                                  : "Caixa c/ 6 garrafas"}
+                              </p>
+                              <div className={`flex items-baseline gap-1.5 ${productPriceSide === "center" ? "justify-center" : productPriceSide === "left" ? "justify-end" : "justify-start"}`}>
+                                <span
+                                  className="font-extrabold"
+                                  style={{ color: resolvedProductPriceColor, fontSize: `${Math.max(1, Math.round(productPriceValueFontSize * previewScale))}px` }}
+                                >
+                                  R$ {(previewWine.precoPromocional ?? previewWine.precoOriginal).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                </span>
+                                {previewWine.precoPromocional !== null && previewWine.precoPromocional !== undefined && (
+                                  <span className="text-gray-400 line-through text-[9px]">
+                                    R$ {previewWine.precoOriginal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                  </span>
+                                )}
+                              </div>
+                            </DraggablePreviewElement>
+                          </div>)}
                         </>
                       )}
-
-                      {/* ── 100% AUTONOMOUS FREE PRICE ELEMENT OVERLAY ── */}
-                      {showProductPrice && (<div
-                        className="absolute left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap"
-                        style={{
-                          top: productLayoutPreset === "price-top" ? "18%" : "45%",
-                        }}
-                      >
-                        <DraggablePreviewElement
-                          className="relative"
-                          elementId="product-price"
-                          label="Preço B2B"
-                          onPositionChange={(x, y) => {
-                            setProductPriceXOffset(clamp(x, -350, 350));
-                            setProductPriceYOffset(clamp(y, -450, 450));
-                            setIsDirty(true);
-                          }}
-                          onSelect={setSelectedPreviewElement}
-                          rotation={productPriceAngle}
-                          scale={previewScale}
-                          selected={selectedPreviewElement === "product-price"}
-                          style={{
-                            textAlign: productPriceSide === "left" ? "right" : productPriceSide === "center" ? "center" : "left",
-                          }}
-                          x={productPriceXOffset}
-                          y={productPriceYOffset}
-                        >
-                          <p
-                            className="uppercase tracking-[1.5px] font-bold mb-0.5"
-                            style={{ color: resolvedProductPriceLabelColor, fontSize: `${Math.max(1, Math.round(productPriceLabelFontSize * previewScale))}px` }}
-                          >
-                            Preço Unitário B2B
-                          </p>
-                          <p
-                            className="font-semibold mb-1"
-                            style={{ color: resolvedProductPriceInfoColor, fontSize: `${Math.max(1, Math.round(productPriceInfoFontSize * previewScale))}px` }}
-                          >
-                            Caixa c/ 6 garrafas
-                          </p>
-                          <div className={`flex items-baseline gap-1.5 ${productPriceSide === "center" ? "justify-center" : productPriceSide === "left" ? "justify-end" : "justify-start"}`}>
-                            <span
-                              className="font-extrabold"
-                              style={{ color: resolvedProductPriceColor, fontSize: `${Math.max(1, Math.round(productPriceValueFontSize * previewScale))}px` }}
-                            >
-                              R$ {(previewWine.precoPromocional ?? previewWine.precoOriginal).toFixed(2)}
-                            </span>
-                            {previewWine.precoPromocional !== null && previewWine.precoPromocional !== undefined && (
-                              <span className="text-gray-400 line-through text-[9px]">
-                                R$ {previewWine.precoOriginal.toFixed(2)}
-                              </span>
-                            )}
-                          </div>
-                        </DraggablePreviewElement>
-                      </div>)}
 
                       {/* Footer */}
                       {showProductFooter && (<div

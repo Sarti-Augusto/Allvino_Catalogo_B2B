@@ -7,6 +7,7 @@ import path from "path";
 import sharp from "sharp";
 import { resolveBrowserlessPdfEndpoint } from "@/lib/browserless";
 import { publicProductSelect } from "@/lib/product-select";
+import { getCountryFlagUrl } from "@/lib/utils";
 import {
   catalogSortToRule,
   filterCatalogProducts,
@@ -157,6 +158,13 @@ export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
+  return generateCatalogPdfResponse(request);
+}
+
+async function generateCatalogPdfResponse(
+  request: Request,
+  previewStylesOverride?: Record<string, unknown>,
+) {
   let browser;
   try {
     const { searchParams } = new URL(request.url);
@@ -167,6 +175,7 @@ export async function GET(request: Request) {
     const productLimit = parseCatalogLimit(searchParams.get("limit"));
     const rawProductIds = searchParams.get("ids");
     const selectedProductIds = parseCatalogProductIds(rawProductIds);
+    const requestedTemplateId = searchParams.get("templateId")?.trim() || "";
     const hidePrices =
       searchParams.get("hidePrices") === "1" || searchParams.get("hidePrices") === "true";
     const includeIndex =
@@ -179,16 +188,34 @@ export async function GET(request: Request) {
       category: searchParams.get("category") || "",
     };
 
-    // 1. Fetch active template
-    const activeTemplate = await prisma.template.findFirst({
-      where: { isActive: true },
-    });
+    // 1. Fetch requested or active template (unless previewStylesOverride is supplied)
+    let styles: any = previewStylesOverride || null;
+    if (!styles) {
+      const targetTemplate = requestedTemplateId
+        ? await prisma.template.findUnique({ where: { id: requestedTemplateId } })
+        : await prisma.template.findFirst({ where: { isActive: true } });
 
-    if (!activeTemplate) {
-      return NextResponse.json(
-        { error: "Nenhum template ativo foi configurado no painel administrativo." },
-        { status: 400 }
-      );
+      const activeTemplate =
+        targetTemplate ||
+        (requestedTemplateId
+          ? await prisma.template.findFirst({ where: { isActive: true } })
+          : null);
+
+      if (!activeTemplate) {
+        return NextResponse.json(
+          { error: "Nenhum template ativo foi configurado no painel administrativo." },
+          { status: 400 }
+        );
+      }
+
+      try {
+        styles = JSON.parse(activeTemplate.cssStyles);
+      } catch {
+        return NextResponse.json(
+          { error: "Erro nas definições de estilo do template." },
+          { status: 500 }
+        );
+      }
     }
 
     // 2. Fetch active wines (push ID filter down to PostgreSQL when specified)
@@ -209,17 +236,6 @@ export async function GET(request: Request) {
       return NextResponse.json(
         { error: "Não há vinhos ativos que correspondam aos filtros para exportar." },
         { status: 400 }
-      );
-    }
-
-    // 3. Parse template styles
-    let styles: any;
-    try {
-      styles = JSON.parse(activeTemplate.cssStyles);
-    } catch {
-      return NextResponse.json(
-        { error: "Erro nas definições de estilo do template." },
-        { status: 500 }
       );
     }
 
@@ -279,7 +295,19 @@ export async function GET(request: Request) {
     const showProductDescription = styles.showProductDescription !== false;
     const showProductPrice = !hidePrices && styles.showProductPrice !== false;
     const showProductFooter = styles.showProductFooter !== false;
-    const productLayoutPreset = ["classic", "side-right", "side-left", "price-top"].includes(styles.productLayoutPreset)
+    const showProductBoxPrice = styles.showProductBoxPrice !== false;
+    const showProductCategoryBadge = styles.showProductCategoryBadge !== false;
+    const showProductDiscountBadge = styles.showProductDiscountBadge !== false;
+    const showProductCountryFlag = styles.showProductCountryFlag !== false;
+    const productLayoutPreset = [
+      "classic",
+      "side-right",
+      "side-left",
+      "price-top",
+      "editorial-duo",
+      "commercial-grid",
+      "executive-table",
+    ].includes(styles.productLayoutPreset)
       ? styles.productLayoutPreset
       : "classic";
     const productDescAngle = typeof styles.productDescAngle === "number" ? styles.productDescAngle : 0;
@@ -334,6 +362,10 @@ export async function GET(request: Request) {
         ? "'Inter', 'Helvetica Neue', sans-serif"
         : fontFamily === "Cinzel"
         ? "'Cinzel', Georgia, serif"
+        : fontFamily === "Cormorant Garamond"
+        ? "'Cormorant Garamond', Georgia, serif"
+        : fontFamily === "Montserrat"
+        ? "'Montserrat', 'Helvetica Neue', sans-serif"
         : "'Playfair Display', Georgia, serif";
 
     // 7. Cover page config & logo resolution
@@ -353,8 +385,18 @@ export async function GET(request: Request) {
     const coverFootColor = coverFooterColorCustom || (hasCoverBg ? "rgba(255,255,255,0.55)" : "#999999");
     const coverDivColor = coverSubtitleColorCustom || (hasCoverBg ? "rgba(255,255,255,0.35)" : secondaryColor);
 
+    // Determine items per product page according to layout preset
+    const itemsPerProductPage =
+      productLayoutPreset === "editorial-duo"
+        ? 2
+        : productLayoutPreset === "commercial-grid"
+        ? 4
+        : productLayoutPreset === "executive-table"
+        ? 12
+        : 1;
+
     // 8. Generate optional Index (Sumário) and product pages HTML
-    const ITEMS_PER_INDEX_PAGE = 24;
+    const ITEMS_PER_INDEX_PAGE = 22;
     const indexPagesCount = includeIndex
       ? Math.max(1, Math.ceil(products.length / ITEMS_PER_INDEX_PAGE))
       : 0;
@@ -369,22 +411,27 @@ export async function GET(request: Request) {
         const rowsHtml = slice
           .map((item, itemIdx) => {
             const globalIdx = pageIdx * ITEMS_PER_INDEX_PAGE + itemIdx;
-            const targetPage = globalIdx + 2 + indexPagesCount;
+            const targetPage = Math.floor(globalIdx / itemsPerProductPage) + 2 + indexPagesCount;
             const itemEffectivePrice = item.precoPromocional ?? item.precoOriginal;
+            const boxTotal = itemEffectivePrice * 6;
             const priceText = !hidePrices
-              ? `<span style="color:${productPriceColor};font-weight:700;margin-left:8px;">R$ ${itemEffectivePrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>`
+              ? `<span style="color:${productPriceColor};font-weight:700;margin-left:8px;">R$ ${itemEffectivePrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>${showProductBoxPrice ? `<span style="color:${productSpecsColor};font-size:9px;margin-left:6px;">(Cx 6: R$ ${boxTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })})</span>` : ""}`
+              : "";
+            const categoryTag = showProductCategoryBadge
+              ? `<span style="display:inline-block;padding:1px 6px;border-radius:3px;background:rgba(128,40,45,0.08);color:${productNameColor};font-size:8px;font-weight:800;letter-spacing:1px;text-transform:uppercase;margin-left:6px;">${escapeHtml(item.categoria || "Tinto")}</span>`
               : "";
             return `
-            <div style="display:flex;align-items:baseline;justify-content:space-between;padding:6px 0;border-bottom:1px dashed rgba(0,0,0,0.12);font-size:11px;">
+            <a href="#wine-anchor-${escapeHtml(item.id)}" style="display:flex;align-items:baseline;justify-content:space-between;padding:7px 4px;border-bottom:1px dashed rgba(0,0,0,0.14);font-size:11px;text-decoration:none;color:inherit;">
               <div style="min-width:0;padding-right:12px;">
                 <span style="font-family:${fontCSS};font-weight:700;color:${productNameColor};font-size:12.5px;">${escapeHtml(item.name)}</span>
-                <span style="color:${productSpecsColor};font-size:9.5px;text-transform:uppercase;letter-spacing:1px;margin-left:8px;">${escapeHtml(item.paisOrigem)} · ${escapeHtml(item.categoria || "Tinto")} · Safra ${escapeHtml(item.safra)}</span>
+                ${categoryTag}
+                <span style="color:${productSpecsColor};font-size:9.5px;text-transform:uppercase;letter-spacing:1px;margin-left:8px;">${escapeHtml(item.vinicola)} · ${escapeHtml(item.paisOrigem)} · Safra ${escapeHtml(item.safra)}</span>
               </div>
               <div style="white-space:nowrap;flex-shrink:0;font-size:10.5px;color:${textColor};">
                 ${priceText}
-                <span style="display:inline-block;min-width:48px;text-align:right;color:${secondaryColor};font-weight:700;">Pág. ${targetPage}</span>
+                <span style="display:inline-block;min-width:52px;text-align:right;color:${secondaryColor};font-weight:700;">Pág. ${targetPage}</span>
               </div>
-            </div>`;
+            </a>`;
           })
           .join("");
 
@@ -392,7 +439,7 @@ export async function GET(request: Request) {
         <div class="prod-page" style="justify-content:flex-start;">
           <div class="prod-top" style="margin-bottom:18px;">
             <h2 class="prod-name" style="color:${productNameColor};font-size:24px;">SUMÁRIO DE RÓTULOS</h2>
-            <p class="prod-origin" style="color:${productSpecsColor};font-size:10px;">${products.length} rótulo${products.length === 1 ? "" : "s"} selecionado${products.length === 1 ? "" : "s"}${indexPagesCount > 1 ? ` · Parte ${pageIdx + 1}/${indexPagesCount}` : ""}</p>
+            <p class="prod-origin" style="color:${productSpecsColor};font-size:10px;">${products.length} rótulo${products.length === 1 ? "" : "s"} selecionado${products.length === 1 ? "" : "s"}${indexPagesCount > 1 ? ` · Parte ${pageIdx + 1}/${indexPagesCount}` : ""} · Clique no vinho para ir à página</p>
             <div class="prod-line" style="background:${productSpecsColor};"></div>
           </div>
           <div style="width:100%;flex:1;">
@@ -416,101 +463,346 @@ export async function GET(request: Request) {
       ? `background-image:url('${backgroundImageUrl}');background-size:cover;background-position:center;`
       : `background-color:${backgroundColor};`;
 
-    products.forEach((product, idx) => {
-      const pageNumber = idx + 2 + indexPagesCount;
-      const productName = escapeHtml(product.name);
-      const productOrigin = escapeHtml(`${product.paisOrigem} · ${product.regiao}`);
-      const productSpecs = escapeHtml(
-        `${product.vinicola} · ${product.uva} · Safra ${product.safra} · ${product.teorAlcoolico}% vol`,
-      );
-      const productImageUrl = productImageUrls[idx];
-      let priceHtml: string;
-      if (product.precoPromocional) {
-        priceHtml = `
-          <span class="price-val" style="color:${productPriceColor}; font-size:${productPriceValueFontSize}px;">R$ ${product.precoPromocional.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-          <span class="price-old" style="font-size:${Math.round(productPriceValueFontSize * 0.55)}px;">R$ ${product.precoOriginal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>`;
-      } else {
-        priceHtml = `<span class="price-val" style="color:${productPriceColor}; font-size:${productPriceValueFontSize}px;">R$ ${product.precoOriginal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>`;
+    const buildBadgesRowHtml = (product: (typeof products)[number], align: string = "center") => {
+      const parts: string[] = [];
+      if (showProductCountryFlag && product.paisOrigem) {
+        const flagUrl = getCountryFlagUrl(product.paisOrigem);
+        parts.push(
+          `<span class="meta-badge"><img src="${escapeHtml(flagUrl)}" alt="" class="flag-icon" />${escapeHtml(product.paisOrigem)}</span>`,
+        );
       }
+      if (showProductCategoryBadge) {
+        parts.push(
+          `<span class="meta-badge meta-badge-cat" style="border-color:${secondaryColor};color:${productNameColor};">${escapeHtml(product.categoria || "Tinto")}</span>`,
+        );
+      }
+      if (
+        showProductDiscountBadge &&
+        !hidePrices &&
+        product.precoPromocional &&
+        product.precoOriginal > product.precoPromocional
+      ) {
+        const pct = Math.round((1 - product.precoPromocional / product.precoOriginal) * 100);
+        if (pct > 0) {
+          parts.push(
+            `<span class="meta-badge meta-badge-promo" style="background:${primaryColor};color:#fff;">-${pct}% OFF</span>`,
+          );
+        }
+      }
+      if (parts.length === 0) return "";
+      const justify = align === "left" ? "flex-start" : align === "right" ? "flex-end" : "center";
+      return `<div class="meta-badges-row" style="justify-content:${justify};">${parts.join("")}</div>`;
+    };
 
-      const notasText = escapeHtml(
-        product.notasDegustacao || "Vinho de excelente estrutura, aromas harmoniosos e notas marcantes.",
-      );
+    if (productLayoutPreset === "editorial-duo") {
+      // ── 2 PRODUCTS PER PAGE (EDITORIAL DUO) ──
+      const totalDuoPages = Math.ceil(products.length / 2);
+      for (let pageIdx = 0; pageIdx < totalDuoPages; pageIdx++) {
+        const pageProducts = products.slice(pageIdx * 2, pageIdx * 2 + 2);
+        const pageNumber = pageIdx + 2 + indexPagesCount;
+        const cardsHtml = pageProducts
+          .map((product, localIdx) => {
+            const globalIdx = pageIdx * 2 + localIdx;
+            const productImageUrl = productImageUrls[globalIdx];
+            const effectiveUnit = product.precoPromocional ?? product.precoOriginal;
+            const boxValue = effectiveUnit * 6;
+            const notasText = escapeHtml(
+              product.notasDegustacao ||
+                "Vinho de excelente estrutura, aromas harmoniosos e notas marcantes.",
+            );
+            const discountPct =
+              product.precoPromocional && product.precoOriginal > product.precoPromocional
+                ? Math.round((1 - product.precoPromocional / product.precoOriginal) * 100)
+                : 0;
 
-      const priceAlignCSS = productPriceSide === "left" ? "right" : productPriceSide === "center" ? "center" : "left";
-      const productPriceBaseTop = productLayoutPreset === "price-top" ? 18 : 45;
+            return `
+            <div id="wine-anchor-${escapeHtml(product.id)}" class="duo-card ${localIdx === 1 ? "duo-card-second" : ""}" style="border-color:${secondaryColor};">
+              ${showProductBottle ? `
+              <div class="duo-bottle-wrap">
+                <img src="${escapeHtml(productImageUrl)}" class="duo-bottle-img" alt="${escapeHtml(product.name)}" />
+              </div>` : ""}
+              <div class="duo-content">
+                ${buildBadgesRowHtml(product, "left")}
+                ${showProductName ? `<h3 class="duo-title" style="font-family:${fontCSS};color:${productNameColor};">${escapeHtml(product.name)}</h3>` : ""}
+                ${showProductOrigin ? `<p class="duo-origin" style="color:${productSpecsColor};">${escapeHtml(product.vinicola)} · ${escapeHtml(product.paisOrigem)} (${escapeHtml(product.regiao)})</p>` : ""}
+                ${showProductDivider ? `<div class="duo-divider" style="background:${secondaryColor};"></div>` : ""}
+                ${showProductSpecs ? `
+                <div class="spec-grid">
+                  <div class="spec-cell"><span class="spec-lbl">UVA / BLEND</span><span class="spec-val" style="color:${textColor};">${escapeHtml(product.uva)}</span></div>
+                  <div class="spec-cell"><span class="spec-lbl">SAFRA</span><span class="spec-val" style="color:${textColor};">${escapeHtml(product.safra)}</span></div>
+                  <div class="spec-cell"><span class="spec-lbl">TEOR ALC.</span><span class="spec-val" style="color:${textColor};">${product.teorAlcoolico}% vol</span></div>
+                </div>` : ""}
+                ${showProductDescription ? `<p class="duo-desc" style="color:${productDescColor};">${notasText}</p>` : ""}
+                ${showProductPrice ? `
+                <div class="duo-price-bar" style="border-top-color:rgba(197,168,128,0.35);">
+                  <div>
+                    <span class="duo-price-lbl" style="color:${productPriceLabelColor};">PREÇO UNITÁRIO B2B</span>
+                    <div class="duo-price-vals">
+                      <span class="duo-price-main" style="color:${productPriceColor};">R$ ${effectiveUnit.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                      ${product.precoPromocional ? `<span class="duo-price-old">R$ ${product.precoOriginal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>` : ""}
+                      ${showProductDiscountBadge && discountPct > 0 ? `<span class="promo-chip" style="background:${primaryColor};">-${discountPct}%</span>` : ""}
+                    </div>
+                  </div>
+                  <div style="text-align:right;">
+                    <span class="duo-price-lbl" style="color:${productPriceInfoColor};">${showProductBoxPrice ? "CAIXA C/ 6 GARRAFAS" : "EMBALAGEM B2B"}</span>
+                    <span class="duo-box-total" style="color:${secondaryColor};">${showProductBoxPrice ? `R$ ${boxValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Caixa c/ 6 un."}</span>
+                  </div>
+                </div>` : ""}
+              </div>
+            </div>`;
+          })
+          .join("");
 
-      // Price block HTML (position absolute full-canvas autonomy)
-      const priceBadgeHtml = showProductPrice ? `
-      <div class="prod-price-badge-free" style="position:absolute; left:calc(50% + ${productPriceXOffset}px); top:calc(${productPriceBaseTop}% + ${productPriceYOffset}px); transform:translate(-50%, -50%) rotate(${productPriceAngle}deg); text-align:${priceAlignCSS}; z-index:20;">
-        <p class="prod-price-label" style="color:${productPriceLabelColor}; font-size:${productPriceLabelFontSize}px;">Preço Unitário B2B</p>
-        <p class="prod-price-info" style="color:${productPriceInfoColor}; font-size:${productPriceInfoFontSize}px;">Caixa c/ 6 garrafas</p>
-        <div class="prod-price-row ${priceAlignCSS === 'center' ? 'flex-center' : priceAlignCSS === 'right' ? 'flex-end' : 'flex-start'}">${priceHtml}</div>
-      </div>` : "";
-
-      if (productLayoutPreset === "side-right" || productLayoutPreset === "side-left") {
-        const isReverse = productLayoutPreset === "side-left";
         productPagesHtml += `
-        <div class="prod-page">
-          <div class="prod-top" style="transform: translate(${productNameXOffset}px, ${productNameYOffset}px);">
-            ${showProductName ? `<h2 class="prod-name" style="color:${productNameColor}; font-size:${productNameFontSize}px;">${productName}</h2>` : ""}
-            ${showProductOrigin ? `<p class="prod-origin" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px; transform: translateY(${productOriginYOffset}px);">${productOrigin}</p>` : ""}
-            ${showProductDivider ? `<div class="prod-line" style="background:${productSpecsColor};"></div>` : ""}
+        <div class="prod-page" style="justify-content:space-between;">
+          <div class="multi-page-header" style="border-bottom-color:${secondaryColor};">
+            <span style="font-family:${fontCSS};color:${productNameColor};font-weight:700;font-size:13px;letter-spacing:2px;">${headerTitle}</span>
+            <span style="color:${productSpecsColor};font-size:9.5px;letter-spacing:2px;text-transform:uppercase;">${coverSubtitle}</span>
           </div>
+          <div class="duo-container">
+            ${cardsHtml}
+          </div>
+          ${showProductFooter ? `<div class="page-foot">
+            <span>${footerText}</span>
+            <span>Página ${pageNumber}</span>
+          </div>` : ""}
+        </div>`;
+      }
+    } else if (productLayoutPreset === "commercial-grid") {
+      // ── 4 PRODUCTS PER PAGE (2x2 COMMERCIAL B2B GRID) ──
+      const totalGridPages = Math.ceil(products.length / 4);
+      for (let pageIdx = 0; pageIdx < totalGridPages; pageIdx++) {
+        const pageProducts = products.slice(pageIdx * 4, pageIdx * 4 + 4);
+        const pageNumber = pageIdx + 2 + indexPagesCount;
+        const cardsHtml = pageProducts
+          .map((product, localIdx) => {
+            const globalIdx = pageIdx * 4 + localIdx;
+            const productImageUrl = productImageUrls[globalIdx];
+            const effectiveUnit = product.precoPromocional ?? product.precoOriginal;
+            const boxValue = effectiveUnit * 6;
+            const notasText = escapeHtml(
+              product.notasDegustacao ||
+                "Vinho de excelente estrutura, aromas harmoniosos e notas marcantes.",
+            );
 
-          <div class="prod-body-side ${isReverse ? 'side-reverse' : ''}">
-            ${showProductBottle ? `<div class="side-col-bottle" style="transform: translate(${productImgXOffset}px, ${productImgYOffset}px) rotate(${productImgAngle}deg);">
-              <img src="${escapeHtml(productImageUrl)}" class="prod-img-side" style="max-height: min(${productImgHeight}px, 100%);" />
-            </div>` : ""}
+            return `
+            <div id="wine-anchor-${escapeHtml(product.id)}" class="grid4-card" style="border-color:rgba(197,168,128,0.45);">
+              <div class="grid4-top" style="border-bottom-color:${secondaryColor};">
+                ${buildBadgesRowHtml(product, "center")}
+                ${showProductBottle ? `
+                <div class="grid4-img-wrap">
+                  <img src="${escapeHtml(productImageUrl)}" class="grid4-img" alt="${escapeHtml(product.name)}" />
+                </div>` : ""}
+              </div>
+              <div class="grid4-body">
+                ${showProductOrigin ? `<p class="grid4-origin" style="color:${productSpecsColor};">${escapeHtml(product.vinicola)} · ${escapeHtml(product.paisOrigem)}</p>` : ""}
+                ${showProductName ? `<h3 class="grid4-title" style="font-family:${fontCSS};color:${productNameColor};">${escapeHtml(product.name)}</h3>` : ""}
+                ${showProductSpecs ? `<p class="grid4-specs" style="color:${productSpecsColor};">${escapeHtml(product.uva)} · Safra ${escapeHtml(product.safra)} · ${product.teorAlcoolico}% vol</p>` : ""}
+                ${showProductDescription ? `<p class="grid4-desc" style="color:${productDescColor};">${notasText}</p>` : ""}
+              </div>
+              ${showProductPrice ? `
+              <div class="grid4-foot" style="border-top-color:rgba(197,168,128,0.3);">
+                <div>
+                  <span class="grid4-price-lbl" style="color:${productPriceLabelColor};">Unitário B2B</span>
+                  <div style="display:flex;align-items:baseline;gap:6px;">
+                    <span class="grid4-price-val" style="color:${productPriceColor};">R$ ${effectiveUnit.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                    ${product.precoPromocional ? `<span class="grid4-price-old">R$ ${product.precoOriginal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>` : ""}
+                  </div>
+                </div>
+                <div style="text-align:right;">
+                  <span class="grid4-price-lbl" style="color:${productPriceInfoColor};">Caixa c/ 6</span>
+                  <span class="grid4-box-val" style="color:${secondaryColor};">${showProductBoxPrice ? `R$ ${boxValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "6 garrafas"}</span>
+                </div>
+              </div>` : ""}
+            </div>`;
+          })
+          .join("");
 
-            <div class="side-col-content"${showProductBottle ? "" : ' style="flex:1 1 100%;"'}>
-              <!-- Specs & Tasting Notes in side column -->
-              <div class="prod-desc-block" style="transform: translate(${productDescXOffset}px, ${productDescYOffset}px) rotate(${productDescAngle}deg); text-align: ${productDescAlign}; max-width:${productTextMaxWidth}px;">
-                ${showProductSpecs ? `<p class="prod-specs" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px; margin-bottom: 8px;">${productSpecs}</p>` : ""}
-                ${showProductDescription ? `<p class="prod-desc" style="color:${productDescColor}; font-size:${productDescFontSize}px;">${notasText}</p>` : ""}
+        productPagesHtml += `
+        <div class="prod-page" style="justify-content:space-between;">
+          <div class="multi-page-header" style="border-bottom-color:${secondaryColor};">
+            <span style="font-family:${fontCSS};color:${productNameColor};font-weight:700;font-size:13px;letter-spacing:2px;">${headerTitle}</span>
+            <span style="color:${productSpecsColor};font-size:9.5px;letter-spacing:2px;text-transform:uppercase;">${coverSubtitle}</span>
+          </div>
+          <div class="grid4-container">
+            ${cardsHtml}
+          </div>
+          ${showProductFooter ? `<div class="page-foot">
+            <span>${footerText}</span>
+            <span>Página ${pageNumber}</span>
+          </div>` : ""}
+        </div>`;
+      }
+    } else if (productLayoutPreset === "executive-table") {
+      // ── 12 PRODUCTS PER PAGE (EXECUTIVE B2B TABLE) ──
+      const totalTablePages = Math.ceil(products.length / 12);
+      for (let pageIdx = 0; pageIdx < totalTablePages; pageIdx++) {
+        const pageProducts = products.slice(pageIdx * 12, pageIdx * 12 + 12);
+        const pageNumber = pageIdx + 2 + indexPagesCount;
+        const rowsHtml = pageProducts
+          .map((product, localIdx) => {
+            const globalIdx = pageIdx * 12 + localIdx;
+            const productImageUrl = productImageUrls[globalIdx];
+            const effectiveUnit = product.precoPromocional ?? product.precoOriginal;
+            const boxValue = effectiveUnit * 6;
+            return `
+            <tr id="wine-anchor-${escapeHtml(product.id)}" class="exec-tr">
+              ${showProductBottle ? `<td class="exec-td exec-td-img"><img src="${escapeHtml(productImageUrl)}" class="exec-thumb" alt="" /></td>` : ""}
+              <td class="exec-td">
+                <div style="font-family:${fontCSS};font-weight:700;color:${productNameColor};font-size:12px;">${escapeHtml(product.name)}</div>
+                <div style="font-size:9.5px;color:${productSpecsColor};">${escapeHtml(product.vinicola)} · ${escapeHtml(product.regiao)}</div>
+              </td>
+              <td class="exec-td" style="font-size:10px;color:${textColor};">${escapeHtml(product.categoria || "Tinto")}</td>
+              <td class="exec-td" style="font-size:10px;color:${textColor};">${escapeHtml(product.paisOrigem)}</td>
+              <td class="exec-td" style="font-size:9.5px;color:${textColor};">${escapeHtml(product.uva)}</td>
+              <td class="exec-td" style="font-size:10px;font-weight:600;color:${textColor};text-align:center;">${escapeHtml(product.safra)}</td>
+              ${showProductPrice ? `
+              <td class="exec-td" style="text-align:right;white-space:nowrap;">
+                <span style="font-weight:800;color:${productPriceColor};font-size:11.5px;">R$ ${effectiveUnit.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                ${product.precoPromocional ? `<div style="font-size:8.5px;color:#999;text-decoration:line-through;">R$ ${product.precoOriginal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>` : ""}
+              </td>
+              <td class="exec-td" style="text-align:right;white-space:nowrap;font-weight:700;color:${secondaryColor};font-size:10.5px;">
+                ${showProductBoxPrice ? `R$ ${boxValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "6 un."}
+              </td>` : ""}
+            </tr>`;
+          })
+          .join("");
+
+        productPagesHtml += `
+        <div class="prod-page" style="justify-content:flex-start;">
+          <div class="multi-page-header" style="border-bottom-color:${secondaryColor};margin-bottom:14px;">
+            <span style="font-family:${fontCSS};color:${productNameColor};font-weight:700;font-size:14px;letter-spacing:2px;">${headerTitle} — TABELA EXECUTIVA B2B</span>
+            <span style="color:${productSpecsColor};font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;">Página ${pageIdx + 1}/${totalTablePages}</span>
+          </div>
+          <table class="exec-table">
+            <thead>
+              <tr style="border-bottom:1.5px solid ${secondaryColor};color:${productNameColor};font-size:9px;text-transform:uppercase;letter-spacing:1px;">
+                ${showProductBottle ? `<th class="exec-th" style="width:36px;"></th>` : ""}
+                <th class="exec-th">Rótulo & Vinícola</th>
+                <th class="exec-th">Tipo</th>
+                <th class="exec-th">País</th>
+                <th class="exec-th">Uva / Blend</th>
+                <th class="exec-th" style="text-align:center;">Safra</th>
+                ${showProductPrice ? `<th class="exec-th" style="text-align:right;">Unitário B2B</th><th class="exec-th" style="text-align:right;">Caixa c/ 6</th>` : ""}
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+          ${showProductFooter ? `<div class="page-foot">
+            <span>${footerText}</span>
+            <span>Página ${pageNumber}</span>
+          </div>` : ""}
+        </div>`;
+      }
+    } else {
+      // ── 1 PRODUCT PER PAGE (CLASSIC, SIDE-RIGHT, SIDE-LEFT, PRICE-TOP) ──
+      products.forEach((product, idx) => {
+        const pageNumber = idx + 2 + indexPagesCount;
+        const productName = escapeHtml(product.name);
+        const productOrigin = escapeHtml(`${product.paisOrigem} · ${product.regiao}`);
+        const productSpecs = escapeHtml(
+          `${product.vinicola} · ${product.uva} · Safra ${product.safra} · ${product.teorAlcoolico}% vol`,
+        );
+        const productImageUrl = productImageUrls[idx];
+        const effectiveUnit = product.precoPromocional ?? product.precoOriginal;
+        const boxTotalValue = effectiveUnit * 6;
+        let priceHtml: string;
+        if (product.precoPromocional) {
+          priceHtml = `
+            <span class="price-val" style="color:${productPriceColor}; font-size:${productPriceValueFontSize}px;">R$ ${product.precoPromocional.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+            <span class="price-old" style="font-size:${Math.round(productPriceValueFontSize * 0.55)}px;">R$ ${product.precoOriginal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>`;
+        } else {
+          priceHtml = `<span class="price-val" style="color:${productPriceColor}; font-size:${productPriceValueFontSize}px;">R$ ${product.precoOriginal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>`;
+        }
+
+        const notasText = escapeHtml(
+          product.notasDegustacao || "Vinho de excelente estrutura, aromas harmoniosos e notas marcantes.",
+        );
+
+        const priceAlignCSS = productPriceSide === "left" ? "right" : productPriceSide === "center" ? "center" : "left";
+        const productPriceBaseTop = productLayoutPreset === "price-top" ? 18 : 45;
+        const boxInfoText = showProductBoxPrice
+          ? `Caixa c/ 6: R$ ${boxTotalValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+          : "Caixa c/ 6 garrafas";
+
+        // Price block HTML (position absolute full-canvas autonomy)
+        const priceBadgeHtml = showProductPrice ? `
+        <div class="prod-price-badge-free" style="position:absolute; left:calc(50% + ${productPriceXOffset}px); top:calc(${productPriceBaseTop}% + ${productPriceYOffset}px); transform:translate(-50%, -50%) rotate(${productPriceAngle}deg); text-align:${priceAlignCSS}; z-index:20;">
+          <p class="prod-price-label" style="color:${productPriceLabelColor}; font-size:${productPriceLabelFontSize}px;">Preço Unitário B2B</p>
+          <p class="prod-price-info" style="color:${productPriceInfoColor}; font-size:${productPriceInfoFontSize}px;">${boxInfoText}</p>
+          <div class="prod-price-row ${priceAlignCSS === 'center' ? 'flex-center' : priceAlignCSS === 'right' ? 'flex-end' : 'flex-start'}">${priceHtml}</div>
+        </div>` : "";
+
+        const badgesHtml = buildBadgesRowHtml(product, "center");
+
+        if (productLayoutPreset === "side-right" || productLayoutPreset === "side-left") {
+          const isReverse = productLayoutPreset === "side-left";
+          productPagesHtml += `
+          <div id="wine-anchor-${escapeHtml(product.id)}" class="prod-page">
+            <div class="prod-top" style="transform: translate(${productNameXOffset}px, ${productNameYOffset}px);">
+              ${badgesHtml}
+              ${showProductName ? `<h2 class="prod-name" style="color:${productNameColor}; font-size:${productNameFontSize}px;">${productName}</h2>` : ""}
+              ${showProductOrigin ? `<p class="prod-origin" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px; transform: translateY(${productOriginYOffset}px);">${productOrigin}</p>` : ""}
+              ${showProductDivider ? `<div class="prod-line" style="background:${productSpecsColor};"></div>` : ""}
+            </div>
+
+            <div class="prod-body-side ${isReverse ? 'side-reverse' : ''}">
+              ${showProductBottle ? `<div class="side-col-bottle" style="transform: translate(${productImgXOffset}px, ${productImgYOffset}px) rotate(${productImgAngle}deg);">
+                <img src="${escapeHtml(productImageUrl)}" class="prod-img-side" style="max-height: min(${productImgHeight}px, 100%);" />
+              </div>` : ""}
+
+              <div class="side-col-content"${showProductBottle ? "" : ' style="flex:1 1 100%;"'}>
+                <!-- Specs & Tasting Notes in side column -->
+                <div class="prod-desc-block" style="transform: translate(${productDescXOffset}px, ${productDescYOffset}px) rotate(${productDescAngle}deg); text-align: ${productDescAlign}; max-width:${productTextMaxWidth}px;">
+                  ${showProductSpecs ? `<p class="prod-specs" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px; margin-bottom: 8px;">${productSpecs}</p>` : ""}
+                  ${showProductDescription ? `<p class="prod-desc" style="color:${productDescColor}; font-size:${productDescFontSize}px;">${notasText}</p>` : ""}
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- Fully Autonomous Price Element -->
-          ${priceBadgeHtml}
+            <!-- Fully Autonomous Price Element -->
+            ${priceBadgeHtml}
 
-          ${showProductFooter ? `<div class="page-foot">
-            <span>${footerText}</span>
-            <span>Página ${pageNumber}</span>
-          </div>` : ""}
-        </div>`;
-      } else {
-        // CLASSIC & PRICE-TOP LAYOUTS
-        productPagesHtml += `
-        <div class="prod-page">
-          <div class="prod-top" style="transform: translate(${productNameXOffset}px, ${productNameYOffset}px);">
-            ${showProductName ? `<h2 class="prod-name" style="color:${productNameColor}; font-size:${productNameFontSize}px;">${productName}</h2>` : ""}
-            ${showProductOrigin ? `<p class="prod-origin" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px; transform: translateY(${productOriginYOffset}px);">${productOrigin}</p>` : ""}
-            ${showProductDivider ? `<div class="prod-line" style="background:${productSpecsColor};"></div>` : ""}
-          </div>
-
-          <div class="prod-middle">
-            ${showProductBottle ? `<div class="prod-img-area" style="transform: translate(${productImgXOffset}px, ${productImgYOffset}px) rotate(${productImgAngle}deg);">
-              <img src="${escapeHtml(productImageUrl)}" class="prod-img" style="max-height: min(${productImgHeight}px, 100%); max-width:${productImgMaxWidth}px;" />
+            ${showProductFooter ? `<div class="page-foot">
+              <span>${footerText}</span>
+              <span>Página ${pageNumber}</span>
             </div>` : ""}
-          </div>
+          </div>`;
+        } else {
+          // CLASSIC & PRICE-TOP LAYOUTS
+          productPagesHtml += `
+          <div id="wine-anchor-${escapeHtml(product.id)}" class="prod-page">
+            <div class="prod-top" style="transform: translate(${productNameXOffset}px, ${productNameYOffset}px);">
+              ${badgesHtml}
+              ${showProductName ? `<h2 class="prod-name" style="color:${productNameColor}; font-size:${productNameFontSize}px;">${productName}</h2>` : ""}
+              ${showProductOrigin ? `<p class="prod-origin" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px; transform: translateY(${productOriginYOffset}px);">${productOrigin}</p>` : ""}
+              ${showProductDivider ? `<div class="prod-line" style="background:${productSpecsColor};"></div>` : ""}
+            </div>
 
-          <div class="prod-bottom" style="transform: translate(${productDescXOffset}px, ${productDescYOffset}px) rotate(${productDescAngle}deg); text-align: ${productDescAlign};">
-            ${showProductSpecs ? `<p class="prod-specs" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px;">${productSpecs}</p>` : ""}
-            ${showProductDescription ? `<p class="prod-desc" style="color:${productDescColor}; font-size:${productDescFontSize}px;">${notasText}</p>` : ""}
-          </div>
+            <div class="prod-middle">
+              ${showProductBottle ? `<div class="prod-img-area" style="transform: translate(${productImgXOffset}px, ${productImgYOffset}px) rotate(${productImgAngle}deg);">
+                <img src="${escapeHtml(productImageUrl)}" class="prod-img" style="max-height: min(${productImgHeight}px, 100%); max-width:${productImgMaxWidth}px;" />
+              </div>` : ""}
+            </div>
 
-          <!-- Fully Autonomous Price Element -->
-          ${priceBadgeHtml}
+            <div class="prod-bottom" style="transform: translate(${productDescXOffset}px, ${productDescYOffset}px) rotate(${productDescAngle}deg); text-align: ${productDescAlign};">
+              ${showProductSpecs ? `<p class="prod-specs" style="color:${productSpecsColor}; font-size:${productSpecsFontSize}px;">${productSpecs}</p>` : ""}
+              ${showProductDescription ? `<p class="prod-desc" style="color:${productDescColor}; font-size:${productDescFontSize}px;">${notasText}</p>` : ""}
+            </div>
 
-          ${showProductFooter ? `<div class="page-foot">
-            <span>${footerText}</span>
-            <span>Página ${pageNumber}</span>
-          </div>` : ""}
-        </div>`;
-      }
-    });
+            <!-- Fully Autonomous Price Element -->
+            ${priceBadgeHtml}
+
+            ${showProductFooter ? `<div class="page-foot">
+              <span>${footerText}</span>
+              <span>Página ${pageNumber}</span>
+            </div>` : ""}
+          </div>`;
+        }
+      });
+    }
 
     // 9. Assemble full HTML document
     const coverBgCSS = hasCoverBg
@@ -523,7 +815,7 @@ export async function GET(request: Request) {
 <meta charset="utf-8">
 <title>${headerTitle}</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Inter:wght@300;400;500;600;700&family=Cinzel:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700;800&display=swap');
 
 @page{size:A4;margin:0}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -615,6 +907,23 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
 .prod-line{
   width:50px;height:1.5px;
   margin:8px auto;
+}
+
+/* Badges Row (Country Flag, Category, Discount) */
+.meta-badges-row{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  margin-bottom:6px;
+}
+.meta-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:2px 8px;border-radius:999px;
+  font-size:8.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;
+  background:rgba(255,255,255,0.86);
+  border:1px solid rgba(197,168,128,0.45);
+  color:${textColor};
+}
+.flag-icon{
+  width:13px;height:9px;object-fit:cover;border-radius:1.5px;
 }
 
 /* Classic Layout Middle Container */
@@ -732,6 +1041,146 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
   margin-bottom:8px;
   word-wrap:break-word;
 }
+
+/* ── MULTI-PRODUCT PAGE HEADER ── */
+.multi-page-header{
+  width:100%;
+  display:flex;align-items:baseline;justify-content:space-between;
+  border-bottom:1px solid ${secondaryColor};
+  padding-bottom:8px;
+  margin-bottom:14px;
+  flex-shrink:0;
+}
+
+/* ── EDITORIAL DUO (2 PER PAGE) ── */
+.duo-container{
+  flex:1;width:100%;
+  display:flex;flex-direction:column;
+  justify-content:space-between;
+  gap:18px;
+  padding-bottom:18px;
+}
+.duo-card{
+  flex:1;
+  display:flex;align-items:center;gap:24px;
+  background:rgba(255,255,255,0.88);
+  border:1px solid rgba(197,168,128,0.45);
+  border-radius:8px;
+  padding:20px 24px;
+  box-shadow:0 4px 18px rgba(0,0,0,0.04);
+}
+.duo-bottle-wrap{
+  width:135px;height:360px;
+  flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+}
+.duo-bottle-img{
+  max-width:100%;max-height:100%;object-fit:contain;
+  filter:drop-shadow(0 8px 18px rgba(0,0,0,0.14));
+}
+.duo-content{
+  flex:1;min-width:0;
+  display:flex;flex-direction:column;justify-content:center;
+}
+.duo-title{
+  font-size:21px;font-weight:700;line-height:1.2;margin-bottom:3px;
+}
+.duo-origin{
+  font-size:10px;text-transform:uppercase;letter-spacing:2px;font-weight:600;margin-bottom:8px;
+}
+.duo-divider{
+  width:42px;height:1.5px;margin-bottom:10px;
+}
+.spec-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+  background:rgba(246,243,242,0.85);
+  border:1px solid rgba(197,168,128,0.25);
+  border-radius:5px;padding:7px 10px;margin-bottom:10px;
+}
+.spec-cell{display:flex;flex-direction:column;}
+.spec-lbl{font-size:7.5px;font-weight:700;letter-spacing:1.2px;color:#877272;text-transform:uppercase;}
+.spec-val{font-size:10px;font-weight:600;margin-top:1px;}
+.duo-desc{
+  font-size:11.5px;line-height:1.55;margin-bottom:12px;
+  display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;
+}
+.duo-price-bar{
+  margin-top:auto;padding-top:10px;border-top:1px solid rgba(197,168,128,0.35);
+  display:flex;align-items:flex-end;justify-content:space-between;
+}
+.duo-price-lbl{display:block;font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:2px;}
+.duo-price-vals{display:flex;align-items:baseline;gap:8px;}
+.duo-price-main{font-size:20px;font-weight:800;}
+.duo-price-old{font-size:11px;color:#aaa;text-decoration:line-through;}
+.promo-chip{font-size:8.5px;font-weight:800;color:#fff;padding:2px 6px;border-radius:4px;}
+.duo-box-total{font-size:13px;font-weight:800;}
+
+/* ── COMMERCIAL GRID (4 PER PAGE) ── */
+.grid4-container{
+  flex:1;width:100%;
+  display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr);
+  gap:16px;padding-bottom:18px;
+}
+.grid4-card{
+  background:rgba(255,255,255,0.92);
+  border:1px solid rgba(197,168,128,0.45);
+  border-radius:8px;
+  padding:14px 16px;
+  display:flex;flex-direction:column;justify-content:space-between;
+  box-shadow:0 3px 14px rgba(0,0,0,0.03);
+}
+.grid4-top{
+  border-bottom:1px solid ${secondaryColor};
+  padding-bottom:8px;margin-bottom:8px;
+  display:flex;flex-direction:column;align-items:center;
+}
+.grid4-img-wrap{
+  height:165px;width:100%;
+  display:flex;align-items:center;justify-content:center;
+}
+.grid4-img{
+  max-height:100%;max-width:100%;object-fit:contain;
+  filter:drop-shadow(0 6px 14px rgba(0,0,0,0.12));
+}
+.grid4-body{flex:1;display:flex;flex-direction:column;}
+.grid4-origin{font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:2px;}
+.grid4-title{font-size:14.5px;font-weight:700;line-height:1.2;margin-bottom:3px;}
+.grid4-specs{font-size:9px;font-weight:600;margin-bottom:6px;}
+.grid4-desc{
+  font-size:9.5px;line-height:1.45;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+}
+.grid4-foot{
+  margin-top:8px;padding-top:8px;border-top:1px solid rgba(197,168,128,0.3);
+  display:flex;align-items:flex-end;justify-content:space-between;
+}
+.grid4-price-lbl{display:block;font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;}
+.grid4-price-val{font-size:15px;font-weight:800;}
+.grid4-price-old{font-size:9.5px;color:#aaa;text-decoration:line-through;}
+.grid4-box-val{font-size:11px;font-weight:800;}
+
+/* ── EXECUTIVE B2B TABLE (12 PER PAGE) ── */
+.exec-table{
+  width:100%;border-collapse:collapse;
+  background:rgba(255,255,255,0.92);
+  border-radius:6px;overflow:hidden;
+}
+.exec-th{
+  text-align:left;padding:8px 8px;font-weight:800;
+}
+.exec-tr{
+  border-bottom:1px solid rgba(197,168,128,0.25);
+}
+.exec-td{
+  padding:7px 8px;vertical-align:middle;
+}
+.exec-td-img{
+  width:36px;text-align:center;
+}
+.exec-thumb{
+  height:48px;width:24px;object-fit:contain;
+}
+
 .page-foot{
   position:absolute;bottom:14px;left:45px;right:45px;
   border-top:1px solid #eee;padding-top:4px;
@@ -965,6 +1414,14 @@ export async function POST(request: Request) {
     );
   }
 
+  if (typeof payload.limit === "number" && Number.isInteger(payload.limit) && payload.limit > 0) {
+    searchParams.set("limit", String(Math.min(payload.limit, 200)));
+  }
+
+  if (typeof payload.templateId === "string" && payload.templateId.trim()) {
+    searchParams.set("templateId", payload.templateId.trim());
+  }
+
   searchParams.set(
     "sorts",
     serializeCatalogSortRules(normalizeCatalogSortRules(payload.sortRules)),
@@ -989,6 +1446,16 @@ export async function POST(request: Request) {
     }
   }
 
+  const previewStylesOverride =
+    payload.previewStyles &&
+    typeof payload.previewStyles === "object" &&
+    !Array.isArray(payload.previewStyles)
+      ? (payload.previewStyles as Record<string, unknown>)
+      : undefined;
+
   forwardedUrl.search = searchParams.toString();
-  return GET(new Request(forwardedUrl, { headers: request.headers }));
+  return generateCatalogPdfResponse(
+    new Request(forwardedUrl, { headers: request.headers }),
+    previewStylesOverride,
+  );
 }
