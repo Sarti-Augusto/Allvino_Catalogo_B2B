@@ -42,6 +42,7 @@ const numericRanges: Record<string, [number, number]> = {
   productDescFontSize: [6, 80],
   productDescXOffset: [-450, 450],
   productDescYOffset: [-150, 150],
+  productCardOpacity: [0, 100],
 };
 
 const booleanStyleKeys = [
@@ -91,6 +92,7 @@ function validateTemplateStyles(styles: Record<string, unknown>): string | null 
     ],
     productDescAlign: ["left", "center", "right", "justify"],
     productPriceSide: ["left", "center", "right"],
+    productCardSurfaceMode: ["auto", "transparent", "tinted-glass", "solid"],
     fontFamily: [
       "Playfair Display",
       "Inter",

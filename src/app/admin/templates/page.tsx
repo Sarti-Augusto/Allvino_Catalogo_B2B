@@ -110,6 +110,10 @@ interface TemplateStyles {
   productDescFontSize?: number;
   productDescXOffset?: number;
   productDescYOffset?: number;
+
+  // Background Harmonization & Card Surface Controls
+  productCardSurfaceMode?: "auto" | "transparent" | "tinted-glass" | "solid";
+  productCardOpacity?: number;
 }
 
 interface Template {
@@ -192,6 +196,142 @@ const clamp = (val: any, min: number = -450, max: number = 450): number => {
 
 const colorInputValue = (value: string, fallback: string) =>
   /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(value) ? value : fallback;
+
+const rgbToHex = (r: number, g: number, b: number): string => {
+  const toHex = (n: number) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+};
+
+const hexToRgba = (hex: string, alpha: number): string => {
+  const cleaned = hex.trim().replace(/^#/, "");
+  const safeAlpha = Math.max(0, Math.min(1, Number(alpha.toFixed(3))));
+  if (safeAlpha === 0) return "transparent";
+  if (/^[0-9a-f]{3}$/i.test(cleaned)) {
+    const r = parseInt(cleaned[0] + cleaned[0], 16);
+    const g = parseInt(cleaned[1] + cleaned[1], 16);
+    const b = parseInt(cleaned[2] + cleaned[2], 16);
+    return `rgba(${r}, ${g}, ${b}, ${safeAlpha})`;
+  }
+  if (/^[0-9a-f]{6}$/i.test(cleaned)) {
+    const r = parseInt(cleaned.slice(0, 2), 16);
+    const g = parseInt(cleaned.slice(2, 4), 16);
+    const b = parseInt(cleaned.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${safeAlpha})`;
+  }
+  return `rgba(244, 239, 230, ${safeAlpha})`;
+};
+
+interface ExtractedImagePalette {
+  dominantBgHex: string;
+  suggestedPrimaryHex: string;
+  suggestedSecondaryHex: string;
+  suggestedTextHex: string;
+  swatches: string[];
+  isDarkBackground: boolean;
+}
+
+function extractPaletteFromLoadedImage(image: HTMLImageElement): ExtractedImagePalette | null {
+  try {
+    const sampleSize = 48;
+    const canvas = document.createElement("canvas");
+    canvas.width = sampleSize;
+    canvas.height = sampleSize;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.drawImage(image, 0, 0, sampleSize, sampleSize);
+    const { data } = ctx.getImageData(0, 0, sampleSize, sampleSize);
+
+    let rSum = 0;
+    let gSum = 0;
+    let bSum = 0;
+    let count = 0;
+
+    // Group pixels into 5 luminance/saturation buckets
+    const buckets: Array<{ r: number; g: number; b: number; n: number }> = [
+      { r: 0, g: 0, b: 0, n: 0 }, // Lightest paper/surface
+      { r: 0, g: 0, b: 0, n: 0 }, // Mid-light warm tone
+      { r: 0, g: 0, b: 0, n: 0 }, // Accent / Gold / Saturated mid
+      { r: 0, g: 0, b: 0, n: 0 }, // Deep primary / Wine / Wood
+      { r: 0, g: 0, b: 0, n: 0 }, // Darkest contrast
+    ];
+
+    for (let y = 0; y < sampleSize; y++) {
+      for (let x = 0; x < sampleSize; x++) {
+        const idx = (y * sampleSize + x) * 4;
+        const a = data[idx + 3];
+        if (a < 128) continue;
+        const r = data[idx];
+        const g = data[idx + 1];
+        const b = data[idx + 2];
+
+        // Focus inner canvas area (where product cards sit) for dominant background
+        if (x >= 8 && x <= 40 && y >= 8 && y <= 40) {
+          rSum += r;
+          gSum += g;
+          bSum += b;
+          count++;
+        }
+
+        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+        const maxC = Math.max(r, g, b);
+        const minC = Math.min(r, g, b);
+        const sat = maxC === 0 ? 0 : (maxC - minC) / maxC;
+
+        let bIdx = 0;
+        if (lum > 205) bIdx = 0;
+        else if (lum > 155 && sat < 0.35) bIdx = 1;
+        else if (sat >= 0.25 && lum >= 75) bIdx = 2;
+        else if (lum >= 45) bIdx = 3;
+        else bIdx = 4;
+
+        buckets[bIdx].r += r;
+        buckets[bIdx].g += g;
+        buckets[bIdx].b += b;
+        buckets[bIdx].n += 1;
+      }
+    }
+
+    if (count === 0) return null;
+
+    const avgR = rSum / count;
+    const avgG = gSum / count;
+    const avgB = bSum / count;
+    const avgLum = 0.299 * avgR + 0.587 * avgG + 0.114 * avgB;
+    const isDarkBackground = avgLum < 115;
+
+    // If inner background is light, prefer the dominant light paper bucket blended with average
+    const paperBucket = isDarkBackground ? buckets[4] : buckets[0].n > 20 ? buckets[0] : buckets[1];
+    const domR = paperBucket.n > 10 ? (paperBucket.r / paperBucket.n) * 0.65 + avgR * 0.35 : avgR;
+    const domG = paperBucket.n > 10 ? (paperBucket.g / paperBucket.n) * 0.65 + avgG * 0.35 : avgG;
+    const domB = paperBucket.n > 10 ? (paperBucket.b / paperBucket.n) * 0.65 + avgB * 0.35 : avgB;
+    const dominantBgHex = rgbToHex(domR, domG, domB);
+
+    const swatches = buckets
+      .filter((b) => b.n > 0)
+      .map((b) => rgbToHex(b.r / b.n, b.g / b.n, b.b / b.n));
+
+    const uniqueSwatches = Array.from(new Set([dominantBgHex, ...swatches])).slice(0, 5);
+    const accentHex =
+      buckets[2].n > 5
+        ? rgbToHex(buckets[2].r / buckets[2].n, buckets[2].g / buckets[2].n, buckets[2].b / buckets[2].n)
+        : "#b48d56";
+    const deepHex =
+      buckets[3].n > 5
+        ? rgbToHex(buckets[3].r / buckets[3].n, buckets[3].g / buckets[3].n, buckets[3].b / buckets[3].n)
+        : "#58111a";
+
+    return {
+      dominantBgHex,
+      suggestedPrimaryHex: isDarkBackground ? accentHex : deepHex,
+      suggestedSecondaryHex: accentHex,
+      suggestedTextHex: isDarkBackground ? "#f5f2eb" : "#221d1a",
+      swatches: uniqueSwatches,
+      isDarkBackground,
+    };
+  } catch {
+    return null;
+  }
+}
 
 function VisibilityToggle({
   label,
@@ -339,6 +479,13 @@ export default function TemplatesPage() {
   const [productDescXOffset, setProductDescXOffset] = useState(0);
   const [productDescYOffset, setProductDescYOffset] = useState(0);
 
+  // Background Harmonization & Card Surface State
+  const [productCardSurfaceMode, setProductCardSurfaceMode] = useState<
+    "auto" | "transparent" | "tinted-glass" | "solid"
+  >("auto");
+  const [productCardOpacity, setProductCardOpacity] = useState<number>(18);
+  const [extractedArtPalette, setExtractedArtPalette] = useState<ExtractedImagePalette | null>(null);
+
   // Preview tab ("cover" | "index" | "product")
   const [previewTab, setPreviewTab] = useState<"cover" | "index" | "product">("product");
   const previewRef = useRef<HTMLDivElement>(null);
@@ -375,6 +522,35 @@ export default function TemplatesPage() {
     fetchTemplates();
     fetchWines();
   }, []);
+
+  // Automatically extract color palette from existing or newly loaded backgroundImageUrl
+  useEffect(() => {
+    if (!backgroundImageUrl) {
+      setExtractedArtPalette(null);
+      return;
+    }
+
+    let cancelled = false;
+    const img = new Image();
+    if (!backgroundImageUrl.startsWith("data:")) {
+      img.crossOrigin = "anonymous";
+    }
+    img.onload = () => {
+      if (cancelled) return;
+      const palette = extractPaletteFromLoadedImage(img);
+      if (palette) {
+        setExtractedArtPalette(palette);
+      }
+    };
+    img.onerror = () => {
+      if (!cancelled) setExtractedArtPalette(null);
+    };
+    img.src = backgroundImageUrl;
+
+    return () => {
+      cancelled = true;
+    };
+  }, [backgroundImageUrl]);
 
   useEffect(() => {
     const element = previewRef.current;
@@ -606,6 +782,21 @@ export default function TemplatesPage() {
     setProductDescFontSize(typeof s.productDescFontSize === "number" ? s.productDescFontSize : 14.5);
     setProductDescXOffset(clamp(s.productDescXOffset));
     setProductDescYOffset(clamp(s.productDescYOffset, -150, 150));
+
+    // Background Harmonization & Card Surface
+    setProductCardSurfaceMode(
+      s.productCardSurfaceMode &&
+        ["auto", "transparent", "tinted-glass", "solid"].includes(s.productCardSurfaceMode)
+        ? s.productCardSurfaceMode
+        : "auto",
+    );
+    setProductCardOpacity(
+      typeof s.productCardOpacity === "number"
+        ? clamp(s.productCardOpacity, 0, 100)
+        : s.backgroundImageUrl
+        ? 14
+        : 88,
+    );
   };
 
   const applyTemplate = (template: Template) => {
@@ -723,6 +914,8 @@ export default function TemplatesPage() {
     productDescFontSize,
     productDescXOffset: clamp(productDescXOffset),
     productDescYOffset: clamp(productDescYOffset, -150, 150),
+    productCardSurfaceMode,
+    productCardOpacity: clamp(productCardOpacity, 0, 100),
   });
 
   // Track changes in history stack for Undo/Redo (debounced)
@@ -898,6 +1091,7 @@ export default function TemplatesPage() {
     file: File | undefined,
     setter: (val: string) => void,
     imageLabel: string,
+    isProductPageBackground = false,
   ) => {
     if (!file) return;
 
@@ -926,8 +1120,24 @@ export default function TemplatesPage() {
         if (!context) throw new Error("CANVAS_UNAVAILABLE");
         context.drawImage(image, 0, 0, canvas.width, canvas.height);
         setter(canvas.toDataURL("image/webp", 0.82));
-        setIsDirty(true);
-        showToast(`${imageLabel} otimizada e pronta para salvar.`);
+
+        if (isProductPageBackground) {
+          const extracted = extractPaletteFromLoadedImage(image);
+          if (extracted) {
+            setExtractedArtPalette(extracted);
+            setBackgroundColor(extracted.dominantBgHex);
+            setProductCardSurfaceMode("auto");
+            setProductCardOpacity(14);
+            if (extracted.isDarkBackground) {
+              setTextColor(extracted.suggestedTextHex);
+            }
+          }
+          setIsDirty(true);
+          showToast("Arte de fundo carregada e superfície dos cards harmonizada automaticamente!");
+        } else {
+          setIsDirty(true);
+          showToast(`${imageLabel} otimizada e pronta para salvar.`);
+        }
       } catch {
         showToast(`Não foi possível processar ${imageLabel}.`, "error");
       } finally {
@@ -939,6 +1149,28 @@ export default function TemplatesPage() {
       showToast(`Não foi possível carregar ${imageLabel}.`, "error");
     };
     image.src = objectUrl;
+  };
+
+  const handleHarmonizeWithArt = (includeAccentColors = false) => {
+    if (!extractedArtPalette) return;
+    setBackgroundColor(extractedArtPalette.dominantBgHex);
+    setProductCardSurfaceMode("auto");
+    setProductCardOpacity(14);
+    if (includeAccentColors) {
+      setPrimaryColor(extractedArtPalette.suggestedPrimaryHex);
+      setSecondaryColor(extractedArtPalette.suggestedSecondaryHex);
+      setTextColor(extractedArtPalette.suggestedTextHex);
+      setProductNameColor("");
+      setProductSpecsColor("");
+      setProductDescColor("");
+      setProductPriceColor("");
+    }
+    setIsDirty(true);
+    showToast(
+      includeAccentColors
+        ? "Paleta completa e superfícies harmonizadas com a arte importada!"
+        : "Cor de fundo e transparência dos cards harmonizadas com a arte!",
+    );
   };
 
   const handleDuplicateTemplate = async () => {
@@ -1039,6 +1271,38 @@ export default function TemplatesPage() {
   const resolvedProductPriceColor = productPriceColor || primaryColor;
   const resolvedProductPriceLabelColor = productPriceLabelColor || "#777777";
   const resolvedProductPriceInfoColor = productPriceInfoColor || secondaryColor;
+
+  // Harmonized Surface Computation (never pull #ffffff when a background image exists)
+  const hasProductBgImage = !!backgroundImageUrl;
+  const isDefaultWhiteBg = backgroundColor.toLowerCase() === "#ffffff";
+  const effectiveSurfaceHex =
+    hasProductBgImage && isDefaultWhiteBg
+      ? extractedArtPalette?.dominantBgHex || "#f4efe6"
+      : backgroundColor;
+
+  const resolvedCardAlpha =
+    productCardSurfaceMode === "transparent"
+      ? 0
+      : productCardSurfaceMode === "tinted-glass"
+      ? clamp(productCardOpacity, 0, 100) / 100
+      : productCardSurfaceMode === "solid"
+      ? clamp(productCardOpacity, 0, 100) / 100
+      : hasProductBgImage
+      ? clamp(productCardOpacity, 0, 100) / 100
+      : 0.88;
+
+  const cardSurfaceBgCSS = hexToRgba(effectiveSurfaceHex, resolvedCardAlpha);
+  const cardSurfaceShadowCSS =
+    resolvedCardAlpha <= 0.18 ? "none" : "0 4px 18px rgba(0,0,0,0.04)";
+  const specGridBgCSS =
+    resolvedCardAlpha === 0
+      ? "transparent"
+      : hexToRgba(effectiveSurfaceHex, Math.min(0.28, resolvedCardAlpha * 0.75));
+  const metaBadgeBgCSS =
+    resolvedCardAlpha === 0
+      ? hexToRgba(effectiveSurfaceHex, 0.18)
+      : hexToRgba(effectiveSurfaceHex, Math.min(0.55, Math.max(0.22, resolvedCardAlpha + 0.12)));
+  const secondaryBorderSubtleCSS = hexToRgba(secondaryColor, 0.38);
 
   const previewLogoSrc =
     coverLogoVariant === "white"
@@ -2423,10 +2687,10 @@ export default function TemplatesPage() {
                     </div>
 
                     {/* Background Texture */}
-                    <div className="space-y-2 pb-3 border-b border-allvino-outline-variant/20">
+                    <div className="space-y-2.5 pb-3 border-b border-allvino-outline-variant/20">
                       <p className="text-[11px] font-bold text-allvino-primary">Imagem de Fundo da Página de Produto</p>
                       <p className="text-[10px] text-allvino-on-surface-variant">
-                        Anexe uma imagem nova ou informe uma URL HTTPS para o fundo de cada página de produto.
+                        Anexe uma imagem nova ou informe uma URL HTTPS. O sistema extrai automaticamente o tom dominante da arte para harmonizar os cards sem blocos brancos.
                       </p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <input
@@ -2438,6 +2702,7 @@ export default function TemplatesPage() {
                               e.target.files?.[0],
                               setBackgroundImageUrl,
                               "a imagem da página de produto",
+                              true,
                             )
                           }
                           className="w-full p-1.5 rounded bg-allvino-surface-container-low border text-[10px]"
@@ -2464,6 +2729,173 @@ export default function TemplatesPage() {
                           >
                             Remover
                           </button>
+                        </div>
+                      )}
+
+                      {/* Extracted Palette from Uploaded Art */}
+                      {extractedArtPalette && (
+                        <div className="rounded-lg border border-allvino-secondary/50 bg-amber-50/60 p-3 space-y-2.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <p className="text-[10.5px] font-bold text-allvino-primary">
+                                🎨 Paleta Extraída do Arquivo Importado
+                              </p>
+                              <p className="text-[9.5px] text-allvino-on-surface-variant">
+                                Tom base detectado:{" "}
+                                <strong className="uppercase">{extractedArtPalette.dominantBgHex}</strong> (substitui o branco padrão)
+                              </p>
+                            </div>
+                            <span
+                              className="h-6 w-6 rounded-full border border-black/20 shadow-inner shrink-0"
+                              style={{ background: extractedArtPalette.dominantBgHex }}
+                              title={`Tom dominante do fundo: ${extractedArtPalette.dominantBgHex}`}
+                            />
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {extractedArtPalette.swatches.map((hex) => (
+                              <button
+                                key={hex}
+                                type="button"
+                                onClick={() => {
+                                  setBackgroundColor(hex);
+                                  setIsDirty(true);
+                                  showToast(`Tom ${hex} da arte aplicado ao fundo e superfície dos cards!`);
+                                }}
+                                title={`Clique para usar ${hex} como cor de superfície/fundo`}
+                                className="flex items-center gap-1.5 rounded-full border border-allvino-outline-variant/60 bg-white px-2 py-1 text-[9px] font-bold text-allvino-text shadow-xs transition hover:border-allvino-primary"
+                              >
+                                <span
+                                  className="h-3.5 w-3.5 rounded-full border border-black/15"
+                                  style={{ background: hex }}
+                                />
+                                <span className="uppercase">{hex}</span>
+                              </button>
+                            ))}
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-0.5">
+                            <button
+                              type="button"
+                              onClick={() => handleHarmonizeWithArt(false)}
+                              className="rounded-lg bg-allvino-primary px-2.5 py-1.5 text-[10px] font-bold text-white shadow-xs transition hover:bg-allvino-primary-container"
+                            >
+                              ✨ Harmonizar Fundo & Cards
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleHarmonizeWithArt(true)}
+                              className="rounded-lg border border-allvino-primary bg-white px-2.5 py-1.5 text-[10px] font-bold text-allvino-primary transition hover:bg-allvino-surface-container-high"
+                            >
+                              🎨 Harmonizar Toda a Paleta
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Card Surface Mode & Opacity Over Background */}
+                    <div className="space-y-2.5 pb-3 border-b border-allvino-outline-variant/20">
+                      <p className="text-[11px] font-bold text-allvino-primary">
+                        🪟 Superfície e Transparência dos Cards sobre o Fundo
+                      </p>
+                      <p className="text-[10px] text-allvino-on-surface-variant leading-relaxed">
+                        Evite retângulos brancos sobre a sua arte: escolha entre fundo 100% transparente ou velatura tonalizada com a cor extraída do fundo.
+                      </p>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {[
+                          {
+                            id: "auto",
+                            title: "✨ Auto Harmonizado",
+                            desc: "Velatura suave com o tom da arte",
+                            defaultOpacity: hasProductBgImage ? 14 : 88,
+                          },
+                          {
+                            id: "transparent",
+                            title: "🌿 100% Transparente",
+                            desc: "Sem fundo nos cards (arte livre)",
+                            defaultOpacity: 0,
+                          },
+                          {
+                            id: "tinted-glass",
+                            title: "🥂 Velatura (Glass)",
+                            desc: "Transparência tingida pelo fundo",
+                            defaultOpacity: 24,
+                          },
+                          {
+                            id: "solid",
+                            title: "📄 Sólido Harmonizado",
+                            desc: "Cor do fundo com alta cobertura",
+                            defaultOpacity: 88,
+                          },
+                        ].map((mode) => (
+                          <button
+                            key={mode.id}
+                            type="button"
+                            onClick={() => {
+                              setProductCardSurfaceMode(mode.id as any);
+                              setProductCardOpacity(mode.defaultOpacity);
+                              setIsDirty(true);
+                            }}
+                            className={`rounded-lg border p-2 text-left transition flex flex-col gap-0.5 ${
+                              productCardSurfaceMode === mode.id
+                                ? "bg-allvino-primary text-white border-allvino-primary shadow-sm"
+                                : "bg-allvino-surface-container-low border-allvino-outline-variant hover:bg-allvino-surface-container-high"
+                            }`}
+                          >
+                            <span className="text-[10.5px] font-bold">{mode.title}</span>
+                            <span
+                              className={`text-[8.5px] ${
+                                productCardSurfaceMode === mode.id
+                                  ? "text-white/80"
+                                  : "text-allvino-on-surface-variant/75"
+                              }`}
+                            >
+                              {mode.desc}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+
+                      {productCardSurfaceMode !== "transparent" && (
+                        <div className="pt-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-[10px] font-semibold text-allvino-on-surface-variant">
+                              Opacidade da Superfície do Card (Tonalizada com {effectiveSurfaceHex.toUpperCase()})
+                            </label>
+                            <span className="text-[10px] font-bold text-allvino-primary">
+                              {productCardOpacity}%
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              value={productCardOpacity}
+                              onChange={(e) => {
+                                const nextVal = clamp(e.target.value, 0, 100);
+                                setProductCardOpacity(nextVal);
+                                if (productCardSurfaceMode === "auto") {
+                                  setProductCardSurfaceMode("tinted-glass");
+                                }
+                                setIsDirty(true);
+                              }}
+                              className="w-full accent-allvino-primary"
+                            />
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={productCardOpacity}
+                              onChange={(e) => {
+                                const nextVal = clamp(e.target.value, 0, 100);
+                                setProductCardOpacity(nextVal);
+                                setIsDirty(true);
+                              }}
+                              className="w-14 rounded border bg-allvino-surface-container-low p-1 text-center text-[10px] font-bold"
+                            />
+                          </div>
                         </div>
                       )}
                     </div>
@@ -2692,7 +3124,7 @@ export default function TemplatesPage() {
                     backgroundColor:
                       previewTab === "cover" && hasCoverBg
                         ? "#000"
-                        : backgroundColor,
+                        : effectiveSurfaceHex,
                     backgroundImage:
                       previewTab === "cover" && hasCoverBg
                         ? `url(${coverImageUrl})`
@@ -2974,8 +3406,8 @@ export default function TemplatesPage() {
 
                       {showProductFooter && (
                         <div
-                          className="w-full border-t pt-2 pb-1 flex justify-between text-[6.5px] text-gray-400 flex-shrink-0"
-                          style={{ borderColor: "#eee" }}
+                          className="w-full border-t pt-2 pb-1 flex justify-between text-[6.5px] flex-shrink-0"
+                          style={{ borderColor: secondaryBorderSubtleCSS, color: resolvedProductSpecsColor, opacity: 0.78 }}
                         >
                           <span>{footerText || "Allvino Importadora de Vinhos B2B"}</span>
                           <span>Página 2</span>
@@ -3027,8 +3459,12 @@ export default function TemplatesPage() {
                               return (
                                 <div
                                   key={`${wineItem.id}-${idx}`}
-                                  className="flex-1 flex items-center gap-3 rounded-lg border bg-white/90 p-3 shadow-sm min-h-0"
-                                  style={{ borderColor: "rgba(197,168,128,0.45)" }}
+                                  className="flex-1 flex items-center gap-3 rounded-lg border p-3 min-h-0 transition-colors"
+                                  style={{
+                                    backgroundColor: cardSurfaceBgCSS,
+                                    borderColor: secondaryBorderSubtleCSS,
+                                    boxShadow: cardSurfaceShadowCSS,
+                                  }}
                                 >
                                   {showProductBottle && (
                                     <div className="w-1/4 h-full flex items-center justify-center shrink-0">
@@ -3044,7 +3480,14 @@ export default function TemplatesPage() {
                                     <div>
                                       <div className="flex flex-wrap items-center gap-1 mb-1">
                                         {showProductCountryFlag && (
-                                          <span className="inline-flex items-center gap-1 rounded-full border border-amber-300/60 bg-white px-1.5 py-0.5 text-[7px] font-bold uppercase">
+                                          <span
+                                            className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[7px] font-bold uppercase"
+                                            style={{
+                                              backgroundColor: metaBadgeBgCSS,
+                                              borderColor: secondaryBorderSubtleCSS,
+                                              color: textColor,
+                                            }}
+                                          >
                                             <img
                                               src={getCountryFlagUrl(wineItem.paisOrigem)}
                                               alt=""
@@ -3056,7 +3499,11 @@ export default function TemplatesPage() {
                                         {showProductCategoryBadge && (
                                           <span
                                             className="rounded-full border px-1.5 py-0.5 text-[7px] font-bold uppercase"
-                                            style={{ borderColor: secondaryColor, color: resolvedProductNameColor }}
+                                            style={{
+                                              backgroundColor: metaBadgeBgCSS,
+                                              borderColor: secondaryColor,
+                                              color: resolvedProductNameColor,
+                                            }}
                                           >
                                             {wineItem.categoria || "Tinto"}
                                           </span>
@@ -3086,17 +3533,38 @@ export default function TemplatesPage() {
                                         </p>
                                       )}
                                       {showProductSpecs && (
-                                        <div className="grid grid-cols-3 gap-1 my-1.5 rounded bg-stone-100/80 p-1.5 border border-amber-200/40">
+                                        <div
+                                          className="grid grid-cols-3 gap-1 my-1.5 py-1.5 px-1 border-y"
+                                          style={{
+                                            backgroundColor: specGridBgCSS,
+                                            borderColor: secondaryBorderSubtleCSS,
+                                          }}
+                                        >
                                           <div>
-                                            <span className="block text-[6px] font-bold uppercase text-stone-500">UVA</span>
+                                            <span
+                                              className="block text-[6px] font-bold uppercase opacity-85"
+                                              style={{ color: resolvedProductSpecsColor }}
+                                            >
+                                              UVA
+                                            </span>
                                             <span className="block truncate font-semibold text-[7.5px]">{wineItem.uva}</span>
                                           </div>
                                           <div>
-                                            <span className="block text-[6px] font-bold uppercase text-stone-500">SAFRA</span>
+                                            <span
+                                              className="block text-[6px] font-bold uppercase opacity-85"
+                                              style={{ color: resolvedProductSpecsColor }}
+                                            >
+                                              SAFRA
+                                            </span>
                                             <span className="block font-semibold text-[7.5px]">{wineItem.safra}</span>
                                           </div>
                                           <div>
-                                            <span className="block text-[6px] font-bold uppercase text-stone-500">TEOR ALC.</span>
+                                            <span
+                                              className="block text-[6px] font-bold uppercase opacity-85"
+                                              style={{ color: resolvedProductSpecsColor }}
+                                            >
+                                              TEOR ALC.
+                                            </span>
                                             <span className="block font-semibold text-[7.5px]">{wineItem.teorAlcoolico}% vol</span>
                                           </div>
                                         </div>
@@ -3114,7 +3582,10 @@ export default function TemplatesPage() {
                                       )}
                                     </div>
                                     {showProductPrice && (
-                                      <div className="flex items-end justify-between border-t border-amber-200/50 pt-1.5 mt-1">
+                                      <div
+                                        className="flex items-end justify-between border-t pt-1.5 mt-1"
+                                        style={{ borderColor: secondaryBorderSubtleCSS }}
+                                      >
                                         <div>
                                           <span
                                             className="block uppercase font-bold tracking-wider"
@@ -3201,16 +3672,27 @@ export default function TemplatesPage() {
                               return (
                                 <div
                                   key={`${wineItem.id}-${idx}`}
-                                  className="flex flex-col justify-between rounded-lg border bg-white/95 p-2.5 shadow-sm min-h-0"
-                                  style={{ borderColor: "rgba(197,168,128,0.45)" }}
+                                  className="flex flex-col justify-between rounded-lg border p-2.5 min-h-0 transition-colors"
+                                  style={{
+                                    backgroundColor: cardSurfaceBgCSS,
+                                    borderColor: secondaryBorderSubtleCSS,
+                                    boxShadow: cardSurfaceShadowCSS,
+                                  }}
                                 >
                                   <div
                                     className="flex flex-col items-center border-b pb-1.5 mb-1.5"
-                                    style={{ borderColor: secondaryColor }}
+                                    style={{ borderColor: secondaryBorderSubtleCSS }}
                                   >
                                     <div className="flex items-center gap-1 mb-1">
                                       {showProductCountryFlag && (
-                                        <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-white px-1.5 py-0.2 text-[6.5px] font-bold uppercase">
+                                        <span
+                                          className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.2 text-[6.5px] font-bold uppercase"
+                                          style={{
+                                            backgroundColor: metaBadgeBgCSS,
+                                            borderColor: secondaryBorderSubtleCSS,
+                                            color: textColor,
+                                          }}
+                                        >
                                           <img
                                             src={getCountryFlagUrl(wineItem.paisOrigem)}
                                             alt=""
@@ -3222,7 +3704,11 @@ export default function TemplatesPage() {
                                       {showProductCategoryBadge && (
                                         <span
                                           className="rounded-full border px-1.5 py-0.2 text-[6.5px] font-bold uppercase"
-                                          style={{ borderColor: secondaryColor, color: resolvedProductNameColor }}
+                                          style={{
+                                            backgroundColor: metaBadgeBgCSS,
+                                            borderColor: secondaryColor,
+                                            color: resolvedProductNameColor,
+                                          }}
                                         >
                                           {wineItem.categoria || "Tinto"}
                                         </span>
@@ -3286,9 +3772,15 @@ export default function TemplatesPage() {
                                     )}
                                   </div>
                                   {showProductPrice && (
-                                    <div className="flex items-end justify-between border-t border-amber-200/50 pt-1 mt-1">
+                                    <div
+                                      className="flex items-end justify-between border-t pt-1 mt-1"
+                                      style={{ borderColor: secondaryBorderSubtleCSS }}
+                                    >
                                       <div>
-                                        <span className="block text-[6px] uppercase font-bold text-stone-500">
+                                        <span
+                                          className="block text-[6px] uppercase font-bold"
+                                          style={{ color: resolvedProductPriceLabelColor }}
+                                        >
                                           Unitário B2B
                                         </span>
                                         <span
@@ -3302,7 +3794,10 @@ export default function TemplatesPage() {
                                         </span>
                                       </div>
                                       <div className="text-right">
-                                        <span className="block text-[6px] uppercase font-bold text-stone-500">
+                                        <span
+                                          className="block text-[6px] uppercase font-bold"
+                                          style={{ color: resolvedProductPriceInfoColor }}
+                                        >
                                           Caixa c/ 6
                                         </span>
                                         <span
@@ -3351,7 +3846,14 @@ export default function TemplatesPage() {
                               12 rótulos / página
                             </span>
                           </div>
-                          <div className="w-full rounded bg-white/95 p-2 shadow-sm border border-amber-200/40 overflow-hidden">
+                          <div
+                            className="w-full rounded p-2 border overflow-hidden transition-colors"
+                            style={{
+                              backgroundColor: cardSurfaceBgCSS,
+                              borderColor: secondaryBorderSubtleCSS,
+                              boxShadow: cardSurfaceShadowCSS,
+                            }}
+                          >
                             <table className="w-full text-left border-collapse">
                               <thead>
                                 <tr
@@ -3436,7 +3938,14 @@ export default function TemplatesPage() {
                             {(showProductCountryFlag || showProductCategoryBadge || (showProductDiscountBadge && previewWine.precoPromocional)) && (
                               <div className="flex items-center justify-center gap-1.5 mb-1 flex-wrap">
                                 {showProductCountryFlag && (
-                                  <span className="inline-flex items-center gap-1 rounded-full border border-amber-300/60 bg-white/90 px-2 py-0.5 text-[7.5px] font-bold uppercase tracking-wider">
+                                  <span
+                                    className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[7.5px] font-bold uppercase tracking-wider"
+                                    style={{
+                                      backgroundColor: metaBadgeBgCSS,
+                                      borderColor: secondaryBorderSubtleCSS,
+                                      color: textColor,
+                                    }}
+                                  >
                                     <img
                                       src={getCountryFlagUrl(previewWine.paisOrigem)}
                                       alt=""
@@ -3447,8 +3956,12 @@ export default function TemplatesPage() {
                                 )}
                                 {showProductCategoryBadge && (
                                   <span
-                                    className="rounded-full border bg-white/90 px-2 py-0.5 text-[7.5px] font-bold uppercase tracking-wider"
-                                    style={{ borderColor: secondaryColor, color: resolvedProductNameColor }}
+                                    className="rounded-full border px-2 py-0.5 text-[7.5px] font-bold uppercase tracking-wider"
+                                    style={{
+                                      backgroundColor: metaBadgeBgCSS,
+                                      borderColor: secondaryColor,
+                                      color: resolvedProductNameColor,
+                                    }}
                                   >
                                     {previewWine.categoria || "Tinto"}
                                   </span>
@@ -3712,8 +4225,8 @@ export default function TemplatesPage() {
 
                       {/* Footer */}
                       {showProductFooter && (<div
-                        className="w-full border-t pt-2 pb-1 flex justify-between text-[6.5px] text-gray-300 flex-shrink-0"
-                        style={{ borderColor: "#eee" }}
+                        className="w-full border-t pt-2 pb-1 flex justify-between text-[6.5px] flex-shrink-0"
+                        style={{ borderColor: secondaryBorderSubtleCSS, color: resolvedProductSpecsColor, opacity: 0.78 }}
                       >
                         <span>
                           {footerText ||

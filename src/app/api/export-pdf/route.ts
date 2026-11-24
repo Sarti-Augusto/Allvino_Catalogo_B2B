@@ -50,7 +50,64 @@ const safeImageSource = (value: unknown): string => {
 
 const MAX_IMAGE_CACHE_ENTRIES = 120;
 const optimizedImageCache = new Map<string, string>();
+const dominantColorCache = new Map<string, string>();
 let cachedLogos: { black: string; white: string } | null = null;
+
+function rgbToHex(r: number, g: number, b: number): string {
+  const toHex = (n: number) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const cleaned = hex.trim().replace(/^#/, "");
+  const safeAlpha = Math.max(0, Math.min(1, Number(alpha.toFixed(3))));
+  if (safeAlpha === 0) return "transparent";
+  if (/^[0-9a-f]{3}$/i.test(cleaned)) {
+    const r = parseInt(cleaned[0] + cleaned[0], 16);
+    const g = parseInt(cleaned[1] + cleaned[1], 16);
+    const b = parseInt(cleaned[2] + cleaned[2], 16);
+    return `rgba(${r}, ${g}, ${b}, ${safeAlpha})`;
+  }
+  if (/^[0-9a-f]{6}$/i.test(cleaned)) {
+    const r = parseInt(cleaned.slice(0, 2), 16);
+    const g = parseInt(cleaned.slice(2, 4), 16);
+    const b = parseInt(cleaned.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${safeAlpha})`;
+  }
+  return `rgba(246, 242, 235, ${safeAlpha})`;
+}
+
+async function extractDominantBgHex(sourceValue: unknown): Promise<string | null> {
+  const source = safeImageSource(sourceValue);
+  const match = source.match(/^data:image\/(?:png|jpe?g|webp);base64,([A-Za-z0-9+/=\s]+)$/i);
+  if (!match) return null;
+
+  const cacheKey = `${source.length}:${source.slice(0, 64)}:${source.slice(-64)}`;
+  const cached = dominantColorCache.get(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const input = Buffer.from(match[1].replace(/\s/g, ""), "base64");
+    const stats = await sharp(input).stats();
+    const dom = stats.dominant;
+    const rMean = stats.channels[0]?.mean ?? dom.r;
+    const gMean = stats.channels[1]?.mean ?? dom.g;
+    const bMean = stats.channels[2]?.mean ?? dom.b;
+    // Blend dominant tone (65%) and mean ambient tone (35%) for natural paper harmony
+    const r = dom.r * 0.65 + rMean * 0.35;
+    const g = dom.g * 0.65 + gMean * 0.35;
+    const b = dom.b * 0.65 + bMean * 0.35;
+    const hex = rgbToHex(r, g, b);
+    if (dominantColorCache.size >= MAX_IMAGE_CACHE_ENTRIES) {
+      const oldest = dominantColorCache.keys().next().value;
+      if (oldest) dominantColorCache.delete(oldest);
+    }
+    dominantColorCache.set(cacheKey, hex);
+    return hex;
+  } catch {
+    return null;
+  }
+}
 
 function getCachedLogos(): { black: string; white: string } {
   if (cachedLogos) return cachedLogos;
@@ -250,10 +307,60 @@ async function generateCatalogPdfResponse(
     const fontFamily = styles.fontFamily || "Playfair Display";
     const headerTitle = escapeHtml(styles.headerTitle || "ALLVINO");
     const footerText = escapeHtml(styles.footerText || "Allvino Importadora de Vinhos B2B");
-    const [coverImageUrl, backgroundImageUrl] = await Promise.all([
+    const [coverImageUrl, backgroundImageUrl, extractedProductBgHex] = await Promise.all([
       optimizeImageSource(styles.coverImageUrl, 1200, 1700, 80),
       optimizeImageSource(styles.backgroundImageUrl, 1200, 1700, 80),
+      extractDominantBgHex(styles.backgroundImageUrl),
     ]);
+
+    // Resolve harmonized surface color (never pull unharmonized #ffffff when a background image exists)
+    const hasProductBgImage = !!backgroundImageUrl;
+    const isDefaultWhiteBg = backgroundColor.toLowerCase() === "#ffffff";
+    const effectiveSurfaceHex =
+      hasProductBgImage && isDefaultWhiteBg
+        ? extractedProductBgHex || "#f4efe6"
+        : backgroundColor;
+
+    const productCardSurfaceMode = ["auto", "transparent", "tinted-glass", "solid"].includes(
+      styles.productCardSurfaceMode,
+    )
+      ? (styles.productCardSurfaceMode as "auto" | "transparent" | "tinted-glass" | "solid")
+      : "auto";
+
+    const customCardOpacity =
+      typeof styles.productCardOpacity === "number" && Number.isFinite(styles.productCardOpacity)
+        ? Math.max(0, Math.min(100, styles.productCardOpacity))
+        : null;
+
+    let resolvedCardAlpha = 0.88;
+    if (productCardSurfaceMode === "transparent") {
+      resolvedCardAlpha = 0;
+    } else if (productCardSurfaceMode === "tinted-glass") {
+      resolvedCardAlpha = customCardOpacity !== null ? customCardOpacity / 100 : 0.22;
+    } else if (productCardSurfaceMode === "solid") {
+      resolvedCardAlpha = customCardOpacity !== null ? customCardOpacity / 100 : 0.88;
+    } else {
+      // "auto" mode: transparent/velatura when a custom background image is loaded so watermarks/art shine through
+      resolvedCardAlpha =
+        customCardOpacity !== null
+          ? customCardOpacity / 100
+          : hasProductBgImage
+          ? 0.14
+          : 0.88;
+    }
+
+    const cardSurfaceBgCSS = hexToRgba(effectiveSurfaceHex, resolvedCardAlpha);
+    const cardSurfaceShadowCSS =
+      resolvedCardAlpha <= 0.18 ? "none" : "0 4px 18px rgba(0,0,0,0.04)";
+    const specGridBgCSS =
+      resolvedCardAlpha === 0
+        ? "transparent"
+        : hexToRgba(effectiveSurfaceHex, Math.min(0.28, resolvedCardAlpha * 0.75));
+    const metaBadgeBgCSS =
+      resolvedCardAlpha === 0
+        ? hexToRgba(effectiveSurfaceHex, 0.18)
+        : hexToRgba(effectiveSurfaceHex, Math.min(0.55, Math.max(0.22, resolvedCardAlpha + 0.12)));
+    const secondaryBorderSubtleCSS = hexToRgba(secondaryColor, 0.38);
 
     // ── COVER DYNAMIC TUNING ────────────────────────
     const showCoverLogo = styles.showCoverLogo !== false;
@@ -918,8 +1025,8 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
   display:inline-flex;align-items:center;gap:4px;
   padding:2px 8px;border-radius:999px;
   font-size:8.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;
-  background:rgba(255,255,255,0.86);
-  border:1px solid rgba(197,168,128,0.45);
+  background:${metaBadgeBgCSS};
+  border:1px solid ${secondaryBorderSubtleCSS};
   color:${textColor};
 }
 .flag-icon{
@@ -1063,11 +1170,11 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
 .duo-card{
   flex:1;
   display:flex;align-items:center;gap:24px;
-  background:rgba(255,255,255,0.88);
-  border:1px solid rgba(197,168,128,0.45);
+  background:${cardSurfaceBgCSS};
+  border:1px solid ${secondaryBorderSubtleCSS};
   border-radius:8px;
   padding:20px 24px;
-  box-shadow:0 4px 18px rgba(0,0,0,0.04);
+  box-shadow:${cardSurfaceShadowCSS};
 }
 .duo-bottle-wrap{
   width:135px;height:360px;
@@ -1093,19 +1200,20 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
 }
 .spec-grid{
   display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
-  background:rgba(246,243,242,0.85);
-  border:1px solid rgba(197,168,128,0.25);
-  border-radius:5px;padding:7px 10px;margin-bottom:10px;
+  background:${specGridBgCSS};
+  border-top:1px solid ${secondaryBorderSubtleCSS};
+  border-bottom:1px solid ${secondaryBorderSubtleCSS};
+  padding:7px 4px;margin-bottom:10px;
 }
 .spec-cell{display:flex;flex-direction:column;}
-.spec-lbl{font-size:7.5px;font-weight:700;letter-spacing:1.2px;color:#877272;text-transform:uppercase;}
+.spec-lbl{font-size:7.5px;font-weight:700;letter-spacing:1.2px;color:${productSpecsColor};opacity:0.88;text-transform:uppercase;}
 .spec-val{font-size:10px;font-weight:600;margin-top:1px;}
 .duo-desc{
   font-size:11.5px;line-height:1.55;margin-bottom:12px;
   display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;
 }
 .duo-price-bar{
-  margin-top:auto;padding-top:10px;border-top:1px solid rgba(197,168,128,0.35);
+  margin-top:auto;padding-top:10px;border-top:1px solid ${secondaryBorderSubtleCSS};
   display:flex;align-items:flex-end;justify-content:space-between;
 }
 .duo-price-lbl{display:block;font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:2px;}
@@ -1122,15 +1230,15 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
   gap:16px;padding-bottom:18px;
 }
 .grid4-card{
-  background:rgba(255,255,255,0.92);
-  border:1px solid rgba(197,168,128,0.45);
+  background:${cardSurfaceBgCSS};
+  border:1px solid ${secondaryBorderSubtleCSS};
   border-radius:8px;
   padding:14px 16px;
   display:flex;flex-direction:column;justify-content:space-between;
-  box-shadow:0 3px 14px rgba(0,0,0,0.03);
+  box-shadow:${cardSurfaceShadowCSS};
 }
 .grid4-top{
-  border-bottom:1px solid ${secondaryColor};
+  border-bottom:1px solid ${secondaryBorderSubtleCSS};
   padding-bottom:8px;margin-bottom:8px;
   display:flex;flex-direction:column;align-items:center;
 }
@@ -1151,7 +1259,7 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
   display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
 }
 .grid4-foot{
-  margin-top:8px;padding-top:8px;border-top:1px solid rgba(197,168,128,0.3);
+  margin-top:8px;padding-top:8px;border-top:1px solid ${secondaryBorderSubtleCSS};
   display:flex;align-items:flex-end;justify-content:space-between;
 }
 .grid4-price-lbl{display:block;font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;}
@@ -1162,14 +1270,14 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
 /* ── EXECUTIVE B2B TABLE (12 PER PAGE) ── */
 .exec-table{
   width:100%;border-collapse:collapse;
-  background:rgba(255,255,255,0.92);
+  background:${cardSurfaceBgCSS};
   border-radius:6px;overflow:hidden;
 }
 .exec-th{
   text-align:left;padding:8px 8px;font-weight:800;
 }
 .exec-tr{
-  border-bottom:1px solid rgba(197,168,128,0.25);
+  border-bottom:1px solid ${secondaryBorderSubtleCSS};
 }
 .exec-td{
   padding:7px 8px;vertical-align:middle;
@@ -1183,9 +1291,9 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
 
 .page-foot{
   position:absolute;bottom:14px;left:45px;right:45px;
-  border-top:1px solid #eee;padding-top:4px;
+  border-top:1px solid ${secondaryBorderSubtleCSS};padding-top:4px;
   display:flex;justify-content:space-between;
-  font-size:8px;color:#bbb;letter-spacing:.5px;
+  font-size:8px;color:${productSpecsColor};opacity:0.78;letter-spacing:.5px;
 }
 </style>
 </head>
