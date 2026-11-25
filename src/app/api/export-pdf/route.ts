@@ -305,8 +305,14 @@ async function generateCatalogPdfResponse(
     const backgroundColor = safeCssValue(styles.backgroundColor, "#ffffff");
     const textColor = safeCssValue(styles.textColor, "#1f2937");
     const fontFamily = styles.fontFamily || "Playfair Display";
-    const headerTitle = escapeHtml(styles.headerTitle || "ALLVINO");
-    const footerText = escapeHtml(styles.footerText || "Allvino Importadora de Vinhos B2B");
+    const headerTitle = escapeHtml(
+      typeof styles.headerTitle === "string" ? styles.headerTitle : "ALLVINO",
+    );
+    const footerText = escapeHtml(
+      typeof styles.footerText === "string"
+        ? styles.footerText
+        : "Allvino Importadora de Vinhos B2B",
+    );
     const [coverImageUrl, backgroundImageUrl, extractedProductBgHex] = await Promise.all([
       optimizeImageSource(styles.coverImageUrl, 1200, 1700, 80),
       optimizeImageSource(styles.backgroundImageUrl, 1200, 1700, 80),
@@ -368,7 +374,25 @@ async function generateCatalogPdfResponse(
     const showCoverTitle = styles.showCoverTitle !== false;
     const showCoverSubtitle = styles.showCoverSubtitle !== false;
     const showCoverFooter = styles.showCoverFooter !== false;
-    const coverSubtitle = escapeHtml(styles.coverSubtitle || "Catálogo Exclusivo B2B");
+    const coverSubtitle = escapeHtml(
+      typeof styles.coverSubtitle === "string" ? styles.coverSubtitle : "Catálogo Exclusivo B2B",
+    );
+    const productPageHeaderLeftText =
+      typeof styles.productPageHeaderLeftText === "string"
+        ? escapeHtml(styles.productPageHeaderLeftText)
+        : headerTitle;
+    const productPageHeaderRightText =
+      typeof styles.productPageHeaderRightText === "string"
+        ? escapeHtml(styles.productPageHeaderRightText)
+        : coverSubtitle;
+    const productPriceLabelText =
+      typeof styles.productPriceLabelText === "string"
+        ? escapeHtml(styles.productPriceLabelText)
+        : "Preço Unitário B2B";
+    const productPriceInfoText =
+      typeof styles.productPriceInfoText === "string"
+        ? escapeHtml(styles.productPriceInfoText)
+        : "";
     const coverLogoHeight = typeof styles.coverLogoHeight === "number" ? styles.coverLogoHeight : 110;
     const coverLogoAngle = typeof styles.coverLogoAngle === "number" ? styles.coverLogoAngle : 0;
     const coverLogoXOffset = clamp(styles.coverLogoXOffset);
@@ -406,6 +430,15 @@ async function generateCatalogPdfResponse(
     const showProductCategoryBadge = styles.showProductCategoryBadge !== false;
     const showProductDiscountBadge = styles.showProductDiscountBadge !== false;
     const showProductCountryFlag = styles.showProductCountryFlag !== false;
+    const showProductPageHeader = styles.showProductPageHeader !== false;
+    const showProductCardBorder =
+      typeof styles.showProductCardBorder === "boolean"
+        ? styles.showProductCardBorder
+        : !hasProductBgImage;
+    const showProductInternalLines = styles.showProductInternalLines !== false;
+    const showProductPillBorders = styles.showProductPillBorders !== false;
+    const showProductPriceLabel = styles.showProductPriceLabel !== false;
+    const showProductPriceInfo = styles.showProductPriceInfo !== false;
     const productLayoutPreset = [
       "classic",
       "side-right",
@@ -522,13 +555,13 @@ async function generateCatalogPdfResponse(
             const itemEffectivePrice = item.precoPromocional ?? item.precoOriginal;
             const boxTotal = itemEffectivePrice * 6;
             const priceText = !hidePrices
-              ? `<span style="color:${productPriceColor};font-weight:700;margin-left:8px;">R$ ${itemEffectivePrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>${showProductBoxPrice ? `<span style="color:${productSpecsColor};font-size:9px;margin-left:6px;">(Cx 6: R$ ${boxTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })})</span>` : ""}`
+              ? `<span style="color:${productPriceColor};font-weight:700;margin-left:8px;">R$ ${itemEffectivePrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>${showProductPriceInfo && showProductBoxPrice ? `<span style="color:${productSpecsColor};font-size:9px;margin-left:6px;">(${productPriceInfoText || "Cx 6"}: R$ ${boxTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })})</span>` : ""}`
               : "";
             const categoryTag = showProductCategoryBadge
-              ? `<span style="display:inline-block;padding:1px 6px;border-radius:3px;background:rgba(128,40,45,0.08);color:${productNameColor};font-size:8px;font-weight:800;letter-spacing:1px;text-transform:uppercase;margin-left:6px;">${escapeHtml(item.categoria || "Tinto")}</span>`
+              ? `<span style="display:inline-block;padding:${showProductPillBorders ? "1px 6px" : "0"};border-radius:3px;background:${showProductPillBorders ? "rgba(128,40,45,0.08)" : "transparent"};color:${productNameColor};font-size:8px;font-weight:800;letter-spacing:1px;text-transform:uppercase;margin-left:6px;">${escapeHtml(item.categoria || "Tinto")}</span>`
               : "";
             return `
-            <a href="#wine-anchor-${escapeHtml(item.id)}" style="display:flex;align-items:baseline;justify-content:space-between;padding:7px 4px;border-bottom:1px dashed rgba(0,0,0,0.14);font-size:11px;text-decoration:none;color:inherit;">
+            <a href="#wine-anchor-${escapeHtml(item.id)}" style="display:flex;align-items:baseline;justify-content:space-between;padding:7px 4px;border-bottom:${showProductInternalLines ? "1px dashed rgba(0,0,0,0.14)" : "none"};font-size:11px;text-decoration:none;color:inherit;">
               <div style="min-width:0;padding-right:12px;">
                 <span style="font-family:${fontCSS};font-weight:700;color:${productNameColor};font-size:12.5px;">${escapeHtml(item.name)}</span>
                 ${categoryTag}
@@ -547,7 +580,7 @@ async function generateCatalogPdfResponse(
           <div class="prod-top" style="margin-bottom:18px;">
             <h2 class="prod-name" style="color:${productNameColor};font-size:24px;">SUMÁRIO DE RÓTULOS</h2>
             <p class="prod-origin" style="color:${productSpecsColor};font-size:10px;">${products.length} rótulo${products.length === 1 ? "" : "s"} selecionado${products.length === 1 ? "" : "s"}${indexPagesCount > 1 ? ` · Parte ${pageIdx + 1}/${indexPagesCount}` : ""} · Clique no vinho para ir à página</p>
-            <div class="prod-line" style="background:${productSpecsColor};"></div>
+            ${showProductDivider ? `<div class="prod-line" style="background:${productSpecsColor};"></div>` : ""}
           </div>
           <div style="width:100%;flex:1;">
             ${rowsHtml}
@@ -571,18 +604,19 @@ async function generateCatalogPdfResponse(
       : `background-color:${backgroundColor};`;
 
     const buildBadgesRowHtml = (product: (typeof products)[number], align: string = "center") => {
-      const parts: string[] = [];
+      const textParts: string[] = [];
       if (showProductCountryFlag && product.paisOrigem) {
         const flagUrl = getCountryFlagUrl(product.paisOrigem);
-        parts.push(
+        textParts.push(
           `<span class="meta-badge"><img src="${escapeHtml(flagUrl)}" alt="" class="flag-icon" />${escapeHtml(product.paisOrigem)}</span>`,
         );
       }
       if (showProductCategoryBadge) {
-        parts.push(
-          `<span class="meta-badge meta-badge-cat" style="border-color:${secondaryColor};color:${productNameColor};">${escapeHtml(product.categoria || "Tinto")}</span>`,
+        textParts.push(
+          `<span class="meta-badge meta-badge-cat" style="${showProductPillBorders ? `border-color:${secondaryColor};` : ""}color:${productNameColor};">${escapeHtml(product.categoria || "Tinto")}</span>`,
         );
       }
+      let promoPart = "";
       if (
         showProductDiscountBadge &&
         !hidePrices &&
@@ -591,14 +625,27 @@ async function generateCatalogPdfResponse(
       ) {
         const pct = Math.round((1 - product.precoPromocional / product.precoOriginal) * 100);
         if (pct > 0) {
-          parts.push(
-            `<span class="meta-badge meta-badge-promo" style="background:${primaryColor};color:#fff;">-${pct}% OFF</span>`,
-          );
+          promoPart = `<span class="meta-badge meta-badge-promo" style="background:${primaryColor};color:#fff;padding:2px 8px;border-radius:999px;border:none;">-${pct}% OFF</span>`;
         }
       }
-      if (parts.length === 0) return "";
+      if (textParts.length === 0 && !promoPart) return "";
       const justify = align === "left" ? "flex-start" : align === "right" ? "flex-end" : "center";
-      return `<div class="meta-badges-row" style="justify-content:${justify};">${parts.join("")}</div>`;
+      const joinedTextParts = showProductPillBorders
+        ? textParts.join("")
+        : textParts.join(`<span style="color:${secondaryColor};font-size:9px;opacity:0.75;margin:0 2px;">·</span>`);
+      return `<div class="meta-badges-row" style="justify-content:${justify};">${joinedTextParts}${promoPart}</div>`;
+    };
+
+    const buildMultiPageHeaderHtml = (overrideRightText?: string, extraStyle: string = "") => {
+      if (!showProductPageHeader) return "";
+      const leftTxt = productPageHeaderLeftText;
+      const rightTxt = overrideRightText !== undefined ? overrideRightText : productPageHeaderRightText;
+      if (!leftTxt.trim() && !rightTxt.trim()) return "";
+      return `
+          <div class="multi-page-header" style="${extraStyle}">
+            <span style="font-family:${fontCSS};color:${productNameColor};font-weight:700;font-size:13px;letter-spacing:2px;">${leftTxt}</span>
+            <span style="color:${productSpecsColor};font-size:9.5px;letter-spacing:2px;text-transform:uppercase;">${rightTxt}</span>
+          </div>`;
     };
 
     if (productLayoutPreset === "editorial-duo") {
@@ -621,9 +668,16 @@ async function generateCatalogPdfResponse(
               product.precoPromocional && product.precoOriginal > product.precoPromocional
                 ? Math.round((1 - product.precoPromocional / product.precoOriginal) * 100)
                 : 0;
+            const duoSecondaryLabel =
+              productPriceInfoText || (showProductBoxPrice ? "CAIXA C/ 6 GARRAFAS" : "EMBALAGEM");
+            const duoSecondaryVal = showProductBoxPrice
+              ? `R$ ${boxValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+              : productPriceInfoText
+              ? ""
+              : "Caixa c/ 6 un.";
 
             return `
-            <div id="wine-anchor-${escapeHtml(product.id)}" class="duo-card ${localIdx === 1 ? "duo-card-second" : ""}" style="border-color:${secondaryColor};">
+            <div id="wine-anchor-${escapeHtml(product.id)}" class="duo-card ${localIdx === 1 ? "duo-card-second" : ""}">
               ${showProductBottle ? `
               <div class="duo-bottle-wrap">
                 <img src="${escapeHtml(productImageUrl)}" class="duo-bottle-img" alt="${escapeHtml(product.name)}" />
@@ -633,27 +687,32 @@ async function generateCatalogPdfResponse(
                 ${showProductName ? `<h3 class="duo-title" style="font-family:${fontCSS};color:${productNameColor};">${escapeHtml(product.name)}</h3>` : ""}
                 ${showProductOrigin ? `<p class="duo-origin" style="color:${productSpecsColor};">${escapeHtml(product.vinicola)} · ${escapeHtml(product.paisOrigem)} (${escapeHtml(product.regiao)})</p>` : ""}
                 ${showProductDivider ? `<div class="duo-divider" style="background:${secondaryColor};"></div>` : ""}
-                ${showProductSpecs ? `
+                ${showProductSpecs
+                  ? showProductInternalLines
+                    ? `
                 <div class="spec-grid">
                   <div class="spec-cell"><span class="spec-lbl">UVA / BLEND</span><span class="spec-val" style="color:${textColor};">${escapeHtml(product.uva)}</span></div>
                   <div class="spec-cell"><span class="spec-lbl">SAFRA</span><span class="spec-val" style="color:${textColor};">${escapeHtml(product.safra)}</span></div>
                   <div class="spec-cell"><span class="spec-lbl">TEOR ALC.</span><span class="spec-val" style="color:${textColor};">${product.teorAlcoolico}% vol</span></div>
-                </div>` : ""}
+                </div>`
+                    : `<p class="duo-specs-clean" style="color:${productSpecsColor};">${escapeHtml(product.uva)} &nbsp;·&nbsp; Safra ${escapeHtml(product.safra)} &nbsp;·&nbsp; ${product.teorAlcoolico}% vol</p>`
+                  : ""}
                 ${showProductDescription ? `<p class="duo-desc" style="color:${productDescColor};">${notasText}</p>` : ""}
                 ${showProductPrice ? `
-                <div class="duo-price-bar" style="border-top-color:rgba(197,168,128,0.35);">
+                <div class="duo-price-bar">
                   <div>
-                    <span class="duo-price-lbl" style="color:${productPriceLabelColor};">PREÇO UNITÁRIO B2B</span>
+                    ${showProductPriceLabel && productPriceLabelText.trim() ? `<span class="duo-price-lbl" style="color:${productPriceLabelColor};">${productPriceLabelText}</span>` : ""}
                     <div class="duo-price-vals">
                       <span class="duo-price-main" style="color:${productPriceColor};">R$ ${effectiveUnit.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                       ${product.precoPromocional ? `<span class="duo-price-old">R$ ${product.precoOriginal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>` : ""}
                       ${showProductDiscountBadge && discountPct > 0 ? `<span class="promo-chip" style="background:${primaryColor};">-${discountPct}%</span>` : ""}
                     </div>
                   </div>
+                  ${showProductPriceInfo ? `
                   <div style="text-align:right;">
-                    <span class="duo-price-lbl" style="color:${productPriceInfoColor};">${showProductBoxPrice ? "CAIXA C/ 6 GARRAFAS" : "EMBALAGEM B2B"}</span>
-                    <span class="duo-box-total" style="color:${secondaryColor};">${showProductBoxPrice ? `R$ ${boxValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Caixa c/ 6 un."}</span>
-                  </div>
+                    ${duoSecondaryLabel ? `<span class="duo-price-lbl" style="color:${productPriceInfoColor};">${duoSecondaryLabel}</span>` : ""}
+                    ${duoSecondaryVal ? `<span class="duo-box-total" style="color:${secondaryColor};">${duoSecondaryVal}</span>` : ""}
+                  </div>` : ""}
                 </div>` : ""}
               </div>
             </div>`;
@@ -662,14 +721,11 @@ async function generateCatalogPdfResponse(
 
         productPagesHtml += `
         <div class="prod-page" style="justify-content:space-between;">
-          <div class="multi-page-header" style="border-bottom-color:${secondaryColor};">
-            <span style="font-family:${fontCSS};color:${productNameColor};font-weight:700;font-size:13px;letter-spacing:2px;">${headerTitle}</span>
-            <span style="color:${productSpecsColor};font-size:9.5px;letter-spacing:2px;text-transform:uppercase;">${coverSubtitle}</span>
-          </div>
+          ${buildMultiPageHeaderHtml()}
           <div class="duo-container">
             ${cardsHtml}
           </div>
-          ${showProductFooter ? `<div class="page-foot">
+          ${showProductFooter && (footerText.trim() || true) ? `<div class="page-foot">
             <span>${footerText}</span>
             <span>Página ${pageNumber}</span>
           </div>` : ""}
@@ -691,10 +747,16 @@ async function generateCatalogPdfResponse(
               product.notasDegustacao ||
                 "Vinho de excelente estrutura, aromas harmoniosos e notas marcantes.",
             );
+            const gridSecondaryLabel = productPriceInfoText || "Caixa c/ 6";
+            const gridSecondaryVal = showProductBoxPrice
+              ? `R$ ${boxValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+              : productPriceInfoText
+              ? ""
+              : "6 garrafas";
 
             return `
-            <div id="wine-anchor-${escapeHtml(product.id)}" class="grid4-card" style="border-color:rgba(197,168,128,0.45);">
-              <div class="grid4-top" style="border-bottom-color:${secondaryColor};">
+            <div id="wine-anchor-${escapeHtml(product.id)}" class="grid4-card">
+              <div class="grid4-top">
                 ${buildBadgesRowHtml(product, "center")}
                 ${showProductBottle ? `
                 <div class="grid4-img-wrap">
@@ -708,18 +770,19 @@ async function generateCatalogPdfResponse(
                 ${showProductDescription ? `<p class="grid4-desc" style="color:${productDescColor};">${notasText}</p>` : ""}
               </div>
               ${showProductPrice ? `
-              <div class="grid4-foot" style="border-top-color:rgba(197,168,128,0.3);">
+              <div class="grid4-foot">
                 <div>
-                  <span class="grid4-price-lbl" style="color:${productPriceLabelColor};">Unitário B2B</span>
+                  ${showProductPriceLabel && productPriceLabelText.trim() ? `<span class="grid4-price-lbl" style="color:${productPriceLabelColor};">${productPriceLabelText}</span>` : ""}
                   <div style="display:flex;align-items:baseline;gap:6px;">
                     <span class="grid4-price-val" style="color:${productPriceColor};">R$ ${effectiveUnit.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                     ${product.precoPromocional ? `<span class="grid4-price-old">R$ ${product.precoOriginal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>` : ""}
                   </div>
                 </div>
+                ${showProductPriceInfo ? `
                 <div style="text-align:right;">
-                  <span class="grid4-price-lbl" style="color:${productPriceInfoColor};">Caixa c/ 6</span>
-                  <span class="grid4-box-val" style="color:${secondaryColor};">${showProductBoxPrice ? `R$ ${boxValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "6 garrafas"}</span>
-                </div>
+                  <span class="grid4-price-lbl" style="color:${productPriceInfoColor};">${gridSecondaryLabel}</span>
+                  ${gridSecondaryVal ? `<span class="grid4-box-val" style="color:${secondaryColor};">${gridSecondaryVal}</span>` : ""}
+                </div>` : ""}
               </div>` : ""}
             </div>`;
           })
@@ -727,10 +790,7 @@ async function generateCatalogPdfResponse(
 
         productPagesHtml += `
         <div class="prod-page" style="justify-content:space-between;">
-          <div class="multi-page-header" style="border-bottom-color:${secondaryColor};">
-            <span style="font-family:${fontCSS};color:${productNameColor};font-weight:700;font-size:13px;letter-spacing:2px;">${headerTitle}</span>
-            <span style="color:${productSpecsColor};font-size:9.5px;letter-spacing:2px;text-transform:uppercase;">${coverSubtitle}</span>
-          </div>
+          ${buildMultiPageHeaderHtml()}
           <div class="grid4-container">
             ${cardsHtml}
           </div>
@@ -768,29 +828,31 @@ async function generateCatalogPdfResponse(
                 <span style="font-weight:800;color:${productPriceColor};font-size:11.5px;">R$ ${effectiveUnit.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                 ${product.precoPromocional ? `<div style="font-size:8.5px;color:#999;text-decoration:line-through;">R$ ${product.precoOriginal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>` : ""}
               </td>
+              ${showProductPriceInfo ? `
               <td class="exec-td" style="text-align:right;white-space:nowrap;font-weight:700;color:${secondaryColor};font-size:10.5px;">
-                ${showProductBoxPrice ? `R$ ${boxValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "6 un."}
-              </td>` : ""}
+                ${showProductBoxPrice ? `R$ ${boxValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : productPriceInfoText || "6 un."}
+              </td>` : ""}` : ""}
             </tr>`;
           })
           .join("");
 
+        const execHeaderRight =
+          typeof styles.productPageHeaderRightText === "string"
+            ? productPageHeaderRightText
+            : `Página ${pageIdx + 1}/${totalTablePages}`;
         productPagesHtml += `
         <div class="prod-page" style="justify-content:flex-start;">
-          <div class="multi-page-header" style="border-bottom-color:${secondaryColor};margin-bottom:14px;">
-            <span style="font-family:${fontCSS};color:${productNameColor};font-weight:700;font-size:14px;letter-spacing:2px;">${headerTitle} — TABELA EXECUTIVA B2B</span>
-            <span style="color:${productSpecsColor};font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;">Página ${pageIdx + 1}/${totalTablePages}</span>
-          </div>
+          ${buildMultiPageHeaderHtml(execHeaderRight, "margin-bottom:14px;")}
           <table class="exec-table">
             <thead>
-              <tr style="border-bottom:1.5px solid ${secondaryColor};color:${productNameColor};font-size:9px;text-transform:uppercase;letter-spacing:1px;">
+              <tr style="border-bottom:${showProductInternalLines ? `1.5px solid ${secondaryColor}` : "none"};color:${productNameColor};font-size:9px;text-transform:uppercase;letter-spacing:1px;">
                 ${showProductBottle ? `<th class="exec-th" style="width:36px;"></th>` : ""}
                 <th class="exec-th">Rótulo & Vinícola</th>
                 <th class="exec-th">Tipo</th>
                 <th class="exec-th">País</th>
                 <th class="exec-th">Uva / Blend</th>
                 <th class="exec-th" style="text-align:center;">Safra</th>
-                ${showProductPrice ? `<th class="exec-th" style="text-align:right;">Unitário B2B</th><th class="exec-th" style="text-align:right;">Caixa c/ 6</th>` : ""}
+                ${showProductPrice ? `<th class="exec-th" style="text-align:right;">${showProductPriceLabel && productPriceLabelText.trim() ? productPriceLabelText : "Valor"}</th>${showProductPriceInfo ? `<th class="exec-th" style="text-align:right;">${productPriceInfoText || "Caixa c/ 6"}</th>` : ""}` : ""}
               </tr>
             </thead>
             <tbody>
@@ -830,15 +892,16 @@ async function generateCatalogPdfResponse(
 
         const priceAlignCSS = productPriceSide === "left" ? "right" : productPriceSide === "center" ? "center" : "left";
         const productPriceBaseTop = productLayoutPreset === "price-top" ? 18 : 45;
+        const boxInfoPrefix = productPriceInfoText || "Caixa c/ 6";
         const boxInfoText = showProductBoxPrice
-          ? `Caixa c/ 6: R$ ${boxTotalValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
-          : "Caixa c/ 6 garrafas";
+          ? `${boxInfoPrefix}: R$ ${boxTotalValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+          : productPriceInfoText || "Caixa c/ 6 garrafas";
 
         // Price block HTML (position absolute full-canvas autonomy)
         const priceBadgeHtml = showProductPrice ? `
         <div class="prod-price-badge-free" style="position:absolute; left:calc(50% + ${productPriceXOffset}px); top:calc(${productPriceBaseTop}% + ${productPriceYOffset}px); transform:translate(-50%, -50%) rotate(${productPriceAngle}deg); text-align:${priceAlignCSS}; z-index:20;">
-          <p class="prod-price-label" style="color:${productPriceLabelColor}; font-size:${productPriceLabelFontSize}px;">Preço Unitário B2B</p>
-          <p class="prod-price-info" style="color:${productPriceInfoColor}; font-size:${productPriceInfoFontSize}px;">${boxInfoText}</p>
+          ${showProductPriceLabel && productPriceLabelText.trim() ? `<p class="prod-price-label" style="color:${productPriceLabelColor}; font-size:${productPriceLabelFontSize}px;">${productPriceLabelText}</p>` : ""}
+          ${showProductPriceInfo ? `<p class="prod-price-info" style="color:${productPriceInfoColor}; font-size:${productPriceInfoFontSize}px;">${boxInfoText}</p>` : ""}
           <div class="prod-price-row ${priceAlignCSS === 'center' ? 'flex-center' : priceAlignCSS === 'right' ? 'flex-end' : 'flex-start'}">${priceHtml}</div>
         </div>` : "";
 
@@ -1023,10 +1086,11 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
 }
 .meta-badge{
   display:inline-flex;align-items:center;gap:4px;
-  padding:2px 8px;border-radius:999px;
+  padding:${showProductPillBorders ? "2px 8px" : "0"};
+  border-radius:${showProductPillBorders ? "999px" : "0"};
   font-size:8.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;
-  background:${metaBadgeBgCSS};
-  border:1px solid ${secondaryBorderSubtleCSS};
+  background:${showProductPillBorders ? metaBadgeBgCSS : "transparent"};
+  border:${showProductPillBorders ? `1px solid ${secondaryBorderSubtleCSS}` : "none"};
   color:${textColor};
 }
 .flag-icon{
@@ -1153,8 +1217,8 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
 .multi-page-header{
   width:100%;
   display:flex;align-items:baseline;justify-content:space-between;
-  border-bottom:1px solid ${secondaryColor};
-  padding-bottom:8px;
+  border-bottom:${showProductInternalLines ? `1px solid ${secondaryColor}` : "none"};
+  padding-bottom:${showProductInternalLines ? "8px" : "4px"};
   margin-bottom:14px;
   flex-shrink:0;
 }
@@ -1171,7 +1235,7 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
   flex:1;
   display:flex;align-items:center;gap:24px;
   background:${cardSurfaceBgCSS};
-  border:1px solid ${secondaryBorderSubtleCSS};
+  border:${showProductCardBorder ? `1px solid ${secondaryBorderSubtleCSS}` : "none"};
   border-radius:8px;
   padding:20px 24px;
   box-shadow:${cardSurfaceShadowCSS};
@@ -1208,12 +1272,18 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
 .spec-cell{display:flex;flex-direction:column;}
 .spec-lbl{font-size:7.5px;font-weight:700;letter-spacing:1.2px;color:${productSpecsColor};opacity:0.88;text-transform:uppercase;}
 .spec-val{font-size:10px;font-weight:600;margin-top:1px;}
+.duo-specs-clean{
+  font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;
+  margin-bottom:10px;line-height:1.4;
+}
 .duo-desc{
-  font-size:11.5px;line-height:1.55;margin-bottom:12px;
+  font-size:11.5px;line-height:1.58;margin-bottom:12px;
   display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;
 }
 .duo-price-bar{
-  margin-top:auto;padding-top:10px;border-top:1px solid ${secondaryBorderSubtleCSS};
+  margin-top:auto;
+  padding-top:${showProductInternalLines ? "10px" : "4px"};
+  border-top:${showProductInternalLines ? `1px solid ${secondaryBorderSubtleCSS}` : "none"};
   display:flex;align-items:flex-end;justify-content:space-between;
 }
 .duo-price-lbl{display:block;font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:2px;}
@@ -1231,14 +1301,14 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
 }
 .grid4-card{
   background:${cardSurfaceBgCSS};
-  border:1px solid ${secondaryBorderSubtleCSS};
+  border:${showProductCardBorder ? `1px solid ${secondaryBorderSubtleCSS}` : "none"};
   border-radius:8px;
   padding:14px 16px;
   display:flex;flex-direction:column;justify-content:space-between;
   box-shadow:${cardSurfaceShadowCSS};
 }
 .grid4-top{
-  border-bottom:1px solid ${secondaryBorderSubtleCSS};
+  border-bottom:${showProductInternalLines ? `1px solid ${secondaryBorderSubtleCSS}` : "none"};
   padding-bottom:8px;margin-bottom:8px;
   display:flex;flex-direction:column;align-items:center;
 }
@@ -1259,7 +1329,8 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
   display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
 }
 .grid4-foot{
-  margin-top:8px;padding-top:8px;border-top:1px solid ${secondaryBorderSubtleCSS};
+  margin-top:8px;padding-top:8px;
+  border-top:${showProductInternalLines ? `1px solid ${secondaryBorderSubtleCSS}` : "none"};
   display:flex;align-items:flex-end;justify-content:space-between;
 }
 .grid4-price-lbl{display:block;font-size:7.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;}
@@ -1271,13 +1342,14 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
 .exec-table{
   width:100%;border-collapse:collapse;
   background:${cardSurfaceBgCSS};
+  border:${showProductCardBorder ? `1px solid ${secondaryBorderSubtleCSS}` : "none"};
   border-radius:6px;overflow:hidden;
 }
 .exec-th{
   text-align:left;padding:8px 8px;font-weight:800;
 }
 .exec-tr{
-  border-bottom:1px solid ${secondaryBorderSubtleCSS};
+  border-bottom:${showProductInternalLines ? `1px solid ${secondaryBorderSubtleCSS}` : "none"};
 }
 .exec-td{
   padding:7px 8px;vertical-align:middle;
@@ -1291,7 +1363,7 @@ img{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!importan
 
 .page-foot{
   position:absolute;bottom:14px;left:45px;right:45px;
-  border-top:1px solid ${secondaryBorderSubtleCSS};padding-top:4px;
+  border-top:${showProductInternalLines ? `1px solid ${secondaryBorderSubtleCSS}` : "none"};padding-top:4px;
   display:flex;justify-content:space-between;
   font-size:8px;color:${productSpecsColor};opacity:0.78;letter-spacing:.5px;
 }

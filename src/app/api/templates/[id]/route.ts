@@ -63,6 +63,12 @@ const booleanStyleKeys = [
   "showProductCategoryBadge",
   "showProductDiscountBadge",
   "showProductCountryFlag",
+  "showProductPageHeader",
+  "showProductCardBorder",
+  "showProductInternalLines",
+  "showProductPillBorders",
+  "showProductPriceLabel",
+  "showProductPriceInfo",
 ];
 
 function validateTemplateStyles(styles: Record<string, unknown>): string | null {
@@ -104,6 +110,18 @@ function validateTemplateStyles(styles: Record<string, unknown>): string | null 
   for (const [key, allowedValues] of Object.entries(allowedEnums)) {
     if (styles[key] !== undefined && (typeof styles[key] !== "string" || !allowedValues.includes(styles[key]))) {
       return `Opção inválida para ${key}.`;
+    }
+  }
+
+  for (const key of [
+    "productPriceLabelText",
+    "productPriceInfoText",
+    "productPageHeaderLeftText",
+    "productPageHeaderRightText",
+  ]) {
+    const value = styles[key];
+    if (value !== undefined && (typeof value !== "string" || value.length > 160)) {
+      return `Texto inválido para ${key} (máximo de 160 caracteres).`;
     }
   }
 

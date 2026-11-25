@@ -114,6 +114,18 @@ interface TemplateStyles {
   // Background Harmonization & Card Surface Controls
   productCardSurfaceMode?: "auto" | "transparent" | "tinted-glass" | "solid";
   productCardOpacity?: number;
+
+  // Clean Editorial / Structural Lines & Custom Labels Controls
+  showProductPageHeader?: boolean;
+  showProductCardBorder?: boolean;
+  showProductInternalLines?: boolean;
+  showProductPillBorders?: boolean;
+  showProductPriceLabel?: boolean;
+  showProductPriceInfo?: boolean;
+  productPriceLabelText?: string;
+  productPriceInfoText?: string;
+  productPageHeaderLeftText?: string;
+  productPageHeaderRightText?: string;
 }
 
 interface Template {
@@ -388,7 +400,7 @@ export default function TemplatesPage() {
   const [textColor, setTextColor] = useState("#1f2937");
   const [fontFamily, setFontFamily] = useState("Playfair Display");
   const [headerTitle, setHeaderTitle] = useState("CATÁLOGO DE VINHOS");
-  const [footerText, setFooterText] = useState("");
+  const [footerText, setFooterText] = useState("Allvino Importadora de Vinhos B2B");
   const [backgroundImageUrl, setBackgroundImageUrl] = useState("");
   const [coverImageUrl, setCoverImageUrl] = useState("");
 
@@ -485,6 +497,18 @@ export default function TemplatesPage() {
   >("auto");
   const [productCardOpacity, setProductCardOpacity] = useState<number>(18);
   const [extractedArtPalette, setExtractedArtPalette] = useState<ExtractedImagePalette | null>(null);
+
+  // Clean Editorial / Structural Lines & Custom Labels State
+  const [showProductPageHeader, setShowProductPageHeader] = useState(true);
+  const [showProductCardBorder, setShowProductCardBorder] = useState(true);
+  const [showProductInternalLines, setShowProductInternalLines] = useState(true);
+  const [showProductPillBorders, setShowProductPillBorders] = useState(true);
+  const [showProductPriceLabel, setShowProductPriceLabel] = useState(true);
+  const [showProductPriceInfo, setShowProductPriceInfo] = useState(true);
+  const [productPriceLabelText, setProductPriceLabelText] = useState("Preço Unitário B2B");
+  const [productPriceInfoText, setProductPriceInfoText] = useState("");
+  const [productPageHeaderLeftText, setProductPageHeaderLeftText] = useState("CATÁLOGO DE VINHOS");
+  const [productPageHeaderRightText, setProductPageHeaderRightText] = useState("CATÁLOGO EXCLUSIVO B2B");
 
   // Preview tab ("cover" | "index" | "product")
   const [previewTab, setPreviewTab] = useState<"cover" | "index" | "product">("product");
@@ -692,8 +716,8 @@ export default function TemplatesPage() {
     setBackgroundColor(s.backgroundColor || "#ffffff");
     setTextColor(s.textColor || "#1f2937");
     setFontFamily(s.fontFamily || "Playfair Display");
-    setHeaderTitle(s.headerTitle || "CATÁLOGO DE VINHOS");
-    setFooterText(s.footerText || "");
+    setHeaderTitle(typeof s.headerTitle === "string" ? s.headerTitle : "CATÁLOGO DE VINHOS");
+    setFooterText(typeof s.footerText === "string" ? s.footerText : "Allvino Importadora de Vinhos B2B");
     setBackgroundImageUrl(s.backgroundImageUrl || "");
     setCoverImageUrl(s.coverImageUrl || "");
 
@@ -710,6 +734,28 @@ export default function TemplatesPage() {
     setShowProductCategoryBadge(s.showProductCategoryBadge !== false);
     setShowProductDiscountBadge(s.showProductDiscountBadge !== false);
     setShowProductCountryFlag(s.showProductCountryFlag !== false);
+    setShowProductPageHeader(s.showProductPageHeader !== false);
+    setShowProductCardBorder(
+      typeof s.showProductCardBorder === "boolean"
+        ? s.showProductCardBorder
+        : !s.backgroundImageUrl,
+    );
+    setShowProductInternalLines(s.showProductInternalLines !== false);
+    setShowProductPillBorders(s.showProductPillBorders !== false);
+    setShowProductPriceLabel(s.showProductPriceLabel !== false);
+    setShowProductPriceInfo(s.showProductPriceInfo !== false);
+    setProductPriceLabelText(
+      typeof s.productPriceLabelText === "string" ? s.productPriceLabelText : "Preço Unitário B2B",
+    );
+    setProductPriceInfoText(typeof s.productPriceInfoText === "string" ? s.productPriceInfoText : "");
+    const resolvedHeader = typeof s.headerTitle === "string" ? s.headerTitle : "CATÁLOGO DE VINHOS";
+    const resolvedSub = typeof s.coverSubtitle === "string" ? s.coverSubtitle : "CATÁLOGO EXCLUSIVO B2B";
+    setProductPageHeaderLeftText(
+      typeof s.productPageHeaderLeftText === "string" ? s.productPageHeaderLeftText : resolvedHeader,
+    );
+    setProductPageHeaderRightText(
+      typeof s.productPageHeaderRightText === "string" ? s.productPageHeaderRightText : resolvedSub,
+    );
     setProductLayoutPreset(s.productLayoutPreset || "classic");
     setProductDescAngle(typeof s.productDescAngle === "number" ? s.productDescAngle : 0);
     setProductDescAlign(s.productDescAlign || "center");
@@ -721,7 +767,9 @@ export default function TemplatesPage() {
     setShowCoverTitle(s.showCoverTitle !== false);
     setShowCoverSubtitle(s.showCoverSubtitle !== false);
     setShowCoverFooter(s.showCoverFooter !== false);
-    setCoverSubtitle(s.coverSubtitle || "CATÁLOGO EXCLUSIVO B2B");
+    setCoverSubtitle(
+      typeof s.coverSubtitle === "string" ? s.coverSubtitle : "CATÁLOGO EXCLUSIVO B2B",
+    );
     setCoverLogoHeight(typeof s.coverLogoHeight === "number" ? s.coverLogoHeight : 110);
     setCoverLogoAngle(typeof s.coverLogoAngle === "number" ? s.coverLogoAngle : 0);
     setCoverLogoXOffset(clamp(s.coverLogoXOffset));
@@ -916,6 +964,16 @@ export default function TemplatesPage() {
     productDescYOffset: clamp(productDescYOffset, -150, 150),
     productCardSurfaceMode,
     productCardOpacity: clamp(productCardOpacity, 0, 100),
+    showProductPageHeader,
+    showProductCardBorder,
+    showProductInternalLines,
+    showProductPillBorders,
+    showProductPriceLabel,
+    showProductPriceInfo,
+    productPriceLabelText,
+    productPriceInfoText,
+    productPageHeaderLeftText,
+    productPageHeaderRightText,
   });
 
   // Track changes in history stack for Undo/Redo (debounced)
@@ -1128,12 +1186,13 @@ export default function TemplatesPage() {
             setBackgroundColor(extracted.dominantBgHex);
             setProductCardSurfaceMode("auto");
             setProductCardOpacity(14);
+            setShowProductCardBorder(false);
             if (extracted.isDarkBackground) {
               setTextColor(extracted.suggestedTextHex);
             }
           }
           setIsDirty(true);
-          showToast("Arte de fundo carregada e superfície dos cards harmonizada automaticamente!");
+          showToast("Arte de fundo carregada e superfície dos cards harmonizada sem molduras duplas!");
         } else {
           setIsDirty(true);
           showToast(`${imageLabel} otimizada e pronta para salvar.`);
@@ -1171,6 +1230,37 @@ export default function TemplatesPage() {
         ? "Paleta completa e superfícies harmonizadas com a arte importada!"
         : "Cor de fundo e transparência dos cards harmonizadas com a arte!",
     );
+  };
+
+  const handleApplyCleanEditorialMode = () => {
+    setShowProductPageHeader(false);
+    setShowProductCardBorder(false);
+    setShowProductInternalLines(false);
+    setShowProductPillBorders(false);
+    setShowProductDivider(false);
+    setShowProductPriceLabel(false);
+    setShowProductPriceInfo(false);
+    if (backgroundImageUrl) {
+      setProductCardSurfaceMode("transparent");
+      setProductCardOpacity(0);
+    }
+    setIsDirty(true);
+    showToast("✨ Modo Limpo Editorial aplicado: linhas estruturais e textos de atacado removidos!");
+  };
+
+  const handleRestoreStandardB2BMode = () => {
+    setShowProductPageHeader(true);
+    setShowProductCardBorder(!backgroundImageUrl);
+    setShowProductInternalLines(true);
+    setShowProductPillBorders(true);
+    setShowProductDivider(true);
+    setShowProductPriceLabel(true);
+    setShowProductPriceInfo(true);
+    if (!productPriceLabelText.trim()) {
+      setProductPriceLabelText("Preço Unitário B2B");
+    }
+    setIsDirty(true);
+    showToast("Estrutura comercial B2B restaurada.");
   };
 
   const handleDuplicateTemplate = async () => {
@@ -1751,11 +1841,54 @@ export default function TemplatesPage() {
                       Configure a exibição do preço unitário, cálculo automático da caixa com 6 garrafas, selo de desconto e posição livre na folha A4.
                     </p>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      <VisibilityToggle label="Exibir preço B2B" checked={showProductPrice} onChange={setShowProductPrice} />
-                      <VisibilityToggle label="Calcular Caixa c/ 6 (R$)" checked={showProductBoxPrice} onChange={setShowProductBoxPrice} />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <VisibilityToggle label="Exibir bloco de preço" checked={showProductPrice} onChange={setShowProductPrice} />
                       <VisibilityToggle label="Selo de desconto (% OFF)" checked={showProductDiscountBadge} onChange={setShowProductDiscountBadge} />
+                      <VisibilityToggle label='Exibir rótulo ("Preço Unitário...")' checked={showProductPriceLabel} onChange={setShowProductPriceLabel} />
+                      <VisibilityToggle label='Exibir info secundária ("Caixa c/ 6")' checked={showProductPriceInfo} onChange={setShowProductPriceInfo} />
+                      {showProductPriceInfo && (
+                        <VisibilityToggle label="Calcular valor da Caixa c/ 6 (R$)" checked={showProductBoxPrice} onChange={setShowProductBoxPrice} />
+                      )}
                     </div>
+
+                    {/* Editable Price Labels (Remove or customize B2B wording) */}
+                    {(showProductPriceLabel || showProductPriceInfo) && (
+                      <div className="rounded-lg border border-allvino-outline-variant/40 bg-allvino-surface-container-low/70 p-3 space-y-2.5">
+                        <p className="text-[10.5px] font-bold text-allvino-primary">
+                          ✏️ Personalizar Textos do Preço (Opcional — Carta de Vinhos ou Atacado)
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {showProductPriceLabel && (
+                            <div>
+                              <label className="block text-[9px] text-allvino-on-surface-variant mb-1 font-semibold">
+                                Rótulo superior do preço
+                              </label>
+                              <input
+                                type="text"
+                                value={productPriceLabelText}
+                                onChange={(e) => setProductPriceLabelText(e.target.value)}
+                                placeholder="Ex: Garrafa 750ml (ou apague)"
+                                className="w-full text-xs p-1.5 rounded bg-white border"
+                              />
+                            </div>
+                          )}
+                          {showProductPriceInfo && (
+                            <div>
+                              <label className="block text-[9px] text-allvino-on-surface-variant mb-1 font-semibold">
+                                Rótulo secundário (caixa/embalagem)
+                              </label>
+                              <input
+                                type="text"
+                                value={productPriceInfoText}
+                                onChange={(e) => setProductPriceInfoText(e.target.value)}
+                                placeholder={showProductBoxPrice ? "Padrão: Caixa c/ 6" : "Padrão: Caixa c/ 6 garrafas"}
+                                className="w-full text-xs p-1.5 rounded bg-white border"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
@@ -2058,15 +2191,82 @@ export default function TemplatesPage() {
                       Ajuste tamanho, posição e alinhamento dos textos da página. Use os controles de visibilidade para remover elementos padrão do template.
                     </p>
 
+                    <div className="rounded-xl border border-amber-300/70 bg-amber-50/70 p-3 space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <p className="text-[11px] font-bold text-allvino-primary">
+                            ✨ Estilo Limpo Editorial (Carta de Vinhos / Arte Própria)
+                          </p>
+                          <p className="text-[9.5px] text-allvino-on-surface-variant">
+                            Remove cabeçalho repetido, molduras, fios internos e termos de atacado com 1 clique.
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={handleApplyCleanEditorialMode}
+                            className="rounded-lg bg-allvino-primary px-2.5 py-1.5 text-[10px] font-bold text-white shadow-xs transition hover:bg-allvino-primary-container"
+                          >
+                            ✨ Aplicar Modo Limpo
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleRestoreStandardB2BMode}
+                            className="rounded-lg border border-allvino-outline-variant bg-white px-2 py-1.5 text-[9.5px] font-bold text-allvino-primary transition hover:bg-allvino-surface-container-high"
+                          >
+                            Padrão B2B
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-2">
                       <VisibilityToggle label="Exibir nome do vinho" checked={showProductName} onChange={setShowProductName} />
                       <VisibilityToggle label="Exibir origem/região" checked={showProductOrigin} onChange={setShowProductOrigin} />
                       <VisibilityToggle label="Exibir bandeira do país" checked={showProductCountryFlag} onChange={setShowProductCountryFlag} />
                       <VisibilityToggle label="Exibir selo de categoria" checked={showProductCategoryBadge} onChange={setShowProductCategoryBadge} />
-                      <VisibilityToggle label="Exibir linha divisória" checked={showProductDivider} onChange={setShowProductDivider} />
+                      <VisibilityToggle label="Contorno nas pílulas (País/Tipo)" checked={showProductPillBorders} onChange={setShowProductPillBorders} />
+                      <VisibilityToggle label="Exibir linha divisória curta" checked={showProductDivider} onChange={setShowProductDivider} />
                       <VisibilityToggle label="Exibir ficha técnica" checked={showProductSpecs} onChange={setShowProductSpecs} />
                       <VisibilityToggle label="Exibir notas de degustação" checked={showProductDescription} onChange={setShowProductDescription} />
+                      <VisibilityToggle label="Cabeçalho superior na página" checked={showProductPageHeader} onChange={setShowProductPageHeader} />
+                      <VisibilityToggle label="Linhas internas (ficha/preço/rodapé)" checked={showProductInternalLines} onChange={setShowProductInternalLines} />
+                      <VisibilityToggle label="Moldura/borda nos cards" checked={showProductCardBorder} onChange={setShowProductCardBorder} />
                     </div>
+
+                    {/* Optional Custom Running Header Texts when enabled */}
+                    {showProductPageHeader && (
+                      <div className="rounded-lg border border-allvino-outline-variant/40 bg-allvino-surface-container-low/70 p-3 space-y-2">
+                        <p className="text-[10.5px] font-bold text-allvino-primary">
+                          Cabeçalho Superior das Páginas Multi-Produto
+                        </p>
+                        <p className="text-[9.5px] text-allvino-on-surface-variant">
+                          Personalize os textos exibidos no topo (ou desmarque &ldquo;Cabeçalho superior na página&rdquo; acima para removê-lo por completo).
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[9px] text-allvino-on-surface-variant mb-1">Texto à esquerda</label>
+                            <input
+                              type="text"
+                              value={productPageHeaderLeftText}
+                              onChange={(e) => setProductPageHeaderLeftText(e.target.value)}
+                              placeholder={headerTitle || "Ex: CARTA DE VINHOS"}
+                              className="w-full text-xs p-1.5 rounded bg-white border"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[9px] text-allvino-on-surface-variant mb-1">Texto à direita (ex: remover &ldquo;Exclusivo para Atacado&rdquo;)</label>
+                            <input
+                              type="text"
+                              value={productPageHeaderRightText}
+                              onChange={(e) => setProductPageHeaderRightText(e.target.value)}
+                              placeholder={coverSubtitle || "Ex: SELEÇÃO RESERVA"}
+                              className="w-full text-xs p-1.5 rounded bg-white border"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Wine Name */}
                     <div className="space-y-2 pb-3 border-b border-allvino-outline-variant/20">
@@ -2601,8 +2801,44 @@ export default function TemplatesPage() {
                       Gerencie paleta de cores geral do PDF, tipografia e a imagem de fundo da página de produto.
                     </p>
 
-                    <div className="grid grid-cols-2 gap-2">
-                      <VisibilityToggle label="Exibir rodapé da página de produto" checked={showProductFooter} onChange={setShowProductFooter} />
+                    {/* Clean Lines & Borders Quick Controls */}
+                    <div className="rounded-xl border border-amber-300/70 bg-amber-50/70 p-3 space-y-2.5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <p className="text-[11px] font-bold text-allvino-primary">
+                            ✨ Limpeza de Linhas, Molduras & Textos Padrão
+                          </p>
+                          <p className="text-[9.5px] text-allvino-on-surface-variant">
+                            Ideal para artes timbradas (ex: Cartas de Vinho): oculte linhas divisórias, bordas de cards e textos fixos de atacado.
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={handleApplyCleanEditorialMode}
+                            className="rounded-lg bg-allvino-primary px-2.5 py-1.5 text-[10px] font-bold text-white shadow-xs transition hover:bg-allvino-primary-container"
+                          >
+                            ✨ Modo Limpo (Sem Linhas)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleRestoreStandardB2BMode}
+                            className="rounded-lg border border-allvino-outline-variant bg-white px-2 py-1.5 text-[9.5px] font-bold text-allvino-primary transition hover:bg-allvino-surface-container-high"
+                          >
+                            Restaurar Linhas
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-0.5">
+                        <VisibilityToggle label="Cabeçalho superior e linha do topo" checked={showProductPageHeader} onChange={setShowProductPageHeader} />
+                        <VisibilityToggle label="Moldura/borda externa nos cards" checked={showProductCardBorder} onChange={setShowProductCardBorder} />
+                        <VisibilityToggle label="Linhas internas (ficha, preço e rodapé)" checked={showProductInternalLines} onChange={setShowProductInternalLines} />
+                        <VisibilityToggle label="Contorno nas pílulas (País e Tipo)" checked={showProductPillBorders} onChange={setShowProductPillBorders} />
+                        <VisibilityToggle label='Rótulo "Preço Unitário B2B"' checked={showProductPriceLabel} onChange={setShowProductPriceLabel} />
+                        <VisibilityToggle label=' Subtítulo "Caixa c/ 6"' checked={showProductPriceInfo} onChange={setShowProductPriceInfo} />
+                        <VisibilityToggle label="Exibir rodapé da página de produto" checked={showProductFooter} onChange={setShowProductFooter} />
+                      </div>
                     </div>
 
                     <div className="space-y-2 pb-3 border-b border-allvino-outline-variant/20">
@@ -3246,11 +3482,11 @@ export default function TemplatesPage() {
                                 textShadow: hasCoverBg ? "0 2px 10px rgba(0,0,0,.25)" : "none",
                               }}
                             >
-                              {headerTitle || "CATÁLOGO DE VINHOS"}
+                              {headerTitle}
                             </h2>
                           </DraggablePreviewElement>
                         )}
-                        {showCoverSubtitle && (
+                        {showCoverSubtitle && coverSubtitle && (
                           <DraggablePreviewElement
                             className="relative mx-auto w-fit"
                             elementId="cover-subtitle"
@@ -3274,12 +3510,12 @@ export default function TemplatesPage() {
                                 fontSize: `${Math.max(1, Math.round(coverSubtitleFontSize * previewScale))}px`,
                               }}
                             >
-                              {coverSubtitle || "CATÁLOGO EXCLUSIVO B2B"}
+                              {coverSubtitle}
                             </p>
                           </DraggablePreviewElement>
                         )}
                       </div>
-                      {showCoverFooter && (
+                      {showCoverFooter && footerText && (
                         <DraggablePreviewElement
                           className="absolute bottom-6 left-0 right-0 z-10 text-center"
                           elementId="cover-footer"
@@ -3299,7 +3535,7 @@ export default function TemplatesPage() {
                           x={coverFooterXOffset}
                           y={coverFooterYOffset}
                         >
-                          {footerText || "Allvino Importadora de Vinhos B2B"}
+                          {footerText}
                         </DraggablePreviewElement>
                       )}
                     </div>
@@ -3335,10 +3571,12 @@ export default function TemplatesPage() {
                           >
                             {(dbWines.length || 1)} rótulos ativos · Índice interativo clicável no PDF
                           </p>
-                          <div
-                            className="w-10 h-px mx-auto mt-2"
-                            style={{ background: resolvedProductSpecsColor }}
-                          />
+                          {showProductDivider && (
+                            <div
+                              className="w-10 h-px mx-auto mt-2"
+                              style={{ background: resolvedProductSpecsColor }}
+                            />
+                          )}
                         </div>
 
                         <div className="space-y-1.5">
@@ -3356,7 +3594,9 @@ export default function TemplatesPage() {
                             return (
                               <div
                                 key={item.id}
-                                className="flex items-baseline justify-between border-b border-dashed border-black/15 py-1"
+                                className={`flex items-baseline justify-between py-1 ${
+                                  showProductInternalLines ? "border-b border-dashed border-black/15" : ""
+                                }`}
                                 style={{ fontSize: `${Math.max(7, Math.round(10.5 * previewScale))}px` }}
                               >
                                 <div className="truncate pr-2">
@@ -3368,9 +3608,11 @@ export default function TemplatesPage() {
                                   </span>
                                   {showProductCategoryBadge && (
                                     <span
-                                      className="ml-1.5 rounded px-1 py-0.5 font-extrabold uppercase"
+                                      className={`ml-1.5 rounded font-extrabold uppercase ${
+                                        showProductPillBorders ? "px-1 py-0.5" : "px-0"
+                                      }`}
                                       style={{
-                                        background: "rgba(128,40,45,0.08)",
+                                        background: showProductPillBorders ? "rgba(128,40,45,0.08)" : "transparent",
                                         color: resolvedProductNameColor,
                                         fontSize: `${Math.max(6, Math.round(7.5 * previewScale))}px`,
                                       }}
@@ -3406,10 +3648,12 @@ export default function TemplatesPage() {
 
                       {showProductFooter && (
                         <div
-                          className="w-full border-t pt-2 pb-1 flex justify-between text-[6.5px] flex-shrink-0"
+                          className={`w-full pt-2 pb-1 flex justify-between text-[6.5px] flex-shrink-0 ${
+                            showProductInternalLines ? "border-t" : ""
+                          }`}
                           style={{ borderColor: secondaryBorderSubtleCSS, color: resolvedProductSpecsColor, opacity: 0.78 }}
                         >
-                          <span>{footerText || "Allvino Importadora de Vinhos B2B"}</span>
+                          <span>{footerText}</span>
                           <span>Página 2</span>
                         </div>
                       )}
@@ -3425,30 +3669,34 @@ export default function TemplatesPage() {
                       {productLayoutPreset === "editorial-duo" ? (
                         /* ── PREVIEW: 2 PRODUCTS PER PAGE (EDITORIAL DUO) ── */
                         <>
-                          <div
-                            className="w-full flex items-baseline justify-between border-b pb-1.5 mb-2 shrink-0"
-                            style={{ borderColor: secondaryColor }}
-                          >
-                            <span
-                              className="font-bold tracking-widest uppercase"
-                              style={{
-                                fontFamily: previewFont,
-                                color: resolvedProductNameColor,
-                                fontSize: `${Math.max(8, Math.round(12 * previewScale))}px`,
-                              }}
+                          {showProductPageHeader && (productPageHeaderLeftText.trim() || productPageHeaderRightText.trim()) && (
+                            <div
+                              className={`w-full flex items-baseline justify-between pb-1.5 mb-2 shrink-0 ${
+                                showProductInternalLines ? "border-b" : ""
+                              }`}
+                              style={{ borderColor: secondaryColor }}
                             >
-                              {headerTitle}
-                            </span>
-                            <span
-                              className="uppercase tracking-widest"
-                              style={{
-                                color: resolvedProductSpecsColor,
-                                fontSize: `${Math.max(6, Math.round(8.5 * previewScale))}px`,
-                              }}
-                            >
-                              {coverSubtitle}
-                            </span>
-                          </div>
+                              <span
+                                className="font-bold tracking-widest uppercase"
+                                style={{
+                                  fontFamily: previewFont,
+                                  color: resolvedProductNameColor,
+                                  fontSize: `${Math.max(8, Math.round(12 * previewScale))}px`,
+                                }}
+                              >
+                                {productPageHeaderLeftText}
+                              </span>
+                              <span
+                                className="uppercase tracking-widest"
+                                style={{
+                                  color: resolvedProductSpecsColor,
+                                  fontSize: `${Math.max(6, Math.round(8.5 * previewScale))}px`,
+                                }}
+                              >
+                                {productPageHeaderRightText}
+                              </span>
+                            </div>
+                          )}
                           <div className="flex-1 w-full flex flex-col justify-between gap-3 py-1 min-h-0">
                             {[
                               previewWine,
@@ -3456,10 +3704,19 @@ export default function TemplatesPage() {
                             ].map((wineItem, idx) => {
                               const unitPrice = wineItem.precoPromocional ?? wineItem.precoOriginal;
                               const boxTotal = unitPrice * 6;
+                              const duoSecondaryLabel =
+                                productPriceInfoText || (showProductBoxPrice ? "Caixa c/ 6" : "Embalagem");
+                              const duoSecondaryVal = showProductBoxPrice
+                                ? `R$ ${boxTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+                                : productPriceInfoText
+                                ? ""
+                                : "6 un.";
                               return (
                                 <div
                                   key={`${wineItem.id}-${idx}`}
-                                  className="flex-1 flex items-center gap-3 rounded-lg border p-3 min-h-0 transition-colors"
+                                  className={`flex-1 flex items-center gap-3 rounded-lg p-3 min-h-0 transition-colors ${
+                                    showProductCardBorder ? "border" : ""
+                                  }`}
                                   style={{
                                     backgroundColor: cardSurfaceBgCSS,
                                     borderColor: secondaryBorderSubtleCSS,
@@ -3481,9 +3738,11 @@ export default function TemplatesPage() {
                                       <div className="flex flex-wrap items-center gap-1 mb-1">
                                         {showProductCountryFlag && (
                                           <span
-                                            className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[7px] font-bold uppercase"
+                                            className={`inline-flex items-center gap-1 text-[7px] font-bold uppercase ${
+                                              showProductPillBorders ? "rounded-full border px-1.5 py-0.5" : "px-0"
+                                            }`}
                                             style={{
-                                              backgroundColor: metaBadgeBgCSS,
+                                              backgroundColor: showProductPillBorders ? metaBadgeBgCSS : "transparent",
                                               borderColor: secondaryBorderSubtleCSS,
                                               color: textColor,
                                             }}
@@ -3496,11 +3755,18 @@ export default function TemplatesPage() {
                                             {wineItem.paisOrigem}
                                           </span>
                                         )}
+                                        {!showProductPillBorders && showProductCountryFlag && showProductCategoryBadge && (
+                                          <span className="text-[7px] opacity-70" style={{ color: secondaryColor }}>
+                                            ·
+                                          </span>
+                                        )}
                                         {showProductCategoryBadge && (
                                           <span
-                                            className="rounded-full border px-1.5 py-0.5 text-[7px] font-bold uppercase"
+                                            className={`text-[7px] font-bold uppercase ${
+                                              showProductPillBorders ? "rounded-full border px-1.5 py-0.5" : "px-0"
+                                            }`}
                                             style={{
-                                              backgroundColor: metaBadgeBgCSS,
+                                              backgroundColor: showProductPillBorders ? metaBadgeBgCSS : "transparent",
                                               borderColor: secondaryColor,
                                               color: resolvedProductNameColor,
                                             }}
@@ -3532,46 +3798,64 @@ export default function TemplatesPage() {
                                           {wineItem.vinicola} · {wineItem.regiao}
                                         </p>
                                       )}
-                                      {showProductSpecs && (
+                                      {showProductDivider && (
                                         <div
-                                          className="grid grid-cols-3 gap-1 my-1.5 py-1.5 px-1 border-y"
-                                          style={{
-                                            backgroundColor: specGridBgCSS,
-                                            borderColor: secondaryBorderSubtleCSS,
-                                          }}
-                                        >
-                                          <div>
-                                            <span
-                                              className="block text-[6px] font-bold uppercase opacity-85"
-                                              style={{ color: resolvedProductSpecsColor }}
-                                            >
-                                              UVA
-                                            </span>
-                                            <span className="block truncate font-semibold text-[7.5px]">{wineItem.uva}</span>
+                                          className="w-8 h-px my-1.5"
+                                          style={{ background: secondaryColor }}
+                                        />
+                                      )}
+                                      {showProductSpecs && (
+                                        showProductInternalLines ? (
+                                          <div
+                                            className="grid grid-cols-3 gap-1 my-1.5 py-1.5 px-1 border-y"
+                                            style={{
+                                              backgroundColor: specGridBgCSS,
+                                              borderColor: secondaryBorderSubtleCSS,
+                                            }}
+                                          >
+                                            <div>
+                                              <span
+                                                className="block text-[6px] font-bold uppercase opacity-85"
+                                                style={{ color: resolvedProductSpecsColor }}
+                                              >
+                                                UVA
+                                              </span>
+                                              <span className="block truncate font-semibold text-[7.5px]">{wineItem.uva}</span>
+                                            </div>
+                                            <div>
+                                              <span
+                                                className="block text-[6px] font-bold uppercase opacity-85"
+                                                style={{ color: resolvedProductSpecsColor }}
+                                              >
+                                                SAFRA
+                                              </span>
+                                              <span className="block font-semibold text-[7.5px]">{wineItem.safra}</span>
+                                            </div>
+                                            <div>
+                                              <span
+                                                className="block text-[6px] font-bold uppercase opacity-85"
+                                                style={{ color: resolvedProductSpecsColor }}
+                                              >
+                                                TEOR ALC.
+                                              </span>
+                                              <span className="block font-semibold text-[7.5px]">{wineItem.teorAlcoolico}% vol</span>
+                                            </div>
                                           </div>
-                                          <div>
-                                            <span
-                                              className="block text-[6px] font-bold uppercase opacity-85"
-                                              style={{ color: resolvedProductSpecsColor }}
-                                            >
-                                              SAFRA
-                                            </span>
-                                            <span className="block font-semibold text-[7.5px]">{wineItem.safra}</span>
-                                          </div>
-                                          <div>
-                                            <span
-                                              className="block text-[6px] font-bold uppercase opacity-85"
-                                              style={{ color: resolvedProductSpecsColor }}
-                                            >
-                                              TEOR ALC.
-                                            </span>
-                                            <span className="block font-semibold text-[7.5px]">{wineItem.teorAlcoolico}% vol</span>
-                                          </div>
-                                        </div>
+                                        ) : (
+                                          <p
+                                            className="uppercase tracking-wider font-semibold my-1.5"
+                                            style={{
+                                              color: resolvedProductSpecsColor,
+                                              fontSize: `${Math.max(6.5, Math.round(8.5 * previewScale))}px`,
+                                            }}
+                                          >
+                                            {wineItem.uva} &nbsp;·&nbsp; Safra {wineItem.safra} &nbsp;·&nbsp; {wineItem.teorAlcoolico}% vol
+                                          </p>
+                                        )
                                       )}
                                       {showProductDescription && (
                                         <p
-                                          className="line-clamp-2 leading-snug"
+                                          className="line-clamp-3 leading-relaxed"
                                           style={{
                                             color: resolvedProductDescColor,
                                             fontSize: `${Math.max(7, Math.round(10 * previewScale))}px`,
@@ -3583,19 +3867,23 @@ export default function TemplatesPage() {
                                     </div>
                                     {showProductPrice && (
                                       <div
-                                        className="flex items-end justify-between border-t pt-1.5 mt-1"
+                                        className={`flex items-end justify-between mt-1 ${
+                                          showProductInternalLines ? "border-t pt-1.5" : "pt-0.5"
+                                        }`}
                                         style={{ borderColor: secondaryBorderSubtleCSS }}
                                       >
                                         <div>
-                                          <span
-                                            className="block uppercase font-bold tracking-wider"
-                                            style={{
-                                              color: resolvedProductPriceLabelColor,
-                                              fontSize: `${Math.max(6, Math.round(7.5 * previewScale))}px`,
-                                            }}
-                                          >
-                                            Preço Unitário B2B
-                                          </span>
+                                          {showProductPriceLabel && productPriceLabelText.trim() && (
+                                            <span
+                                              className="block uppercase font-bold tracking-wider"
+                                              style={{
+                                                color: resolvedProductPriceLabelColor,
+                                                fontSize: `${Math.max(6, Math.round(7.5 * previewScale))}px`,
+                                              }}
+                                            >
+                                              {productPriceLabelText}
+                                            </span>
+                                          )}
                                           <span
                                             className="font-extrabold"
                                             style={{
@@ -3606,28 +3894,32 @@ export default function TemplatesPage() {
                                             R$ {unitPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                                           </span>
                                         </div>
-                                        <div className="text-right">
-                                          <span
-                                            className="block uppercase font-bold"
-                                            style={{
-                                              color: resolvedProductPriceInfoColor,
-                                              fontSize: `${Math.max(6, Math.round(7.5 * previewScale))}px`,
-                                            }}
-                                          >
-                                            Caixa c/ 6
-                                          </span>
-                                          <span
-                                            className="font-extrabold"
-                                            style={{
-                                              color: secondaryColor,
-                                              fontSize: `${Math.max(7, Math.round(10.5 * previewScale))}px`,
-                                            }}
-                                          >
-                                            {showProductBoxPrice
-                                              ? `R$ ${boxTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
-                                              : "6 un."}
-                                          </span>
-                                        </div>
+                                        {showProductPriceInfo && (
+                                          <div className="text-right">
+                                            {duoSecondaryLabel && (
+                                              <span
+                                                className="block uppercase font-bold"
+                                                style={{
+                                                  color: resolvedProductPriceInfoColor,
+                                                  fontSize: `${Math.max(6, Math.round(7.5 * previewScale))}px`,
+                                                }}
+                                              >
+                                                {duoSecondaryLabel}
+                                              </span>
+                                            )}
+                                            {duoSecondaryVal && (
+                                              <span
+                                                className="font-extrabold"
+                                                style={{
+                                                  color: secondaryColor,
+                                                  fontSize: `${Math.max(7, Math.round(10.5 * previewScale))}px`,
+                                                }}
+                                              >
+                                                {duoSecondaryVal}
+                                              </span>
+                                            )}
+                                          </div>
+                                        )}
                                       </div>
                                     )}
                                   </div>
@@ -3639,40 +3931,52 @@ export default function TemplatesPage() {
                       ) : productLayoutPreset === "commercial-grid" ? (
                         /* ── PREVIEW: 4 PRODUCTS PER PAGE (2x2 COMMERCIAL B2B GRID) ── */
                         <>
-                          <div
-                            className="w-full flex items-baseline justify-between border-b pb-1.5 mb-2 shrink-0"
-                            style={{ borderColor: secondaryColor }}
-                          >
-                            <span
-                              className="font-bold tracking-widest uppercase"
-                              style={{
-                                fontFamily: previewFont,
-                                color: resolvedProductNameColor,
-                                fontSize: `${Math.max(8, Math.round(12 * previewScale))}px`,
-                              }}
+                          {showProductPageHeader && (productPageHeaderLeftText.trim() || productPageHeaderRightText.trim()) && (
+                            <div
+                              className={`w-full flex items-baseline justify-between pb-1.5 mb-2 shrink-0 ${
+                                showProductInternalLines ? "border-b" : ""
+                              }`}
+                              style={{ borderColor: secondaryColor }}
                             >
-                              {headerTitle}
-                            </span>
-                            <span
-                              className="uppercase tracking-widest"
-                              style={{
-                                color: resolvedProductSpecsColor,
-                                fontSize: `${Math.max(6, Math.round(8.5 * previewScale))}px`,
-                              }}
-                            >
-                              {coverSubtitle}
-                            </span>
-                          </div>
+                              <span
+                                className="font-bold tracking-widest uppercase"
+                                style={{
+                                  fontFamily: previewFont,
+                                  color: resolvedProductNameColor,
+                                  fontSize: `${Math.max(8, Math.round(12 * previewScale))}px`,
+                                }}
+                              >
+                                {productPageHeaderLeftText}
+                              </span>
+                              <span
+                                className="uppercase tracking-widest"
+                                style={{
+                                  color: resolvedProductSpecsColor,
+                                  fontSize: `${Math.max(6, Math.round(8.5 * previewScale))}px`,
+                                }}
+                              >
+                                {productPageHeaderRightText}
+                              </span>
+                            </div>
+                          )}
                           <div className="flex-1 w-full grid grid-cols-2 grid-rows-2 gap-2.5 py-1 min-h-0">
                             {Array.from({ length: 4 }, (_, idx) => {
                               const sourceList = dbWines.length > 0 ? dbWines : [DEFAULT_PREVIEW_WINE];
                               const wineItem = idx === 0 ? previewWine : sourceList[idx % sourceList.length];
                               const unitPrice = wineItem.precoPromocional ?? wineItem.precoOriginal;
                               const boxTotal = unitPrice * 6;
+                              const gridSecondaryLabel = productPriceInfoText || "Caixa c/ 6";
+                              const gridSecondaryVal = showProductBoxPrice
+                                ? `R$ ${boxTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+                                : productPriceInfoText
+                                ? ""
+                                : "6 un.";
                               return (
                                 <div
                                   key={`${wineItem.id}-${idx}`}
-                                  className="flex flex-col justify-between rounded-lg border p-2.5 min-h-0 transition-colors"
+                                  className={`flex flex-col justify-between rounded-lg p-2.5 min-h-0 transition-colors ${
+                                    showProductCardBorder ? "border" : ""
+                                  }`}
                                   style={{
                                     backgroundColor: cardSurfaceBgCSS,
                                     borderColor: secondaryBorderSubtleCSS,
@@ -3680,15 +3984,19 @@ export default function TemplatesPage() {
                                   }}
                                 >
                                   <div
-                                    className="flex flex-col items-center border-b pb-1.5 mb-1.5"
+                                    className={`flex flex-col items-center pb-1.5 mb-1.5 ${
+                                      showProductInternalLines ? "border-b" : ""
+                                    }`}
                                     style={{ borderColor: secondaryBorderSubtleCSS }}
                                   >
                                     <div className="flex items-center gap-1 mb-1">
                                       {showProductCountryFlag && (
                                         <span
-                                          className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.2 text-[6.5px] font-bold uppercase"
+                                          className={`inline-flex items-center gap-1 text-[6.5px] font-bold uppercase ${
+                                            showProductPillBorders ? "rounded-full border px-1.5 py-0.2" : "px-0"
+                                          }`}
                                           style={{
-                                            backgroundColor: metaBadgeBgCSS,
+                                            backgroundColor: showProductPillBorders ? metaBadgeBgCSS : "transparent",
                                             borderColor: secondaryBorderSubtleCSS,
                                             color: textColor,
                                           }}
@@ -3701,11 +4009,18 @@ export default function TemplatesPage() {
                                           {wineItem.paisOrigem}
                                         </span>
                                       )}
+                                      {!showProductPillBorders && showProductCountryFlag && showProductCategoryBadge && (
+                                        <span className="text-[6.5px] opacity-70" style={{ color: secondaryColor }}>
+                                          ·
+                                        </span>
+                                      )}
                                       {showProductCategoryBadge && (
                                         <span
-                                          className="rounded-full border px-1.5 py-0.2 text-[6.5px] font-bold uppercase"
+                                          className={`text-[6.5px] font-bold uppercase ${
+                                            showProductPillBorders ? "rounded-full border px-1.5 py-0.2" : "px-0"
+                                          }`}
                                           style={{
-                                            backgroundColor: metaBadgeBgCSS,
+                                            backgroundColor: showProductPillBorders ? metaBadgeBgCSS : "transparent",
                                             borderColor: secondaryColor,
                                             color: resolvedProductNameColor,
                                           }}
@@ -3773,16 +4088,20 @@ export default function TemplatesPage() {
                                   </div>
                                   {showProductPrice && (
                                     <div
-                                      className="flex items-end justify-between border-t pt-1 mt-1"
+                                      className={`flex items-end justify-between mt-1 ${
+                                        showProductInternalLines ? "border-t pt-1" : "pt-0.5"
+                                      }`}
                                       style={{ borderColor: secondaryBorderSubtleCSS }}
                                     >
                                       <div>
-                                        <span
-                                          className="block text-[6px] uppercase font-bold"
-                                          style={{ color: resolvedProductPriceLabelColor }}
-                                        >
-                                          Unitário B2B
-                                        </span>
+                                        {showProductPriceLabel && productPriceLabelText.trim() && (
+                                          <span
+                                            className="block text-[6px] uppercase font-bold"
+                                            style={{ color: resolvedProductPriceLabelColor }}
+                                          >
+                                            {productPriceLabelText}
+                                          </span>
+                                        )}
                                         <span
                                           className="font-extrabold"
                                           style={{
@@ -3793,25 +4112,27 @@ export default function TemplatesPage() {
                                           R$ {unitPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                                         </span>
                                       </div>
-                                      <div className="text-right">
-                                        <span
-                                          className="block text-[6px] uppercase font-bold"
-                                          style={{ color: resolvedProductPriceInfoColor }}
-                                        >
-                                          Caixa c/ 6
-                                        </span>
-                                        <span
-                                          className="font-bold"
-                                          style={{
-                                            color: secondaryColor,
-                                            fontSize: `${Math.max(7, Math.round(9.5 * previewScale))}px`,
-                                          }}
-                                        >
-                                          {showProductBoxPrice
-                                            ? `R$ ${boxTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
-                                            : "6 un."}
-                                        </span>
-                                      </div>
+                                      {showProductPriceInfo && (
+                                        <div className="text-right">
+                                          <span
+                                            className="block text-[6px] uppercase font-bold"
+                                            style={{ color: resolvedProductPriceInfoColor }}
+                                          >
+                                            {gridSecondaryLabel}
+                                          </span>
+                                          {gridSecondaryVal && (
+                                            <span
+                                              className="font-bold"
+                                              style={{
+                                                color: secondaryColor,
+                                                fontSize: `${Math.max(7, Math.round(9.5 * previewScale))}px`,
+                                              }}
+                                            >
+                                              {gridSecondaryVal}
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                 </div>
@@ -3822,32 +4143,38 @@ export default function TemplatesPage() {
                       ) : productLayoutPreset === "executive-table" ? (
                         /* ── PREVIEW: 12 PRODUCTS PER PAGE (EXECUTIVE B2B TABLE) ── */
                         <div className="w-full flex-1 flex flex-col justify-start">
-                          <div
-                            className="w-full flex items-baseline justify-between border-b pb-1.5 mb-2"
-                            style={{ borderColor: secondaryColor }}
-                          >
-                            <span
-                              className="font-bold tracking-widest uppercase"
-                              style={{
-                                fontFamily: previewFont,
-                                color: resolvedProductNameColor,
-                                fontSize: `${Math.max(8, Math.round(12 * previewScale))}px`,
-                              }}
+                          {showProductPageHeader && (productPageHeaderLeftText.trim() || productPageHeaderRightText.trim()) && (
+                            <div
+                              className={`w-full flex items-baseline justify-between pb-1.5 mb-2 ${
+                                showProductInternalLines ? "border-b" : ""
+                              }`}
+                              style={{ borderColor: secondaryColor }}
                             >
-                              {headerTitle} — TABELA EXECUTIVA B2B
-                            </span>
-                            <span
-                              className="uppercase tracking-widest"
-                              style={{
-                                color: resolvedProductSpecsColor,
-                                fontSize: `${Math.max(6, Math.round(8 * previewScale))}px`,
-                              }}
-                            >
-                              12 rótulos / página
-                            </span>
-                          </div>
+                              <span
+                                className="font-bold tracking-widest uppercase"
+                                style={{
+                                  fontFamily: previewFont,
+                                  color: resolvedProductNameColor,
+                                  fontSize: `${Math.max(8, Math.round(12 * previewScale))}px`,
+                                }}
+                              >
+                                {productPageHeaderLeftText}
+                              </span>
+                              <span
+                                className="uppercase tracking-widest"
+                                style={{
+                                  color: resolvedProductSpecsColor,
+                                  fontSize: `${Math.max(6, Math.round(8 * previewScale))}px`,
+                                }}
+                              >
+                                {productPageHeaderRightText || "12 rótulos / página"}
+                              </span>
+                            </div>
+                          )}
                           <div
-                            className="w-full rounded p-2 border overflow-hidden transition-colors"
+                            className={`w-full rounded p-2 overflow-hidden transition-colors ${
+                              showProductCardBorder ? "border" : ""
+                            }`}
                             style={{
                               backgroundColor: cardSurfaceBgCSS,
                               borderColor: secondaryBorderSubtleCSS,
@@ -3857,7 +4184,9 @@ export default function TemplatesPage() {
                             <table className="w-full text-left border-collapse">
                               <thead>
                                 <tr
-                                  className="border-b uppercase text-[7px] font-extrabold"
+                                  className={`uppercase text-[7px] font-extrabold ${
+                                    showProductInternalLines ? "border-b" : ""
+                                  }`}
                                   style={{ borderColor: secondaryColor, color: resolvedProductNameColor }}
                                 >
                                   <th className="py-1 px-1">Rótulo & Vinícola</th>
@@ -3866,13 +4195,17 @@ export default function TemplatesPage() {
                                   <th className="py-1 px-1 text-center">Safra</th>
                                   {showProductPrice && (
                                     <>
-                                      <th className="py-1 px-1 text-right">Unitário</th>
-                                      <th className="py-1 px-1 text-right">Caixa c/ 6</th>
+                                      <th className="py-1 px-1 text-right">
+                                        {showProductPriceLabel && productPriceLabelText.trim() ? productPriceLabelText : "Valor"}
+                                      </th>
+                                      {showProductPriceInfo && (
+                                        <th className="py-1 px-1 text-right">{productPriceInfoText || "Caixa c/ 6"}</th>
+                                      )}
                                     </>
                                   )}
                                 </tr>
                               </thead>
-                              <tbody className="divide-y divide-amber-200/30 text-[7.5px]">
+                              <tbody className={`text-[7.5px] ${showProductInternalLines ? "divide-y divide-amber-200/30" : ""}`}>
                                 {(dbWines.length > 0 ? dbWines.slice(0, 10) : [DEFAULT_PREVIEW_WINE]).map((w) => {
                                   const unit = w.precoPromocional ?? w.precoOriginal;
                                   return (
@@ -3899,14 +4232,16 @@ export default function TemplatesPage() {
                                           >
                                             R$ {unit.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                                           </td>
-                                          <td
-                                            className="py-1 px-1 text-right font-bold"
-                                            style={{ color: secondaryColor }}
-                                          >
-                                            {showProductBoxPrice
-                                              ? `R$ ${(unit * 6).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
-                                              : "6 un."}
-                                          </td>
+                                          {showProductPriceInfo && (
+                                            <td
+                                              className="py-1 px-1 text-right font-bold"
+                                              style={{ color: secondaryColor }}
+                                            >
+                                              {showProductBoxPrice
+                                                ? `R$ ${(unit * 6).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+                                                : productPriceInfoText || "6 un."}
+                                            </td>
+                                          )}
                                         </>
                                       )}
                                     </tr>
@@ -3939,9 +4274,11 @@ export default function TemplatesPage() {
                               <div className="flex items-center justify-center gap-1.5 mb-1 flex-wrap">
                                 {showProductCountryFlag && (
                                   <span
-                                    className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[7.5px] font-bold uppercase tracking-wider"
+                                    className={`inline-flex items-center gap-1 text-[7.5px] font-bold uppercase tracking-wider ${
+                                      showProductPillBorders ? "rounded-full border px-2 py-0.5" : "px-0"
+                                    }`}
                                     style={{
-                                      backgroundColor: metaBadgeBgCSS,
+                                      backgroundColor: showProductPillBorders ? metaBadgeBgCSS : "transparent",
                                       borderColor: secondaryBorderSubtleCSS,
                                       color: textColor,
                                     }}
@@ -3954,11 +4291,18 @@ export default function TemplatesPage() {
                                     {previewWine.paisOrigem}
                                   </span>
                                 )}
+                                {!showProductPillBorders && showProductCountryFlag && showProductCategoryBadge && (
+                                  <span className="text-[8px] opacity-70" style={{ color: secondaryColor }}>
+                                    ·
+                                  </span>
+                                )}
                                 {showProductCategoryBadge && (
                                   <span
-                                    className="rounded-full border px-2 py-0.5 text-[7.5px] font-bold uppercase tracking-wider"
+                                    className={`text-[7.5px] font-bold uppercase tracking-wider ${
+                                      showProductPillBorders ? "rounded-full border px-2 py-0.5" : "px-0"
+                                    }`}
                                     style={{
-                                      backgroundColor: metaBadgeBgCSS,
+                                      backgroundColor: showProductPillBorders ? metaBadgeBgCSS : "transparent",
                                       borderColor: secondaryColor,
                                       color: resolvedProductNameColor,
                                     }}
@@ -4191,20 +4535,24 @@ export default function TemplatesPage() {
                               x={productPriceXOffset}
                               y={productPriceYOffset}
                             >
-                              <p
-                                className="uppercase tracking-[1.5px] font-bold mb-0.5"
-                                style={{ color: resolvedProductPriceLabelColor, fontSize: `${Math.max(1, Math.round(productPriceLabelFontSize * previewScale))}px` }}
-                              >
-                                Preço Unitário B2B
-                              </p>
-                              <p
-                                className="font-semibold mb-1"
-                                style={{ color: resolvedProductPriceInfoColor, fontSize: `${Math.max(1, Math.round(productPriceInfoFontSize * previewScale))}px` }}
-                              >
-                                {showProductBoxPrice
-                                  ? `Caixa c/ 6: R$ ${((previewWine.precoPromocional ?? previewWine.precoOriginal) * 6).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
-                                  : "Caixa c/ 6 garrafas"}
-                              </p>
+                              {showProductPriceLabel && productPriceLabelText.trim() && (
+                                <p
+                                  className="uppercase tracking-[1.5px] font-bold mb-0.5"
+                                  style={{ color: resolvedProductPriceLabelColor, fontSize: `${Math.max(1, Math.round(productPriceLabelFontSize * previewScale))}px` }}
+                                >
+                                  {productPriceLabelText}
+                                </p>
+                              )}
+                              {showProductPriceInfo && (
+                                <p
+                                  className="font-semibold mb-1"
+                                  style={{ color: resolvedProductPriceInfoColor, fontSize: `${Math.max(1, Math.round(productPriceInfoFontSize * previewScale))}px` }}
+                                >
+                                  {showProductBoxPrice
+                                    ? `${productPriceInfoText || "Caixa c/ 6"}: R$ ${((previewWine.precoPromocional ?? previewWine.precoOriginal) * 6).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+                                    : productPriceInfoText || "Caixa c/ 6 garrafas"}
+                                </p>
+                              )}
                               <div className={`flex items-baseline gap-1.5 ${productPriceSide === "center" ? "justify-center" : productPriceSide === "left" ? "justify-end" : "justify-start"}`}>
                                 <span
                                   className="font-extrabold"
@@ -4225,13 +4573,12 @@ export default function TemplatesPage() {
 
                       {/* Footer */}
                       {showProductFooter && (<div
-                        className="w-full border-t pt-2 pb-1 flex justify-between text-[6.5px] flex-shrink-0"
+                        className={`w-full pt-2 pb-1 flex justify-between text-[6.5px] flex-shrink-0 ${
+                          showProductInternalLines ? "border-t" : ""
+                        }`}
                         style={{ borderColor: secondaryBorderSubtleCSS, color: resolvedProductSpecsColor, opacity: 0.78 }}
                       >
-                        <span>
-                          {footerText ||
-                            "Allvino Importadora de Vinhos B2B"}
-                        </span>
+                        <span>{footerText}</span>
                         <span>Página 2</span>
                       </div>)}
                     </div>
